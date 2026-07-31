@@ -33,7 +33,6 @@ export type LessonCompletionReward = {
 export type ProgressState = {
   completedLessons: Record<string, string>;
   reviewCompletions?: Record<string, string>;
-  studyDayCompletions: Record<string, true>;
   lessonCompletionRewards?: Record<string, LessonCompletionReward>;
   lessonXp: Record<string, number>;
   habitLog: Record<string, HabitEntry>;
