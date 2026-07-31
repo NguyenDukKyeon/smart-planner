@@ -16,7 +16,7 @@ export function SaveTimeInfoDialog({ open, onClose }: { open: boolean; onClose: 
       role="dialog"
       aria-modal="true"
       aria-label="Giải thích lưu thời gian"
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in"
+      className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in"
     >
       <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-slate-800 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -24,6 +24,7 @@ export function SaveTimeInfoDialog({ open, onClose }: { open: boolean; onClose: 
             <HelpCircle className="h-5 w-5" /> Nút “Lưu thời gian” dùng để làm gì?
           </h4>
           <Button
+            type="button"
             size="icon"
             variant="ghost"
             className="h-8 w-8 rounded-full"
@@ -51,6 +52,7 @@ export function SaveTimeInfoDialog({ open, onClose }: { open: boolean; onClose: 
           </p>
         </div>
         <Button
+          type="button"
           className="w-full rounded-xl bg-rose-600 font-semibold text-white hover:bg-rose-700"
           onClick={onClose}
         >
@@ -92,7 +94,7 @@ export function TimerRecoveryDialogs({
           role="dialog"
           aria-modal="true"
           aria-label="Quyết định phiên đã hết hạn"
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
         >
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <h3 className="font-serif text-xl font-semibold">Phiên đã kết thúc khi app đóng</h3>
@@ -101,10 +103,19 @@ export function TimerRecoveryDialogs({
               không tự ghi dữ liệu khi chưa có xác nhận.
             </p>
             <div className="mt-5 flex gap-2">
-              <Button className="flex-1" onClick={() => onExpiredDecision(true)}>
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={() => onExpiredDecision(true)}
+              >
                 Lưu {durationMinutes} phút
               </Button>
-              <Button className="flex-1" variant="outline" onClick={() => onExpiredDecision(false)}>
+              <Button
+                type="button"
+                className="flex-1"
+                variant="outline"
+                onClick={() => onExpiredDecision(false)}
+              >
                 Bỏ qua
               </Button>
             </div>
@@ -118,7 +129,7 @@ export function TimerRecoveryDialogs({
           role="dialog"
           aria-modal="true"
           aria-label="Tóm tắt phiên tập trung"
-          className="fixed inset-0 z-[125] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
         >
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
             <div className="text-3xl">🎉</div>
@@ -128,11 +139,12 @@ export function TimerRecoveryDialogs({
             </p>
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
               {canCompleteLesson && (
-                <Button variant="outline" onClick={onCompleteLesson}>
+                <Button type="button" variant="outline" onClick={onCompleteLesson}>
                   <Check className="h-4 w-4" /> Hoàn thành bài
                 </Button>
               )}
               <Button
+                type="button"
                 onClick={() =>
                   onStartMode(completionSummary.nextMode, completionSummary.nextMinutes)
                 }
@@ -140,12 +152,13 @@ export function TimerRecoveryDialogs({
                 Bắt đầu nghỉ
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => onStartMode("pomodoro", lastFocusDuration || 50)}
               >
                 Học tiếp
               </Button>
-              <Button variant="ghost" onClick={onReturnToday}>
+              <Button type="button" variant="ghost" onClick={onReturnToday}>
                 Về màn hình Hôm nay
               </Button>
             </div>
@@ -172,7 +185,7 @@ export function MicroStartDialog({
       role="dialog"
       aria-modal="true"
       aria-label="Quyết định tiếp tục phiên tập trung"
-      className="fixed inset-0 z-[135] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in"
+      className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in"
     >
       <div className="w-full max-w-md space-y-4 rounded-3xl border border-amber-300 bg-white p-6 text-center shadow-2xl">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-3xl shadow-lg">
@@ -191,12 +204,14 @@ export function MicroStartDialog({
         </div>
         <div className="space-y-2 pt-2">
           <Button
+            type="button"
             onClick={() => onContinue(25)}
             className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-700"
           >
             🍅 Học tiếp 25 phút
           </Button>
           <Button
+            type="button"
             onClick={() => onContinue(50)}
             variant="outline"
             className="w-full rounded-2xl border-indigo-200 bg-indigo-50 py-3 text-sm font-bold text-indigo-800 hover:bg-indigo-100"
@@ -204,6 +219,7 @@ export function MicroStartDialog({
             🧠 Deep Work 50 phút
           </Button>
           <Button
+            type="button"
             variant="ghost"
             onClick={onFinish}
             className="w-full rounded-2xl text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700"
@@ -235,7 +251,7 @@ export function RecommitmentDialog({
       role="dialog"
       aria-modal="true"
       aria-label="Tái cam kết phiên học"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in"
+      className="pointer-events-auto fixed inset-0 z-[10050] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in"
     >
       <div className="w-full max-w-md space-y-4 rounded-3xl border border-indigo-200 bg-white p-6 text-center shadow-2xl">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 text-3xl shadow-lg">
@@ -254,12 +270,14 @@ export function RecommitmentDialog({
         </div>
         <div className="space-y-2 pt-2">
           <Button
+            type="button"
             onClick={onContinueNext}
             className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3 text-xs font-bold text-white shadow-lg hover:brightness-110"
           >
             ▷ Bắt đầu phiên tiếp
           </Button>
           <Button
+            type="button"
             variant="outline"
             onClick={onExtendBreak}
             className="w-full rounded-2xl border-indigo-200 bg-indigo-50/50 text-xs font-bold text-indigo-800 hover:bg-indigo-100"
@@ -267,6 +285,7 @@ export function RecommitmentDialog({
             ☕ Nghỉ thêm 5 phút
           </Button>
           <Button
+            type="button"
             variant="ghost"
             onClick={onFinishSession}
             className="w-full rounded-2xl text-xs font-semibold text-slate-500 hover:bg-slate-100"
