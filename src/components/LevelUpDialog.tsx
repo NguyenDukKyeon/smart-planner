@@ -12,8 +12,9 @@ type Props = {
 export function LevelUpDialog({ open, onOpenChange, level }: Props) {
   const titleInfo = getLevelTitle(level);
 
+  // Keep this celebration non-modal so it never disables pointer events on an active Pomodoro portal.
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-3xl p-6 text-center sm:p-8 bg-gradient-to-b from-amber-50/90 via-white to-sky-50/90 border-amber-200/90 shadow-xl">
         <DialogHeader className="items-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-400 via-rose-500 to-indigo-600 text-white shadow-lg animate-bounce">
