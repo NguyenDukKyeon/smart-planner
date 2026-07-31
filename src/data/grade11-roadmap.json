@@ -1,0 +1,2795 @@
+[
+  {
+    "week": 0,
+    "date": "27/06/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 3,
+    "videos": 4,
+    "load": 3.94,
+    "mainSubjects": "Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày. T7 ưu tiên rà lỗi, bù bài, không mở thêm chuyên đề mới.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#1. Bài 0101 - Đại cương dao động điều hoà",
+        "done": true
+      },
+      {
+        "subject": "Hóa",
+        "name": "KIẾN THỨC NỀN HÓA HỌC VÔ CƠ",
+        "done": true
+      },
+      {
+        "subject": "Hóa",
+        "name": "TÍNH CHẤT HÓA HỌC HỢP CHẤT VÔ CƠ",
+        "done": true
+      }
+    ]
+  },
+  {
+    "week": 0,
+    "date": "28/06/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 1,
+    "date": "29/06/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 13,
+    "load": 6.5,
+    "mainSubjects": "Toán Cơ Bản, Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X11_Cơ bản về lượng giác",
+        "done": true
+      },
+      {
+        "subject": "Lý",
+        "name": "#2. Bài 0102 - Phương trình vận tốc",
+        "done": true
+      },
+      {
+        "subject": "Lý",
+        "name": "#3. Bài 0103 - Phương trình gia tốc",
+        "done": true
+      },
+      {
+        "subject": "Hóa",
+        "name": "CÔNG THỨC HÓA HỌC CẦN NHỚ",
+        "done": true
+      }
+    ]
+  },
+  {
+    "week": 1,
+    "date": "30/06/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 7,
+    "load": 6,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Lý",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#4. Bài 0104 - Đại cương đồ thị hình Sin",
+        "done": true
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X12_Các công thức biến đổi lượng giác",
+        "done": true
+      },
+      {
+        "subject": "Hóa",
+        "name": "TỔNG ÔN VÀ LẤY GỐC HÓA 10 (ĐỀ 1)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "TỔNG ÔN VÀ LẤY GỐC HÓA 10 (ĐỀ 2)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 1,
+    "date": "01/07/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 3,
+    "videos": 4,
+    "load": 3.94,
+    "mainSubjects": "Hóa, Toán Cơ Bản",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "TỔNG ÔN VÀ LẤY GỐC HÓA 10 (ĐỀ 3)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "TỔNG ÔN VÀ LẤY GỐC HÓA 10 (ĐỀ 4)",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X13_Các hàm lượng giác cơ bản",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 1,
+    "date": "02/07/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 2,
+    "videos": 7,
+    "load": 2.88,
+    "mainSubjects": "Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#5. Bài 0105 - Mối quan hệ x - v - a",
+        "done": true
+      },
+      {
+        "subject": "Hóa",
+        "name": "TỔNG ÔN VÀ LẤY GỐC HÓA 10 (ĐỀ 5)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 1,
+    "date": "03/07/2026",
+    "weekday": "T6",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 4,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Đã dời hết các bài trùng sang tuần 2, ngày này để trống/nghỉ.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 1,
+    "date": "04/07/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 3,
+    "videos": 3,
+    "load": 2.38,
+    "mainSubjects": "Buffer",
+    "note": "T7 ưu tiên rà lỗi, bù bài, không mở thêm chuyên đề mới.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Buffer",
+        "name": "Buffer / Bù nhẹ / Ôn lỗi",
+        "done": false
+      },
+      {
+        "subject": "Buffer",
+        "name": "Buffer / Bù nhẹ / Ôn lỗi",
+        "done": false
+      },
+      {
+        "subject": "Buffer",
+        "name": "Buffer / Bù nhẹ / Ôn lỗi",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 1,
+    "date": "05/07/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 2,
+    "date": "06/07/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 6,
+    "videos": 6,
+    "load": 7.25,
+    "mainSubjects": "Toán Cơ Bản, Lý, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Cần chú ý",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X14_Các phương trình lượng giác cơ bản",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#6. Bài 0106 - Đồ thị mối quan hệ x - v - a",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X15_Hàm số và PTLG dạng: asinx+bcosx",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X16_Phương pháp đặt ẩn phụ trong PTLG",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "A6 - Đề ôn tập Lượng giác - Đề số 01",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "A7 - Đề ôn tập Lượng giác - Đề số 02",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "date": "07/07/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 6,
+    "videos": 6,
+    "load": 8,
+    "mainSubjects": "Toán Cơ Bản, Hóa",
+    "note": "Ngày nhiều Hóa: chỉ học phần trọng tâm, ưu tiên chữa lỗi, không mở thêm bài ngoài.",
+    "warning": "Rất nặng",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X17_Một số mở rộng nâng cao PT BPT Lượng giác",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 1 - LÝ THUYẾT TRỌNG TÂM CÂN BẰNG HÓA HỌC",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 2 - SỰ CHUYỂN DỊCH CÂN BẰNG HÓA HỌC",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 3 - LÝ THUYẾT TRỌNG TÂM VỀ SỰ ĐIỆN LI",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 4 - PHƯƠNG PHÁP VIẾT PHƯƠNG TRÌNH ION",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "date": "08/07/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 6,
+    "videos": 7,
+    "load": 7.25,
+    "mainSubjects": "Toán Cơ Bản, Lý, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Cần chú ý",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X21_Cơ bản về dãy số",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#7. Bài 0107 - Kĩ thuật vòng tròn lượng giác",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X22_Cơ bản về cấp số cộng",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#8. Luyện tập 0107 - Kĩ thuật vòng tròn lượng giác",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "A8 - Lượng giác trong đề thi ĐGNL, ĐGTD",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "B4 - Ôn tập dãy số (P1)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "date": "09/07/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 5,
+    "videos": 6,
+    "load": 7.08,
+    "mainSubjects": "Toán Cơ Bản, Hóa",
+    "note": "Ngày nhiều Hóa: chỉ học phần trọng tâm, ưu tiên chữa lỗi, không mở thêm bài ngoài.",
+    "warning": "Cần chú ý",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X23_Cơ bản về cấp số nhân",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 5 - THUYẾT ACID - BASE CỦA BRONSTED & LOWRY",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 6 - XÁC ĐỊNH PH CỦA DUNG DỊCH & CHẤT CHỈ THỊ",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 7 - PHẢN ỨNG TRAO ĐỔI ION TRONG DUNG DỊCH",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 8 - PHƯƠNG PHÁP CHUẨN ĐỘ ACID - BASE",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "date": "10/07/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 4.83,
+    "mainSubjects": "Toán Cơ Bản, Lý, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X24_Cơ bản về giới hạn của dãy số",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#9. Bài 0108 - Viết Phương trình dao động",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#10. Bài 0109 - Kĩ thuật đa trục",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "B5 - Ôn tập dãy số (P2)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "date": "11/07/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 3,
+    "videos": 4,
+    "load": 4.25,
+    "mainSubjects": "Toán Cơ Bản, Lý",
+    "note": "T7 ưu tiên rà lỗi, bù bài, không mở thêm chuyên đề mới.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X25_Giới hạn dãy số",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#11. Luyện tập 0109 - Kĩ thuật đa trục (Buổi 1)",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X26_Giới hạn hàm số nâng cao",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "date": "12/07/2026",
+    "weekday": "CN",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 2,
+    "videos": 0,
+    "load": 2.63,
+    "mainSubjects": "Toán - ĐVĐ, Hóa",
+    "note": "Dồn 2 bài cuối tuần (Toán - ĐVĐ, Hóa) từ các ngày trong tuần sang vì lịch bận (xem bóng đá), giữ đúng thứ tự bài học.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "B6 - Cấp số cộng, cấp số nhân trong đề ĐGNL, ĐGTD",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 9 - ĐỊNH LUẬT BẢO TOÀN ĐIỆN TÍCH",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "13/07/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Toán Cơ Bản, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X27_Hàm số liên tục",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "C5 - Bài tập giới hạn, hàm số liên tục trong SGK, SBT",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "C6 - Ôn tập giới hạn, hàm số liên tục - Đề số 01",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "C7 - Ôn tập giới hạn, hàm số liên tục - Đề số 02",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "14/07/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5,
+    "mainSubjects": "Toán - ĐVĐ, Lý",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "TC4 - Giới hạn chứa tham số - giới hạn hàm ẩn",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#12. Luyện tập 0109 - Kĩ thuật đa trục (Buổi 2)",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#13. Bài 0110 - Kĩ thuật đồ thị hình sin viết phương trình dao động",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#14. Bài 0111 - Con lắc lò xo",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "15/07/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 4.5,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXV01. Cơ bản về quy tắc đếm",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y30_Nâng cao dãy số 01",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#15. Luyện tập 0111 - Con lắc lò xo nằm ngang",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "16/07/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Toán Cơ Bản, Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXV02. Hoán vị",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#16. Luyện tập 0111 - Con lắc lò xo",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 22 - TỔNG ÔN TOÀN DIỆN CHUYÊN ĐỀ I",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 23 - THI THỬ ONLINE KẾT THÚC CHUYÊN ĐỀ I",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "17/07/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 4.5,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXV03. Chỉnh hợp và tổ hợp",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y31_Nâng cao dãy số 02",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#17. Bài 0112 - Năng lượng dao động",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "18/07/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5,
+    "mainSubjects": "Hóa, Toán Cơ Bản",
+    "note": "T7 ưu tiên rà lỗi, bù bài, không mở thêm chuyên đề mới.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 24 - LÝ THUYẾT TRỌNG TÂM NITROGEN",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 25 - LÝ THUYẾT TRỌNG TÂM AMMONIA VÀ MUỐI AMMONIUM",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXV04. Khai triển Newton",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "date": "19/07/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 4,
+    "date": "20/07/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Lý, Hóa, Toán Cơ Bản",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#18. Bài 0113 - Các dạng đồ thị năng lượng",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 26 - LÝ THUYẾT TRỌNG CÁC OXIDE CỦA NITROGEN",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 27 - LÝ THUYẾT TRỌNG TÂM NITRIC ACID",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXV05. Cơ bản về biến cố và xác suất",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 4,
+    "date": "21/07/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXV06. Các phép toán trên các biến cố",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y32_Nâng cao dãy số 03",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#19. Bài 0114 - Con lắc đơn",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 28 - LÝ THUYẾT TRỌNG TÂM MUỐI NITRATE",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 4,
+    "date": "22/07/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.5,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 29 - LÝ THUYẾT TRỌNG TÂM HIỆN TƯỢNG PHÚ DƯỠNG",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDMXY10. MSL GN và các số đo trung tâm",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "E3 - Đề ôn tập xác suất - Đề số 01",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "E4 - Đề ôn tập xác suất - Đề số 02",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 4,
+    "date": "23/07/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.5,
+    "mainSubjects": "Toán - ĐVĐ, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "E5 - Ôn tập về biến cố và công thức xác suất",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X25 - Ôn tập về biến cố và các quy tắc tính xác suất",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X58 - TỔNG ÔN 50 CÂU BIẾN CỐ QUY TẮC TÍNH XÁC SUẤT",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y33_Nâng cao dãy số 04",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 4,
+    "date": "24/07/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5,
+    "mainSubjects": "Lý, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#20. Bài 0115 - Bài toán quãng đường",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y34_Nâng cao dãy số 05",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#21. Bài 0116 - Cực trị quãng đường",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y01_Kĩ năng bó",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 4,
+    "date": "25/07/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5,
+    "mainSubjects": "Lý, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán. T7 ưu tiên rà lỗi, bù bài.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#22. Bài 0117 - Lực đàn hồi con lắc lò xo",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#23. Bài 0118 - Độ lệch pha giữa hai dao động",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y02_Kĩ năng hoán vị lặp",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#24. Bài 0119 - Các loại dao động",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 4,
+    "date": "26/07/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 5,
+    "date": "27/07/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.75,
+    "mainSubjects": "Lý, Toán Nâng Cao, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#1. Nhập Môn Kĩ Năng Giải Toán - Dao Động Cơ - Buổi 1",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y03_Kĩ năng cân bằng phần tử khoá",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#2. Nhập Môn Kĩ Năng Giải Toán - Dao Động Cơ - Buổi 2",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 42 - LÝ THUYẾT TRỌNG TÂM SULFUR",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 5,
+    "date": "28/07/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.5,
+    "mainSubjects": "Hóa, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#1. Bài 0201 - Mô tả sóng và sự truyền sóng",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y04_Kĩ năng tính tổng các số tự nhiên lập được",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 43 - LÝ THUYẾT TRỌNG TÂM SULFUR DIOXIDE",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 44 - LÝ THUYẾT TRỌNG TÂM SULFURIC ACID",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 5,
+    "date": "29/07/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 5.75,
+    "mainSubjects": "Hóa, Lý, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#2. Bài 0202 - Phương trình truyền sóng cơ",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#3. Bài 0203 - Độ lệch pha của các phần tử sóng cơ",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y05_Kĩ năng gián tiếp tương quan",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 45 - LÝ THUYẾT TRỌNG TÂM MUỐI SULFATE",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 5,
+    "date": "30/07/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 8,
+    "load": 6.25,
+    "mainSubjects": "Lý, Hóa, Toán Cơ Bản",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#4. Bài 0204 - Tìm số điểm thỏa mãn pha dao động",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 50 - LÝ THUYẾT TRỌNG TÂM PHÂN BÓN HÓA HỌC (SÁCH CHUYÊN ĐỀ)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 51 - PHÂN DẠNG BÀI TẬP PHÂN BÓN HÓA HỌC",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X31_Cơ bản về hình học không gian",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 5,
+    "date": "31/07/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 9,
+    "load": 6,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X32_Hai đường thẳng song song trong không gian",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y06_Kĩ năng phân tập",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#5. Bài 0205 - So sánh 2 phần tử sóng",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 53 - DẠNG BÀI TẬP SULFUR PHẢN ỨNG VỚI KIM LOẠI",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 5,
+    "date": "01/08/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 6,
+    "load": 5.25,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán. T7 ưu tiên rà lỗi, bù bài.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X33_ĐT song song với Mặt Phẳng trong KG",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X34_Hai mặt phẳng song song trong không gian",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y07_Kĩ năng gộp phép thử",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#6. Luyện tập Sóng Cơ - Độ lệch pha",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 5,
+    "date": "02/08/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 6,
+    "date": "03/08/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 54 - PHÂN DẠNG BÀI TẬP OLEUM SIÊU HAY",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X34_Hai mặt phẳng song song trong không gian",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X35_Phép chiều song song trong KG",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "D9 - Đề ôn tập quan hệ song song - Đề số 1",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 6,
+    "date": "04/08/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 14,
+    "load": 7,
+    "mainSubjects": "Toán - ĐVĐ, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Cần chú ý",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "D10 - Đề ôn tập quan hệ song song - Đề số 2",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y08_Kĩ năng xử lí ước nguyên dương",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#7. Bài 0206 - Đồ thị sóng truyền trên dây",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#8. Bài 0207 - Giao thoa sóng",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 6,
+    "date": "05/08/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 6,
+    "mainSubjects": "Hóa, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#9. Luyện tập: Giao thoa sóng cơ",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y09_Kĩ năng vách ngăn",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 1",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 2",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 6,
+    "date": "06/08/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 6,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Lý",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#10. Bài 0209 - Sóng dừng",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X61_2 ĐT vuông góc trong không gian",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 3",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 4",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 6,
+    "date": "07/08/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 5,
+    "load": 5.5,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 5",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X62_ĐT vuông góc với MP trong KG",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X63_HAI MP VUÔNG GÓC TRONG KG",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y10_Kết hợp kĩ năng vách ngăn và bó",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 6,
+    "date": "08/08/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 10,
+    "load": 6.25,
+    "mainSubjects": "Lý, Toán Cơ Bản, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán. T7 ưu tiên rà lỗi, bù bài.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#11. Bài 0210 - Các kĩ thuật giải toán sóng dừng",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X64_HÌNH CHÓP ĐỀU VÀ LĂNG TRỤ ĐỀU",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y11_KN xếp nhóm phần tử không đối diện",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#12. Bài 0211 - Sóng điện từ",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 6,
+    "date": "09/08/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 7,
+    "date": "10/08/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 7,
+    "load": 5.75,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X65_Định vị chân đường cao cơ bản",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y12_KN định vị hình học 01",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#13. Bài 0212 - Giao thoa ánh sáng",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 61 - LÝ THUYẾT TRỌNG TÂM HỢP CHẤT HỮU CƠ & HÓA HỌC HỮU CƠ",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 7,
+    "date": "11/08/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 7,
+    "load": 6.25,
+    "mainSubjects": "Toán Cơ Bản, Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa trong cùng ngày.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X66_Cơ bản về khoảng cách",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#14. Bài 0213 - Các kĩ thuật giải toán giao thoa ánh sáng",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 62 - CÂU HỎI VẬN DỤNG HỢP CHẤT HỮU CƠ & HÓA HỌC HỮU CƠ",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 63 - PHƯƠNG PHÁP GIẢI PHỔ HỒNG NGOẠI IR",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 7,
+    "date": "12/08/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 10,
+    "load": 6.25,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X67_KC giữa 2 đườn thẳng chéo nhau",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y13_Kĩ năng đánh số thứ tự",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#15. Bài 0214 - Đại cương sóng âm",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 64 - LÝ THUYẾT TRỌNG TÂM TÁCH VÀ TINH CHẾ HỢP CHẤT HỮU CƠ",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 7,
+    "date": "13/08/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.5,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Toán - ĐVĐ",
+    "note": "",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 65 - BÀI TẬP VẬN DỤNG TÁCH VÀ TINH CHẾ HỢP CHẤT HỮU CƠ",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X68_Thể tích",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "H7 - Tổng ôn góc - khoảng cách - thể tích",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X26 - Ôn tập Góc trong không gian",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 7,
+    "date": "14/08/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.5,
+    "mainSubjects": "Toán - ĐVĐ, Lý, Hóa, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X48 - 20 bài toán khoảng cách giữa 2 đường thẳng chéo nhau",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#16. Bài 0215 - Giao thoa 2 bức xạ",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 67 - CÔNG THỨC PHÂN TỬ HỢP CHẤT HỮU CƠ & PHỔ KHỐI LƯỢNG",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y14_Bài toán chia kẹo Euler",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 7,
+    "date": "15/08/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 8,
+    "load": 6.5,
+    "mainSubjects": "Lý, Hóa, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán. T7 ưu tiên rà lỗi.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#17. ÔN TẬP CHƯƠNG 2 - SÓNG",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 68 - CÔNG THỨC CẤU TẠO HỢP CHẤT HỮU CƠ",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y15_Kĩ năng đếm tam giác trong đa giác",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#1. Bài 0301 - Tương tác tĩnh điện - Định luật Cu-lông",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 7,
+    "date": "16/08/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 8,
+    "date": "17/08/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 9,
+    "load": 6,
+    "mainSubjects": "Toán Nâng Cao, Lý, Toán Cơ Bản",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y16_Kĩ năng đếm tứ giác trong đa giác",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#2. Bài 0302: Các dạng toán hay và khó về Định Luật Cu-lông",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#3. Bài 0303: Thuyết Electron - Sự Nhiễm Điện",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X71_Cơ bản về đạo hàm",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 8,
+    "date": "18/08/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 9,
+    "load": 5.75,
+    "mainSubjects": "Toán Nâng Cao, Lý, Toán Cơ Bản",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y17_Thống nhất chia kẹo và bổ đề CapCut",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#4. Bài 0304: Điện trường",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X71_Cơ bản về đạo hàm",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#5. Bài 0305: Các dạng toán hay và khó về Điện Trường",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 8,
+    "date": "19/08/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 78 - THỰC HÀNH VIẾT CÔNG THỨC CẤU TẠO",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 79 - TỔNG ÔN CÔNG THỨC CẤU TẠO HỢP CHẤT HỮU CƠ",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X72_Đạo hàm hàm hợp",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y18_Khai triển Newton nâng cao 01",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 8,
+    "date": "20/08/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 8,
+    "load": 6.25,
+    "mainSubjects": "Lý, Hóa, Toán Cơ Bản",
+    "note": "Đã ưu tiên xếp Lý trước Hóa.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#6. Bài 0306: Công lực điện - Điện thế - Hiệu điện thế",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 80 - TỔNG ÔN TOÀN DIỆN ĐẠI CƯƠNG HỮU CƠ",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 81 - KIỂM TRA CHẤT LƯỢNG ĐẠI CƯƠNG HỮU CƠ",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X72_Đạo hàm hàm hợp",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 8,
+    "date": "21/08/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 9,
+    "load": 6.25,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X73_Đạo hàm cấp cao và mở rộng đạo hàm",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y19_Khai triển Newton nâng cao 02",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#7. Bài 0307: Điện tích trong điện trường đều",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 82 - LÝ THUYẾT TRỌNG TÂM ALKANE (VIP1)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 8,
+    "date": "22/08/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 5,
+    "load": 4.75,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán. T7 ưu tiên rà lỗi.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X74_Ứng dụng đạo hàm toàn diện",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y20_Xác suất Bernoulli",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#8. Bài 0308: Tụ điện",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 8,
+    "date": "23/08/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 9,
+    "date": "24/08/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 6,
+    "mainSubjects": "Hóa, Lý, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#9. Bài 0310: Ghép tụ điện",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 85 - PHÂN DẠNG CÂU HỎI LÝ THUYẾT ALKANE (VIP1)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 87 - BÀI TẬP PHẢN ỨNG THẾ CỦA ALKANE",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y21_Kĩ năng cây điều kiện",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 9,
+    "date": "25/08/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 6.5,
+    "mainSubjects": "Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#10. Bài 0310: Ghép tụ đã tích điện",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 88 - BÀI TẬP TÍNH TỈ LỆ SẢN PHẨM THẾ",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 89 - BÀI TẬP TÍNH CHỈ SỐ OCTANE (OCTANE NUMBER)",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#11. Nâng cao - Điện tích chuyển động trong điện trường đều",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 9,
+    "date": "26/08/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X41_Cơ bản về luỹ thừa",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y22_Kĩ năng triển khai TT Vết dầu loang",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#12. Tổng ôn chương 3",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 93 - BÀI TẬP ĐỐT CHÁY ALKANE CHƯƠNG TRÌNH CŨ (TẶNG THÊM)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 9,
+    "date": "27/08/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 7,
+    "load": 5.5,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X42_Cơ bản về logarit",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y23_BT chia đồ số 01",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#1. Bài Cường độ dòng điện",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 94 - LÝ THUYẾT TRỌNG TÂM HYDROCARBON KHÔNG NO (VIP1)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 9,
+    "date": "28/08/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 5,
+    "load": 5.25,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X43_Biến đổi logarit nâng cao",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y24_Kĩ năng chia đồ số 02",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#2. Buổi 2 - Định luật Ohm",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 96 - PHƯƠNG PHÁP ĐẾM NHANH SỐ ĐỒNG PHÂN ALKENE & ALKYNE",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 9,
+    "date": "29/08/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 5,
+    "load": 5.5,
+    "mainSubjects": "Hóa, Toán Cơ Bản, Lý",
+    "note": "Đã ưu tiên xếp Lý trước Hóa. T7 ưu tiên rà lỗi.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#3. Buổi 3 - Vẽ lại mạch điện (tiết 1)",
+        "done": false
+      },
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X44_Tăng trưởng và lãi suất",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 97 - PHÂN DẠNG BÀI TẬP HYDROCARBON KHÔNG NO (VIP1)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 99 - BÀI TẬP XÁC ĐỊNH THÀNH PHẦN - HÀM LƯỢNG HYDROCARBON",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 9,
+    "date": "30/08/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 10,
+    "date": "31/08/2026",
+    "weekday": "T2",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5,
+    "mainSubjects": "Toán Cơ Bản, Toán Nâng Cao, Lý, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X45_Cơ bản về hàm số mũ và loga",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y25_Kĩ năng triển khai CT Menelaus",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#4. Buổi 4 - Vẽ lại mạch điện (tiết 2)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 100 - BÀI TẬP XÁC ĐỊNH LƯỢNG CHẤT HYDROCARBON",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 10,
+    "date": "01/09/2026",
+    "weekday": "T3",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 6,
+    "mainSubjects": "Toán Cơ Bản, Lý, Hóa",
+    "note": "Đã ưu tiên xếp Lý trước Hóa.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X46_Cơ bản về PT BPT Mũ",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#5. Buổi 5 - Mạch chứa Ampe kế và Vôn kế",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 102 - PHƯƠNG PHÁP BẢO TOÀN MOL LIÊN KẾT PI",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 105 - LÝ THUYẾT TRỌNG TÂM HYDROCARBON THƠM",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 10,
+    "date": "02/09/2026",
+    "weekday": "T4",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 5,
+    "load": 5,
+    "mainSubjects": "Toán Cơ Bản, Toán - ĐVĐ, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Cơ Bản",
+        "name": "TDM11X47_Cơ bản về PT BPT loga",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "F6 - Bất phương trình mũ logarit quy về tam thức bậc hai chứa tham số",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "F7 - Ứng dụng định lý Viet trong bài toán phương trình mũ logarit có tham số",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y26_KN làm chủ tỉ lệ trong HC đáy HBH",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 10,
+    "date": "03/09/2026",
+    "weekday": "T5",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 6,
+    "load": 6,
+    "mainSubjects": "Lý, Hóa, Toán Nâng Cao",
+    "note": "Đã ưu tiên xếp Lý trước Hóa.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#6. Buổi 6 - Nguồn điện",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 109 - TỔNG ÔN CHUYÊN ĐỀ HYDROCARBON (VIP1)",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y27_KN làm chủ tỉ lệ trong hình hộp",
+        "done": false
+      },
+      {
+        "subject": "Lý",
+        "name": "#7. Buổi 7 - Năng lượng điện và Công suất điện",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 10,
+    "date": "04/09/2026",
+    "weekday": "T6",
+    "type": "Học chính + luyện tập",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.25,
+    "mainSubjects": "Toán Nâng Cao, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y28_KN làm chủ tỉ lệ trong HC đáy HT",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y29_KN làm chủ tổ hợp tỉ lệ cạnh bên của HC",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 1",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y35_Kĩ năng triển khai góc giữa 2 cạnh đối",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 10,
+    "date": "05/09/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 4,
+    "videos": 4,
+    "load": 5.75,
+    "mainSubjects": "Hóa, Toán Nâng Cao, Lý",
+    "note": "Đã ưu tiên xếp Lý trước Hóa. T7 ưu tiên rà lỗi.",
+    "warning": "Vừa sức",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#8. Buổi 8 - Cực trị công suất",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 2",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y36_KN triển khai CT GKC01_GKC02",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 3",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 10,
+    "date": "06/09/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 11,
+    "date": "07/09/2026",
+    "weekday": "T2",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 4",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 5",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 11,
+    "date": "08/09/2026",
+    "weekday": "T3",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.5,
+    "mainSubjects": "Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y37_Kĩ năng định vị chân đường cao Level3",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y38_KN sử dụng CT thể tích nâng cao",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 11,
+    "date": "09/09/2026",
+    "weekday": "T4",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Hóa, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 118 - LÝ THUYẾT TRỌNG TÂM DẪN XUẤT HALOGEN",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y39_NCao góc nhị diện_Lăng trụ hoá nhị diện",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 11,
+    "date": "10/09/2026",
+    "weekday": "T5",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Hóa, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 121 - PHÂN DẠNG BÀI TẬP DẪN XUẤT HALOGEN",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y40_Cực trị thể tích",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 11,
+    "date": "11/09/2026",
+    "weekday": "T6",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Toán Nâng Cao, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y41_KN nhìn nhanh cặp loga nghịch đảo",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 127 - PHÂN DẠNG BÀI TẬP ALCOHOL (VIP1)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 11,
+    "date": "12/09/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Toán Nâng Cao, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán. T7 ưu tiên rà lỗi.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y42_Kĩ năng miền D",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 130 - LÝ THUYẾT TRỌNG TÂM PHENOL",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 11,
+    "date": "13/09/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 12,
+    "date": "14/09/2026",
+    "weekday": "T2",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 131 - PHÂN DẠNG BÀI TẬP PHENOL",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 132 - CÂU HỎI ĐÚNG - SAI DẪN XUẤT HALOGEN - ALCOHOL – PHENOL",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 12,
+    "date": "15/09/2026",
+    "weekday": "T3",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.5,
+    "mainSubjects": "Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y47_Kĩ năng rút gọn đường cong quỹ tích",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y43_KN khảo sát trong PT BPT Mũ Logarit",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 12,
+    "date": "16/09/2026",
+    "weekday": "T4",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Toán Nâng Cao, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y44_PT BPT tích thương cùng điểm rơi",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 2",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 12,
+    "date": "17/09/2026",
+    "weekday": "T5",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 3",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 4",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 12,
+    "date": "18/09/2026",
+    "weekday": "T6",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Hóa, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 5",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y45_Đánh giá tổng hàm cùng điểm rơi",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 12,
+    "date": "19/09/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "T7 ưu tiên rà lỗi.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ THI THỬ GIỮA HỌC KÌ II (ĐỀ SỐ 8)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ THI THỬ GIỮA HỌC KÌ II (ĐỀ SỐ 9)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 12,
+    "date": "20/09/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 13,
+    "date": "21/09/2026",
+    "weekday": "T2",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Toán Nâng Cao, Hóa",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y46_Đánh giá BĐT Bernoulli",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ THI THỬ GIỮA HỌC KÌ II (ĐỀ SỐ 10)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 13,
+    "date": "22/09/2026",
+    "weekday": "T3",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 2.75,
+    "mainSubjects": "Hóa, Toán Nâng Cao",
+    "note": "Giữ Toán Nâng Cao ở nhóm slot Toán.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 142 - LÝ THUYẾT TRỌNG TÂM HỢP CHẤT CARBONYL",
+        "done": false
+      },
+      {
+        "subject": "Toán Nâng Cao",
+        "name": "TDM11Y48_Cực trị KC giữa hai đường cong ĐB",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 13,
+    "date": "23/09/2026",
+    "weekday": "T4",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 143 - CÂU HỎI LÝ THUYẾT TRỌNG TÂM HỢP CHẤT CARBONYL",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 144 - PHÂN DẠNG BÀI TẬP HỢP CHẤT CARBONYL (VIP1)",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 13,
+    "date": "24/09/2026",
+    "weekday": "T5",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 146 - LÝ THUYẾT TRỌNG TÂM CARBOXYLIC ACID",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "LIVE 147 - CÂU HỎI LÝ THUYẾT TRỌNG TÂM CARBOXYLIC ACID",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 13,
+    "date": "25/09/2026",
+    "weekday": "T6",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "LIVE 148 - PHÂN DẠNG BÀI TẬP CARBOXYLIC ACID (VIP1)",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "CHIẾN DỊCH THI THỬ CUỐI HỌC KÌ II – ĐỀ 1",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 13,
+    "date": "26/09/2026",
+    "weekday": "T7",
+    "type": "Học nhẹ + ôn/bù",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "T7 ưu tiên rà lỗi.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "CHIẾN DỊCH THI THỬ CUỐI HỌC KÌ II – ĐỀ 2",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "CHIẾN DỊCH THI THỬ CUỐI HỌC KÌ II – ĐỀ 3",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 13,
+    "date": "27/09/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 14,
+    "date": "28/09/2026",
+    "weekday": "T2",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Hóa",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Hóa",
+        "name": "CHIẾN DỊCH THI THỬ CUỐI HỌC KÌ II – ĐỀ 4",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "CHIẾN DỊCH THI THỬ CUỐI HỌC KÌ II – ĐỀ 5",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 14,
+    "date": "29/09/2026",
+    "weekday": "T3",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 5,
+    "load": 3.75,
+    "mainSubjects": "Hóa, Lý",
+    "note": "Đã ưu tiên xếp Lý trước Hóa.",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Lý",
+        "name": "#2. Chuỗi live Thực chiến lí thuyết Dao động và Sóng",
+        "done": false
+      },
+      {
+        "subject": "Hóa",
+        "name": "ĐỀ SỐ 1",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 14,
+    "date": "30/09/2026",
+    "weekday": "T4",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Toán - ĐVĐ",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X49 - 20 bài toán góc nhị diện",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X50 - 20 bài toán mũ - loga đặc sắc",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 14,
+    "date": "01/10/2026",
+    "weekday": "T5",
+    "type": "Ôn tập / luyện đề",
+    "sessions": 2,
+    "videos": 2,
+    "load": 3,
+    "mainSubjects": "Toán - ĐVĐ",
+    "note": "",
+    "warning": "Nhẹ/đệm",
+    "items": [
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X51 - 20 bài toán thể tích - tỉ lệ thể tích",
+        "done": false
+      },
+      {
+        "subject": "Toán - ĐVĐ",
+        "name": "X52 - 20 bài toán giới hạn - đạo hàm đặc sắc",
+        "done": false
+      }
+    ]
+  },
+  {
+    "week": 14,
+    "date": "02/10/2026",
+    "weekday": "T6",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 14,
+    "date": "03/10/2026",
+    "weekday": "T7",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  },
+  {
+    "week": 14,
+    "date": "04/10/2026",
+    "weekday": "CN",
+    "type": "Nghỉ",
+    "sessions": 0,
+    "videos": 0,
+    "load": 0,
+    "mainSubjects": "Nghỉ hoàn toàn",
+    "note": "Không học bài mới; phục hồi, bù nhẹ nếu cần.",
+    "warning": "Nghỉ",
+    "items": []
+  }
+]

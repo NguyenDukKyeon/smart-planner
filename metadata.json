@@ -1,0 +1,6 @@
+{
+  "name": "Nhiệm vụ & Tiến độ Học tập",
+  "description": "Ứng dụng quản lý bài học, thói quen và theo dõi tiến độ nhiệm vụ 7 ngày",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
