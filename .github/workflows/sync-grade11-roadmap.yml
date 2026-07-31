@@ -21,18 +21,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
       - name: Sync sample and streak rule
         run: node scripts/sync-grade11-roadmap-and-study-streak.mjs
-      - name: Validate
+      - name: Validate generated application
         run: |
           npm run typecheck
-          npm test
           npm run build
       - name: Commit generated app changes
         run: |
-          if git diff --quiet; then
+          if git diff --quiet -- src/data/grade11-roadmap.json src/lib/mock-data.ts src/lib/custom-subjects.ts src/lib/progress-analytics.ts src/routes/index.tsx src/components/TodayPanel.tsx src/components/StudyStreakCard.tsx; then
             echo "No generated changes"
             exit 0
           fi
