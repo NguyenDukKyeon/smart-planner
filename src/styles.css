@@ -249,3 +249,13 @@ html[data-smart-animations="off"] *::after {
   scroll-behavior: auto !important;
   transition-duration: 0.01ms !important;
 }
+
+/*
+ * Radix modal dialogs temporarily set pointer-events: none on the page body.
+ * Pomodoro is rendered in an independent portal and must remain operable when
+ * a recovery/onboarding dialog briefly overlaps during state restoration.
+ */
+[role="dialog"][aria-label="Đồng hồ tập trung"],
+[data-timer-overlay="true"] {
+  pointer-events: auto !important;
+}
