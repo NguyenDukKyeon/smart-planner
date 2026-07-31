@@ -7,14 +7,17 @@ async function readSource(relativePath: string): Promise<string> {
 
 describe("Pomodoro modal interaction safety", () => {
   test("keeps timer decision overlays clickable when another Radix dialog exists", async () => {
-    const [dialogsSource, levelUpSource] = await Promise.all([
+    const [dialogsSource, levelUpSource, stylesSource] = await Promise.all([
       readSource("../components/focus-timer/FocusTimerDialogs.tsx"),
       readSource("../components/LevelUpDialog.tsx"),
+      readSource("../styles.css"),
     ]);
 
     expect(dialogsSource.match(/pointer-events-auto/g)?.length).toBeGreaterThanOrEqual(5);
     expect(dialogsSource).toContain('type="button"');
     expect(levelUpSource).toContain("<Dialog modal={false}");
+    expect(stylesSource).toContain('[aria-label="Đồng hồ tập trung"]');
+    expect(stylesSource).toContain('[data-timer-overlay="true"]');
   });
 
   test("closes the notification center before starting a focus timer", async () => {
