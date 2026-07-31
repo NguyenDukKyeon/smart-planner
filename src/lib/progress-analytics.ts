@@ -173,17 +173,11 @@ export function studyMinutesOnDate(sessions: ProgressState["studySessions"], dat
   return Math.round(secs / 60);
 }
 
+export const STUDY_DAY_COMPLETE_KEY = "__study_day_complete__";
+
 export function isStudyDay(state: ProgressState, dateISO: string): boolean {
   if (!isDateISO(dateISO)) return false;
-
-  const hasCompletedLesson = Object.values(state.completedLessons).some(
-    (completedOn) => completedOn === dateISO,
-  );
-  const hasRecordedStudyHabit = state.habitLog[dateISO]?.study === true;
-  const mins = studyMinutesOnDate(state.studySessions, dateISO);
-  const hasFocusSession = mins >= 25 || studySecondsOnDate(state.studySessions, dateISO) > 0;
-
-  return hasCompletedLesson || hasRecordedStudyHabit || hasFocusSession;
+  return state.habitLog[dateISO]?.[STUDY_DAY_COMPLETE_KEY] === true;
 }
 
 export function computeHabitStreak(state: ProgressState): number {
