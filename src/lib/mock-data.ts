@@ -1,4 +1,11 @@
-import rawRoadmap from "@/data/grade11-roadmap.json";
+import roadmapMeta from "@/data/grade11-roadmap-meta.json";
+import roadmapLessons1 from "@/data/grade11-roadmap-lessons-1.json";
+import roadmapLessons2 from "@/data/grade11-roadmap-lessons-2.json";
+import roadmapLessons3 from "@/data/grade11-roadmap-lessons-3.json";
+import roadmapLessons4 from "@/data/grade11-roadmap-lessons-4.json";
+import roadmapLessons5 from "@/data/grade11-roadmap-lessons-5.json";
+import roadmapLessons6 from "@/data/grade11-roadmap-lessons-6.json";
+import { sortSubjects } from "./subject-order";
 
 export type Lesson = {
   id: string;
@@ -26,85 +33,119 @@ export type Subject = {
   milestones: Milestone[];
 };
 
-type ScheduleItem = { subject: string; name: string; done: boolean };
-type ScheduleDay = {
-  week: number;
+type CompactRoadmap = {
+  subjects: string[];
+  topics: [subjectIndex: number, title: string][];
+  lessons: [topicIndex: number, title: string, xp: number][];
   date: string;
-  weekday: string;
-  items: ScheduleItem[];
+  minutes: number;
 };
 
-const schedule = rawRoadmap as ScheduleDay[];
-const SUBJECT_DEFS = [
-  { id: "toan", name: "Toán", emoji: "📐" },
-  { id: "ly", name: "Vật lý", emoji: "⚛️" },
-  { id: "hoa", name: "Hóa học", emoji: "🧪" },
-] as const;
-
-const subjectGroup = (source: string) => {
-  if (source.startsWith("Toán")) return "toan";
-  if (source === "Lý") return "ly";
-  if (source === "Hóa") return "hoa";
-  return null;
+const SUBJECT_META: Record<string, { id: string; emoji: string }> = {
+  Toán: { id: "toan", emoji: "📐" },
+  "Vật lý": { id: "ly", emoji: "⚛️" },
+  "Hóa học": { id: "hoa", emoji: "🧪" },
 };
 
-const toISODate = (date: string) => {
-  const [day, month, year] = date.split("/");
-  return `${year}-${month}-${day}`;
-};
-
-const weekRanges = new Map<number, { start: string; end: string }>();
-const lessonsBySubjectWeek: Record<string, Map<number, Lesson[]>> = Object.fromEntries(
-  SUBJECT_DEFS.map((subject) => [subject.id, new Map<number, Lesson[]>()]),
-);
-
-for (const day of schedule) {
-  const currentRange = weekRanges.get(day.week);
-  weekRanges.set(day.week, {
-    start: currentRange?.start ?? day.date,
-    end: day.date,
-  });
-
-  day.items.forEach((item, itemIndex) => {
-    const group = subjectGroup(item.subject);
-    if (!group) return;
-    const lessons = lessonsBySubjectWeek[group].get(day.week) ?? [];
-    let topic: string | undefined = undefined;
-    if (item.name.includes(" - ")) {
-      topic = item.name.split(" - ")[0].trim();
-    }
-    lessons.push({
-      id: `${group}-${toISODate(day.date)}-${itemIndex + 1}`,
-      title: item.name,
-      topic,
-      xp: 20,
-      plannedDurationMinutes: 90,
-      scheduledDate: toISODate(day.date),
-      weekday: day.weekday,
-      sourceSubject: item.subject,
-      week: day.week,
-      initialDone: item.done,
-    });
-    lessonsBySubjectWeek[group].set(day.week, lessons);
-  });
+function roadmapSlug(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
-import { sortSubjects } from "./subject-order";
+function roadmapHash(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
 
-export const SUBJECTS: Subject[] = sortSubjects(
-  SUBJECT_DEFS.map((subject) => ({
-    ...subject,
-    milestones: [...lessonsBySubjectWeek[subject.id].entries()].map(([week, lessons]) => {
-      const range = weekRanges.get(week)!;
-      return {
-        id: `${subject.id}-week-${week}`,
-        title: week === 0 ? "Khởi động" : `Tuần ${week}`,
-        subtitle: `${range.start} – ${range.end} · ${lessons.length} bài`,
-        lessons,
+function buildSampleRoadmap(raw: CompactRoadmap): Subject[] {
+  const subjects = raw.subjects.map((name) => ({
+    id: SUBJECT_META[name]?.id ?? (roadmapSlug(name) || "custom"),
+    name,
+    emoji: SUBJECT_META[name]?.emoji ?? "📖",
+    milestones: [] as Milestone[],
+  }));
+  const occurrenceByTopic = new Map<number, number>();
+  const usedIdsBySubject = new Map<number, Set<string>>();
+
+  for (const [topicIndex, title, xp] of raw.lessons) {
+    const [subjectIndex, topicTitle] = raw.topics[topicIndex] ?? [];
+    const subject = subjects[subjectIndex];
+    if (!subject || typeof topicTitle !== "string") continue;
+
+    const legacyIndex = occurrenceByTopic.get(topicIndex) ?? 0;
+    occurrenceByTopic.set(topicIndex, legacyIndex + 1);
+
+    const source = `${subject.name}|${title}|${raw.date}|${legacyIndex}`;
+    const baseId = `lesson-${roadmapSlug(subject.name) || "custom"}-${roadmapHash(source)}`;
+    const usedIds = usedIdsBySubject.get(subjectIndex) ?? new Set<string>();
+    let lessonId = baseId;
+    if (usedIds.has(lessonId)) {
+      const collisionHash = roadmapHash(
+        `${topicTitle}|${subject.name}|${title}|${raw.date}|${legacyIndex}`,
+      );
+      lessonId = `${baseId}-${collisionHash}`;
+      let suffix = 2;
+      while (usedIds.has(lessonId)) {
+        lessonId = `${baseId}-${collisionHash}-${suffix}`;
+        suffix += 1;
+      }
+    }
+    usedIds.add(lessonId);
+    usedIdsBySubject.set(subjectIndex, usedIds);
+
+    let milestone = subject.milestones.at(-1);
+    if (!milestone || milestone.title !== topicTitle) {
+      const blockIndex = subject.milestones.length;
+      milestone = {
+        id: `${subject.id}-topic-${roadmapSlug(topicTitle) || blockIndex + 1}-${blockIndex + 1}`,
+        title: topicTitle,
+        subtitle: "0 bài học",
+        lessons: [],
       };
-    }),
-  })),
-);
+      subject.milestones.push(milestone);
+    }
+
+    milestone.lessons.push({
+      id: lessonId,
+      title,
+      topic: topicTitle === "Toàn bộ bài học" ? undefined : topicTitle,
+      xp,
+      plannedDurationMinutes: raw.minutes,
+      scheduledDate: raw.date,
+      weekday: "Thứ 7",
+      sourceSubject: subject.name,
+      week: 1,
+      initialDone: false,
+    });
+    milestone.subtitle = `${milestone.lessons.length} bài học`;
+  }
+
+  return subjects;
+}
+
+const compactRoadmap: CompactRoadmap = {
+  ...(roadmapMeta as Omit<CompactRoadmap, "lessons">),
+  lessons: [
+    ...roadmapLessons1,
+    ...roadmapLessons2,
+    ...roadmapLessons3,
+    ...roadmapLessons4,
+    ...roadmapLessons5,
+    ...roadmapLessons6,
+  ] as CompactRoadmap["lessons"],
+};
+
+// This compact dataset is generated from the downloadable workbook in public/.
+export const SUBJECTS: Subject[] = sortSubjects(buildSampleRoadmap(compactRoadmap));
 
 export const ALL_LESSONS = SUBJECTS.flatMap((subject) =>
   subject.milestones.flatMap((milestone) => milestone.lessons),
@@ -121,11 +162,13 @@ export const INITIAL_LESSON_XP: Record<string, number> = Object.fromEntries(
   ALL_LESSONS.filter((lesson) => lesson.initialDone).map((lesson) => [lesson.id, lesson.xp]),
 );
 
+const roadmapDates = ALL_LESSONS.map((lesson) => lesson.scheduledDate).filter(Boolean).sort();
+
 export const ROADMAP_STATS = {
   totalLessons: ALL_LESSONS.length,
   initialCompleted: Object.keys(INITIAL_COMPLETED_LESSONS).length,
-  startDate: toISODate(schedule[0].date),
-  endDate: toISODate(schedule.at(-1)!.date),
+  startDate: roadmapDates.at(0) ?? "",
+  endDate: roadmapDates.at(-1) ?? "",
 };
 
 export type HabitIcon = "water" | "book" | "run" | "sleep" | "meditate" | "study";

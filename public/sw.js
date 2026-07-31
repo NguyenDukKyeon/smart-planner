@@ -1,4 +1,4 @@
-const CACHE_NAME = "smart-study-shell-v4";
+const CACHE_NAME = "smart-study-shell-v5";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
