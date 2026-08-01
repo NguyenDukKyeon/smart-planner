@@ -48,8 +48,6 @@ updateFile("src/components/CourseManagerModal.tsx", (initialSource) => {
 
   let source = initialSource;
 
-  // Thẻ là vùng nhận vị trí thả; chỉ tay cầm mới bắt đầu kéo. Điều này tránh
-  // kéo nhầm khi người dùng bấm vào nội dung hoặc các nút thao tác trên thẻ.
   source = replacePatternRequired(
     source,
     /                  draggable=\{[\s\S]*?                  onDragOver=\{\(event\) => \{/,
@@ -85,7 +83,8 @@ updateFile("src/components/CourseManagerModal.tsx", (initialSource) => {
                           preview.style.position = "fixed";
                           preview.style.top = "-10000px";
                           preview.style.left = "-10000px";
-                          preview.style.width = `${Math.min(card.getBoundingClientRect().width, 420)}px`;
+                          preview.style.width = "360px";
+                          preview.style.maxWidth = "90vw";
                           preview.style.background = "white";
                           preview.style.border = "1px solid rgb(129 140 248)";
                           preview.style.borderRadius = "12px";
@@ -104,7 +103,7 @@ updateFile("src/components/CourseManagerModal.tsx", (initialSource) => {
                       }}
                       className="mt-1 inline-flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:cursor-grabbing sm:mt-0"
                       title="Kéo một lần bằng tay cầm để đổi vị trí"
-                      aria-label={`Kéo để sắp xếp ${lesson.title}`}
+                      aria-label="Kéo để sắp xếp bài học"
                       role="button"
                       tabIndex={0}
                     >
