@@ -14,6 +14,16 @@ type Props = {
   shiftedDates?: Record<string, string>;
 };
 
+const HOUR_FORMATTER = new Intl.NumberFormat("vi-VN", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
+});
+
+function formatHours(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  return HOUR_FORMATTER.format(Math.round(Math.max(0, value) * 10) / 10);
+}
+
 export function ForecastCard({
   state,
   subjects = SUBJECTS,
@@ -56,12 +66,12 @@ export function ForecastCard({
 
   const remainingBySubject = useMemo(() => {
     const sorted = sortSubjects(subjects);
-    return sorted.map((s) => {
-      const lessons = s.milestones.flatMap((m) => m.lessons);
+    return sorted.map((subject) => {
+      const lessons = subject.milestones.flatMap((milestone) => milestone.lessons);
       const total = lessons.length;
-      const done = lessons.filter((l) => state.completedLessons[l.id]).length;
-      const remaining = total - done;
-      return { subject: s, total, done, remaining };
+      const done = lessons.filter((lesson) => state.completedLessons[lesson.id]).length;
+      const remaining = Math.max(0, total - done);
+      return { subject, total, done, remaining };
     });
   }, [subjects, state.completedLessons]);
 
@@ -89,20 +99,21 @@ export function ForecastCard({
             ? displayDate(fc.endDateISO)
             : `${displayDate(fc.earliestEndDateISO)} – ${displayDate(fc.latestEndDateISO)}`;
 
+  const totalWorkloadHours = Math.round((fc.totalNewHours + fc.totalReviewHours) * 10) / 10;
+
   return (
-    <section className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-4.5 shadow-xs space-y-3">
-      {/* Top Header: Title & Slider Control */}
+    <section className="min-w-0 space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs sm:p-4.5">
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-slate-900 sm:text-xl">
             <span>Dự báo hoàn thành theo kế hoạch</span>
           </h2>
-          <p className="text-[11px] sm:text-xs text-slate-500">
+          <p className="text-[11px] text-slate-500 sm:text-xs">
             Tính toán theo vận tốc học đều {hours} giờ/ngày (6 ngày/tuần, nghỉ CN).
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-1.5 shrink-0 self-start sm:self-auto">
+        <div className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-1.5 sm:self-auto">
           <span className="text-xs font-semibold text-slate-700">Học đều</span>
           <Slider
             className="w-24 sm:w-32"
@@ -110,7 +121,7 @@ export function ForecastCard({
             min={0}
             max={12}
             step={0.5}
-            onValueChange={(v) => handleHoursChange(v[0])}
+            onValueChange={(value) => handleHoursChange(value[0])}
           />
           <Input
             type="number"
@@ -118,74 +129,96 @@ export function ForecastCard({
             max={12}
             step={0.5}
             value={hours}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (Number.isFinite(n)) handleHoursChange(Math.min(12, Math.max(0, n)));
+            onChange={(event) => {
+              const nextHours = Number(event.target.value);
+              if (Number.isFinite(nextHours)) {
+                handleHoursChange(Math.min(12, Math.max(0, nextHours)));
+              }
             }}
-            className="w-20 min-w-[80px] h-7 px-3 text-center text-xs font-bold rounded-lg border-slate-300 bg-white"
+            className="h-7 w-20 min-w-[80px] rounded-lg border-slate-300 bg-white px-3 text-center text-xs font-bold"
           />
-          <span className="text-xs text-slate-500 font-medium">h/ngày</span>
+          <span className="text-xs font-medium text-slate-500">h/ngày</span>
         </div>
       </div>
 
-      {/* KPI Stats in 1 Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">🎯</span>
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-base">🎯</span>
           <div className="min-w-0">
-            <div className="text-[10px] sm:text-[11px] font-medium text-slate-500">Dự kiến hoàn thành</div>
-            <div className="text-xs sm:text-sm font-bold text-emerald-700 truncate">{planCompletionText}</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">📚</span>
-          <div className="min-w-0">
-            <div className="text-[10px] sm:text-[11px] font-medium text-slate-500">Bài còn lại</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 truncate">{fc.remaining} bài</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">⏱️</span>
-          <div className="min-w-0">
-            <div className="text-[10px] sm:text-[11px] font-medium text-slate-500">Tổng khối lượng</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-              {fc.totalNewHours + fc.totalReviewHours}h <span className="text-[10px] font-normal text-slate-500 hidden sm:inline">({fc.totalNewHours}h mới + {fc.totalReviewHours}h ôn)</span>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Dự kiến hoàn thành
+            </div>
+            <div className="truncate text-xs font-bold text-emerald-700 sm:text-sm">
+              {planCompletionText}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">🟢</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-base">📚</span>
           <div className="min-w-0">
-            <div className="text-[10px] sm:text-[11px] font-medium text-slate-500">Mức tin cậy</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 truncate">{confidenceLabel}</div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Bài còn lại
+            </div>
+            <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
+              {fc.remaining} bài
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="mt-0.5 shrink-0 text-base">⏱️</span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Tổng khối lượng dự kiến
+            </div>
+            <div className="text-xs font-bold text-slate-800 sm:text-sm">
+              {formatHours(totalWorkloadHours)} giờ
+            </div>
+            <div className="mt-0.5 text-[10px] leading-tight text-slate-500">
+              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ ôn
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-base">🟢</span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Mức tin cậy
+            </div>
+            <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
+              {confidenceLabel}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mini Progress Bars for Subjects */}
-      <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-start gap-2 sm:gap-3 text-xs">
-        <div className="flex items-center gap-1.5 text-slate-500 shrink-0 text-[11px] font-medium">
-          <span>Tiến độ còn lại:</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 shrink-0 w-full sm:w-auto sm:min-w-[380px] max-w-xl">
+      <div className="space-y-2 pt-1">
+        <div className="text-[11px] font-medium text-slate-500">Tiến độ theo môn</div>
+        <div className="grid w-full gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
           {remainingBySubject.map((item) => {
-            const pct = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
+            const percent = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
             return (
-              <div key={item.subject.id} className="space-y-1">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="truncate font-semibold text-slate-700 flex items-center gap-1">
-                    <span>{item.subject.emoji}</span>
-                    <span className="hidden sm:inline">{item.subject.name}</span>
+              <div
+                key={item.subject.id}
+                className="min-w-0 rounded-xl border border-slate-200/70 bg-slate-50/60 p-2.5"
+              >
+                <div className="flex min-w-0 items-center justify-between gap-2 text-[11px]">
+                  <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-700">
+                    <span className="shrink-0">{item.subject.emoji}</span>
+                    <span className="truncate">{item.subject.name}</span>
                   </span>
-                  <span className="font-bold text-sky-700 text-[10px] sm:text-[11px] shrink-0">{pct}% ({item.done}/{item.total})</span>
+                  <span className="shrink-0 font-bold text-sky-700">{percent}%</span>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                  <span>{item.done}/{item.total} bài đã xong</span>
+                  <span className="shrink-0">Còn {item.remaining}</span>
+                </div>
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
                     className="h-full rounded-full bg-sky-500 transition-all duration-300"
-                    style={{ width: `${pct}%` }}
+                    style={{ width: `${percent}%` }}
                   />
                 </div>
               </div>
@@ -194,7 +227,7 @@ export function ForecastCard({
         </div>
       </div>
 
-      <div className="text-[10px] italic text-slate-400 text-right pt-0.5">
+      <div className="pt-0.5 text-right text-[10px] italic text-slate-400">
         Ước tính dựa trên {basisLabel} (~{fc.meanMinutes}p/bài).
       </div>
     </section>
