@@ -1,0 +1,1 @@
+Diagnose drag-and-drop build.
