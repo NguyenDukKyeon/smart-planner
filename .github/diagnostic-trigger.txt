@@ -1,1 +1,1 @@
-Diagnose drag-and-drop build.
+Diagnose drag-and-drop build, retry 2.
