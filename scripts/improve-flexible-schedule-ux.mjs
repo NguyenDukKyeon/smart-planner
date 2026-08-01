@@ -122,3 +122,13 @@ updateFile("src/components/CourseManagerModal.tsx", (initialSource) => {
 
   return source;
 });
+
+const flexiblePlannerTemplate = readFileSync(
+  new URL("./templates/FlexiblePlanner.tsx", import.meta.url),
+  "utf8",
+);
+writeFileSync(
+  new URL("../src/components/FlexiblePlanner.tsx", import.meta.url),
+  flexiblePlannerTemplate,
+  "utf8",
+);
