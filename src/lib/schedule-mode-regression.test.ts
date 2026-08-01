@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import { describe, expect, test } from "vitest";
 import type { Lesson, Subject } from "./mock-data";
 import {
@@ -145,5 +146,43 @@ describe("fixed and flexible lesson scheduling", () => {
 
     expect(day.newLessons).toHaveLength(0);
     expect(day.unplacedFixedLessons).toHaveLength(0);
+  });
+
+  test("fixed lessons keep the exact order chosen in Course Manager", () => {
+    const subjects = subject([
+      lesson("unit-13", "2026-08-01", "fixed"),
+      lesson("unit-4", "2026-08-01", "fixed"),
+      lesson("unit-10", "2026-08-01", "fixed"),
+    ]);
+
+    const day = pickDayQueue({
+      subjects,
+      completed: {},
+      meta: DEFAULT_STUDY_META,
+      settings: DEFAULT_PLANNER_SETTINGS,
+      dateISO: "2026-08-01",
+      hoursOverride: 6,
+    });
+
+    expect(day.newLessons.map((item) => item.id)).toEqual([
+      "unit-13",
+      "unit-4",
+      "unit-10",
+    ]);
+  });
+});
+
+describe("Course Manager drag interaction", () => {
+  test("uses the full card as the drag surface and auto-scrolls near the edges", async () => {
+    const source = await fs.readFile(
+      new URL("../components/CourseManagerModal.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("draggable={canReorder && !selectionMode}");
+    expect(source).toContain("function autoScrollDuringLessonDrag");
+    expect(source).toContain("data-course-scroll-container");
+    expect(source).toContain("button, input, select, textarea, a, [data-no-drag]");
+    expect(source).toContain("Giữ và kéo bất kỳ vùng trống nào trên thẻ");
   });
 });
