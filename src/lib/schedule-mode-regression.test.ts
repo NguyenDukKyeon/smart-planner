@@ -173,16 +173,18 @@ describe("fixed and flexible lesson scheduling", () => {
 });
 
 describe("Course Manager drag interaction", () => {
-  test("uses the full card as the drag surface and auto-scrolls near the edges", async () => {
+  test("uses two-step activation, exact drop boundaries and edge auto-scroll", async () => {
     const source = await fs.readFile(
       new URL("../components/CourseManagerModal.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(source).toContain("draggable={canReorder && !selectionMode}");
+    expect(source).toContain("dragArmedLessonId === lesson.id");
+    expect(source).toContain("Lần 2: giữ và kéo");
+    expect(source).toContain("Chèn phía trên");
+    expect(source).toContain("Chèn phía dưới");
     expect(source).toContain("function autoScrollDuringLessonDrag");
     expect(source).toContain("data-course-scroll-container");
     expect(source).toContain("button, input, select, textarea, a, [data-no-drag]");
-    expect(source).toContain("Giữ và kéo bất kỳ vùng trống nào trên thẻ");
   });
 });
