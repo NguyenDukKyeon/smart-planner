@@ -69,3 +69,7 @@ replaceOnce(
 );
 
 writeFileSync(url, source, "utf8");
+
+// Run after the schedule-mode patches because it improves the generated
+// Course Manager markup and planner behavior.
+await import("./improve-lesson-order-drag.mjs");
