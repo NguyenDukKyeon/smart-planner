@@ -91,18 +91,19 @@ describe("catalog order in the study plan", () => {
 });
 
 describe("Course Manager drag interaction", () => {
-  test("requires a first click to arm the card and shows an exact drop boundary", async () => {
+  test("starts from a dedicated handle and shows an exact drop boundary", async () => {
     const source = await fs.readFile(
       new URL("../components/CourseManagerModal.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(source).toContain("dragArmedLessonId === lesson.id");
-    expect(source).toContain("Lần 2: giữ và kéo");
+    expect(source).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
+    expect(source).toContain("application/x-smart-lesson-id");
+    expect(source).toContain("setDragImage");
     expect(source).toContain("Chèn phía trên");
     expect(source).toContain("Chèn phía dưới");
     expect(source).toContain("function autoScrollDuringLessonDrag");
     expect(source).toContain("data-course-scroll-container");
-    expect(source).toContain("button, input, select, textarea, a, [data-no-drag]");
+    expect(source).not.toContain("Lần 2: giữ và kéo");
   });
 });
