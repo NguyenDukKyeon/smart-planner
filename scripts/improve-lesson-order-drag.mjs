@@ -22,9 +22,7 @@ function replacePattern(source, pattern, after, marker, label) {
 updateFile("src/lib/planner.ts", (initial) => {
   let source = initial;
 
-  // Fixed lessons must follow the exact catalog order chosen in Course Manager.
-  // Sorting by duration/title made UNIT 4 appear before UNIT 13, even after a
-  // deliberate manual reorder.
+  // Bài cố định phải giữ đúng thứ tự người dùng đã sắp trong Quản lý môn & bài.
   source = replacePattern(
     source,
     /  return lessons\.sort\(\(left, right\) => \{[\s\S]*?\n  \}\);\n}\n\nexport function reviewTaskId/,
@@ -34,6 +32,67 @@ updateFile("src/lib/planner.ts", (initial) => {
 export function reviewTaskId`,
     "return lessons;\n}\n\nexport function reviewTaskId",
     "thứ tự bài cố định theo danh mục",
+  );
+
+  return source;
+});
+
+updateFile("src/lib/custom-subjects.ts", (initial) => {
+  let source = initial;
+
+  // targetLessonId = null nghĩa là chèn xuống cuối chủ đề. Điều này cho phép
+  // drop indicator thể hiện chính xác cả vị trí phía trên lẫn phía dưới một bài.
+  source = replacePattern(
+    source,
+    /export function moveLessonBeforeInTopic\([\s\S]*?\n}\n\nexport function moveLessonBefore\(/,
+    `export function moveLessonBeforeInTopic(
+  existingSubjects: Subject[],
+  subjectId: string,
+  topicId: string,
+  sourceLessonId: string,
+  targetLessonId: string | null,
+): Subject[] {
+  if (targetLessonId && sourceLessonId === targetLessonId) return existingSubjects;
+  let changed = false;
+  const next = existingSubjects.map((subject) => {
+    if (subject.id !== subjectId) return subject;
+    return {
+      ...subject,
+      milestones: subject.milestones.map((milestone) => {
+        if (milestone.id !== topicId) return milestone;
+        const sourceIndex = milestone.lessons.findIndex(
+          (lesson) => lesson.id === sourceLessonId,
+        );
+        if (sourceIndex < 0) return milestone;
+        if (
+          targetLessonId &&
+          !milestone.lessons.some((lesson) => lesson.id === targetLessonId)
+        ) {
+          return milestone;
+        }
+
+        const lessons = [...milestone.lessons];
+        const [moving] = lessons.splice(sourceIndex, 1);
+        const insertionIndex = targetLessonId
+          ? lessons.findIndex((lesson) => lesson.id === targetLessonId)
+          : lessons.length;
+        lessons.splice(insertionIndex < 0 ? lessons.length : insertionIndex, 0, moving);
+
+        const unchanged = lessons.every(
+          (lesson, index) => lesson.id === milestone.lessons[index]?.id,
+        );
+        if (unchanged) return milestone;
+        changed = true;
+        return { ...milestone, lessons };
+      }),
+    };
+  });
+  return changed ? next : existingSubjects;
+}
+
+export function moveLessonBefore(`,
+    "targetLessonId: string | null",
+    "thả bài trước hoặc sau vị trí đích",
   );
 
   return source;
@@ -80,6 +139,40 @@ export function CourseManagerModal`,
 
   source = replaceOnce(
     source,
+    "  const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);",
+    `  const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
+  const [dragArmedLessonId, setDragArmedLessonId] = useState<string | null>(null);`,
+    "dragArmedLessonId",
+    "trạng thái kích hoạt kéo hai bước",
+  );
+
+  source = replaceOnce(
+    source,
+    `  useEffect(() => {
+    setSelectedLessonIds(new Set());
+    setSelectionMode(false);
+    setBulkTargetSubjectId("");
+    setBulkTargetTopicId("");
+  }, [selectedSubjectId]);`,
+    `  useEffect(() => {
+    setSelectedLessonIds(new Set());
+    setSelectionMode(false);
+    setBulkTargetSubjectId("");
+    setBulkTargetTopicId("");
+    setDragArmedLessonId(null);
+  }, [selectedSubjectId]);
+
+  useEffect(() => {
+    if (!dragArmedLessonId || draggedLessonId) return;
+    const timeout = window.setTimeout(() => setDragArmedLessonId(null), 2600);
+    return () => window.clearTimeout(timeout);
+  }, [dragArmedLessonId, draggedLessonId]);`,
+    "window.setTimeout(() => setDragArmedLessonId(null), 2600)",
+    "tự hủy trạng thái sẵn sàng kéo",
+  );
+
+  source = replaceOnce(
+    source,
     `          <main className={cn("min-h-0 overflow-y-auto bg-white p-4 sm:p-5", !mobileDetail && "hidden md:block")}>`,
     `          <main
             data-course-scroll-container
@@ -99,19 +192,80 @@ export function CourseManagerModal`,
 
   source = replaceOnce(
     source,
+    `                      draggedLessonId={draggedLessonId}
+                      onDraggedLessonChange={setDraggedLessonId}`,
+    `                      draggedLessonId={draggedLessonId}
+                      onDraggedLessonChange={setDraggedLessonId}
+                      dragArmedLessonId={dragArmedLessonId}
+                      onDragArmedLessonChange={setDragArmedLessonId}`,
+    "dragArmedLessonId={dragArmedLessonId}",
+    "truyền trạng thái kích hoạt kéo",
+  );
+
+  source = replaceOnce(
+    source,
+    `  draggedLessonId,
+  onDraggedLessonChange,
+  onRequestDelete,`,
+    `  draggedLessonId,
+  onDraggedLessonChange,
+  dragArmedLessonId,
+  onDragArmedLessonChange,
+  onRequestDelete,`,
+    "onDragArmedLessonChange,\n  onRequestDelete",
+    "tham số kích hoạt kéo",
+  );
+
+  source = replaceOnce(
+    source,
+    `  draggedLessonId: string | null;
+  onDraggedLessonChange: (lessonId: string | null) => void;
+  onRequestDelete: (lesson: Lesson) => void;`,
+    `  draggedLessonId: string | null;
+  onDraggedLessonChange: (lessonId: string | null) => void;
+  dragArmedLessonId: string | null;
+  onDragArmedLessonChange: (lessonId: string | null) => void;
+  onRequestDelete: (lesson: Lesson) => void;`,
+    "dragArmedLessonId: string | null",
+    "kiểu tham số kích hoạt kéo",
+  );
+
+  source = replaceOnce(
+    source,
+    "  const [open, setOpen] = useState(true);",
+    `  const [open, setOpen] = useState(true);
+  const [dropIndicator, setDropIndicator] = useState<{
+    lessonId: string;
+    edge: "before" | "after";
+  } | null>(null);`,
+    "const [dropIndicator, setDropIndicator]",
+    "trạng thái chỉ báo vị trí thả",
+  );
+
+  source = replacePattern(
+    source,
+    /                <li\n                  key=\{lesson\.id\}[\s\S]*?                  \)\}\n                >/,
     `                <li
                   key={lesson.id}
-                  onDragOver={(event) => {`,
-    `                <li
-                  key={lesson.id}
-                  draggable={canReorder && !selectionMode}
-                  onDragStart={(event: DragEvent<HTMLLIElement>) => {
+                  draggable={
+                    canReorder &&
+                    !selectionMode &&
+                    dragArmedLessonId === lesson.id
+                  }
+                  onClick={(event) => {
+                    if (!canReorder || selectionMode || draggedLessonId) return;
                     const target = event.target instanceof HTMLElement ? event.target : null;
                     if (
                       target?.closest(
                         "button, input, select, textarea, a, [data-no-drag]",
                       )
                     ) {
+                      return;
+                    }
+                    onDragArmedLessonChange(lesson.id);
+                  }}
+                  onDragStart={(event: DragEvent<HTMLLIElement>) => {
+                    if (dragArmedLessonId !== lesson.id) {
                       event.preventDefault();
                       return;
                     }
@@ -119,28 +273,104 @@ export function CourseManagerModal`,
                     event.dataTransfer.setData("text/plain", lesson.id);
                     onDraggedLessonChange(lesson.id);
                   }}
-                  onDragOver={(event) => {`,
-    "draggable={canReorder && !selectionMode}",
-    "kéo toàn bộ thẻ bài",
+                  onDragOver={(event) => {
+                    if (canReorder && draggedLessonId && draggedLessonId !== lesson.id) {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      setDropIndicator({
+                        lessonId: lesson.id,
+                        edge: event.clientY < rect.top + rect.height / 2 ? "before" : "after",
+                      });
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    const nextTarget = event.relatedTarget;
+                    if (
+                      !(nextTarget instanceof Node) ||
+                      !event.currentTarget.contains(nextTarget)
+                    ) {
+                      setDropIndicator(null);
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const sourceId = event.dataTransfer.getData("text/plain") || draggedLessonId;
+                    if (!canReorder || !sourceId || sourceId === lesson.id) {
+                      setDropIndicator(null);
+                      return;
+                    }
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const edge =
+                      dropIndicator?.lessonId === lesson.id
+                        ? dropIndicator.edge
+                        : event.clientY < rect.top + rect.height / 2
+                          ? "before"
+                          : "after";
+                    const beforeLessonId =
+                      edge === "before" ? lesson.id : lessons[index + 1]?.id ?? null;
+                    onApply(
+                      moveLessonBeforeInTopic(
+                        subjects,
+                        subject.id,
+                        topicId,
+                        sourceId,
+                        beforeLessonId,
+                      ),
+                      "Đã sắp xếp lại bài học.",
+                    );
+                    setDropIndicator(null);
+                    onDraggedLessonChange(null);
+                    onDragArmedLessonChange(null);
+                  }}
+                  onDragEnd={() => {
+                    setDropIndicator(null);
+                    onDraggedLessonChange(null);
+                    onDragArmedLessonChange(null);
+                  }}
+                  className={cn(
+                    "relative flex items-start gap-3 p-3 sm:items-center",
+                    canReorder && !selectionMode && "select-none",
+                    dragArmedLessonId === lesson.id &&
+                      !draggedLessonId &&
+                      "bg-indigo-50/70 ring-2 ring-inset ring-indigo-400",
+                    selectedLessonIds.has(lesson.id) && "bg-indigo-50/70",
+                    draggedLessonId === lesson.id && "bg-indigo-50 opacity-60",
+                  )}
+                >`,
+    "dragArmedLessonId === lesson.id &&",
+    "kéo hai bước và chỉ báo vị trí thả",
   );
 
   source = replaceOnce(
     source,
-    `                  className={cn(
-                    "flex items-start gap-3 p-3 sm:items-center",
-                    selectedLessonIds.has(lesson.id) && "bg-indigo-50/70",
-                    draggedLessonId === lesson.id && "opacity-50",
-                  )}`,
-    `                  className={cn(
-                    "flex items-start gap-3 p-3 sm:items-center",
-                    canReorder &&
-                      !selectionMode &&
-                      "cursor-grab select-none active:cursor-grabbing",
-                    selectedLessonIds.has(lesson.id) && "bg-indigo-50/70",
-                    draggedLessonId === lesson.id && "bg-indigo-50 opacity-60",
-                  )}`,
-    "cursor-grab select-none active:cursor-grabbing",
-    "trạng thái kéo toàn thẻ",
+    `                  {selectionMode && (`,
+    `                  {dropIndicator?.lessonId === lesson.id && draggedLessonId && (
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute left-3 right-3 z-20 h-0.5 bg-indigo-600 shadow-[0_0_0_1px_white]",
+                        dropIndicator.edge === "before" ? "-top-px" : "-bottom-px",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <span className="absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-indigo-600 bg-white" />
+                      <span
+                        className={cn(
+                          "absolute left-4 rounded-md bg-indigo-700 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm",
+                          dropIndicator.edge === "before"
+                            ? "bottom-1"
+                            : "top-1",
+                        )}
+                      >
+                        {dropIndicator.edge === "before"
+                          ? "Chèn phía trên"
+                          : "Chèn phía dưới"}
+                      </span>
+                    </span>
+                  )}
+                  {selectionMode && (`,
+    "Chèn phía trên",
+    "đường ranh giới vị trí thả",
   );
 
   source = replaceOnce(
@@ -166,14 +396,31 @@ export function CourseManagerModal`,
     `                  {canReorder && !selectionMode && (
                     <span
                       className="pointer-events-none mt-1 inline-flex shrink-0 text-slate-400 sm:mt-0"
-                      title="Giữ và kéo bất kỳ vùng trống nào trên thẻ để đổi vị trí"
+                      title="Nhấp một lần để kích hoạt; lần hai giữ và kéo"
                       aria-hidden="true"
                     >
                       <GripVertical className="h-4 w-4" />
                     </span>
                   )}`,
-    "Giữ và kéo bất kỳ vùng trống nào trên thẻ",
-    "biểu tượng gợi ý kéo toàn thẻ",
+    "Nhấp một lần để kích hoạt; lần hai giữ và kéo",
+    "biểu tượng hướng dẫn kéo hai bước",
+  );
+
+  source = replaceOnce(
+    source,
+    `                    >
+                      {isCompleted ? "Hoàn thành" : minutes > 0 ? "Đang học" : "Chưa bắt đầu"}
+                    </span>`,
+    `                    >
+                      {isCompleted ? "Hoàn thành" : minutes > 0 ? "Đang học" : "Chưa bắt đầu"}
+                    </span>
+                    {dragArmedLessonId === lesson.id && !draggedLessonId && (
+                      <span className="ml-2 inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                        Lần 2: giữ và kéo
+                      </span>
+                    )}`,
+    "Lần 2: giữ và kéo",
+    "hướng dẫn trạng thái sẵn sàng kéo",
   );
 
   source = replaceOnce(
