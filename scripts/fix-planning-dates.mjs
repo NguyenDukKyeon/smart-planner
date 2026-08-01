@@ -40,13 +40,17 @@ updateFile("src/lib/planner.ts", (initialSource) => {
         if (completed[lesson.id]) continue;
         if (consumed.has(lesson.id)) continue;
         if (!lesson.scheduledDate) continue;
-        // A future lesson must not be pulled into an earlier day. Overdue lessons
-        // remain eligible so the adjusted plan can carry them forward.
+        // Ngày dự kiến là ngày sớm nhất bài được tham gia lịch điều chỉnh.
+        // Bài tương lai không bị kéo lên trước; bài quá hạn được mang sang ngày sau.
         if (dateISO && lesson.scheduledDate > dateISO) continue;
         list.push(lesson);
       }
     }
-    list.sort((left, right) => left.scheduledDate.localeCompare(right.scheduledDate));
+    list.sort((left, right) => {
+      const leftExact = dateISO && left.scheduledDate === dateISO ? 0 : 1;
+      const rightExact = dateISO && right.scheduledDate === dateISO ? 0 : 1;
+      return leftExact - rightExact || left.scheduledDate.localeCompare(right.scheduledDate);
+    });
     out[subject.id] = list;
   }
   return out;
@@ -54,77 +58,73 @@ updateFile("src/lib/planner.ts", (initialSource) => {
 
 export function reviewTaskId`,
     "if (dateISO && lesson.scheduledDate > dateISO) continue;",
-    "lọc bài theo ngày có hiệu lực",
-  );
-
-  source = replaceRequired(
-    source,
-    `const REVIEW_MIN_PER_ITEM = 15;
-
-export function pickDayQueue`,
-    `const REVIEW_MIN_PER_ITEM = 15;
-
-function lessonsScheduledOn(
-  subjects: Subject[],
-  completed: Record<string, string>,
-  consumed: Set<string>,
-  dateISO: string,
-): Lesson[] {
-  const lessons: Lesson[] = [];
-  for (const subject of sortSubjects(subjects)) {
-    for (const milestone of subject.milestones) {
-      for (const lesson of milestone.lessons) {
-        if (completed[lesson.id] || consumed.has(lesson.id)) continue;
-        if (lesson.scheduledDate === dateISO) lessons.push(lesson);
-      }
-    }
-  }
-  return sortLessonsBySubjectPriority(lessons);
-}
-
-export function pickDayQueue`,
-    "function lessonsScheduledOn(",
-    "hàm lấy bài được ấn định đúng ngày",
-  );
-
-  source = replaceRequired(
-    source,
-    `  for (const l of pinned) {
-    if (consumed.has(l.id)) continue;
-    newLessons.push(l);
-    newMinutes += estimateLessonMinutes(l.id, meta, subjects);
-    consumed.add(l.id);
-  }
-
-  if (quotaMinutes > 0) {`,
-    `  for (const l of pinned) {
-    if (consumed.has(l.id)) continue;
-    newLessons.push(l);
-    newMinutes += estimateLessonMinutes(l.id, meta, subjects);
-    consumed.add(l.id);
-  }
-
-  // A date selected by the user is authoritative. Keep every lesson assigned
-  // to this date visible even when it exceeds the configured capacity; the UI
-  // will report the excess instead of silently moving the lesson months later.
-  const scheduledToday = lessonsScheduledOn(subjects, completed, consumed, dateISO);
-  for (const lesson of scheduledToday) {
-    newLessons.push(lesson);
-    newMinutes += estimateLessonMinutes(lesson.id, meta, subjects);
-    consumed.add(lesson.id);
-  }
-
-  if (quotaMinutes > 0) {`,
-    "const scheduledToday = lessonsScheduledOn",
-    "ghim bài đúng ngày vào lịch điều chỉnh",
+    "lọc bài theo ngày đủ điều kiện",
   );
 
   source = replaceRequired(
     source,
     "    const pools = remainingBySubject(sortedSubjects, completed, consumed);",
     "    const pools = remainingBySubject(sortedSubjects, completed, consumed, dateISO);",
-    "remainingBySubject(sortedSubjects, completed, consumed, dateISO)",
     "không kéo bài tương lai lên sớm",
+  );
+
+  source = replacePatternRequired(
+    source,
+    /    const pools = remainingBySubject\(sortedSubjects, completed, consumed, dateISO\);[\s\S]*?      if \(!picked\) break;\n    }/,
+    `    const pools = remainingBySubject(sortedSubjects, completed, consumed, dateISO);
+    const order = sortedSubjects.map((subject) => subject.id);
+    const cursors: Record<string, number> = Object.fromEntries(order.map((id) => [id, 0]));
+    const subjectPickCounts: Record<string, number> = Object.fromEntries(
+      order.map((id) => [id, 0]),
+    );
+
+    // Mỗi lần chỉ chọn một ứng viên vừa ngân sách. Ưu tiên bài đúng ngày,
+    // sau đó cân bằng số bài giữa các môn và chọn bài ngắn hơn khi hòa.
+    // Nhờ vậy một môn không thể chiếm hết quỹ giờ trước khi môn mới được xét.
+    let guard = 0;
+    while (guard++ < 1000) {
+      const remainingBudget = newBudget - newMinutes;
+      const candidates = order.flatMap((subjectId, subjectOrder) => {
+        const pool = pools[subjectId] || [];
+        const lesson = pool[cursors[subjectId]];
+        if (!lesson) return [];
+        const estimatedMinutes = estimateLessonMinutes(lesson.id, meta, subjects);
+        if (estimatedMinutes > remainingBudget) return [];
+        return [
+          {
+            subjectId,
+            subjectOrder,
+            lesson,
+            estimatedMinutes,
+            exactDate: lesson.scheduledDate === dateISO,
+          },
+        ];
+      });
+
+      if (candidates.length === 0) break;
+
+      candidates.sort((left, right) => {
+        if (left.exactDate !== right.exactDate) return left.exactDate ? -1 : 1;
+        const pickDifference =
+          subjectPickCounts[left.subjectId] - subjectPickCounts[right.subjectId];
+        if (pickDifference !== 0) return pickDifference;
+        const dateDifference = left.lesson.scheduledDate.localeCompare(
+          right.lesson.scheduledDate,
+        );
+        if (dateDifference !== 0) return dateDifference;
+        const durationDifference = left.estimatedMinutes - right.estimatedMinutes;
+        if (durationDifference !== 0) return durationDifference;
+        return left.subjectOrder - right.subjectOrder;
+      });
+
+      const selected = candidates[0];
+      newLessons.push(selected.lesson);
+      newMinutes += selected.estimatedMinutes;
+      cursors[selected.subjectId] += 1;
+      subjectPickCounts[selected.subjectId] += 1;
+    }`,
+    "const subjectPickCounts:",
+    "phân bổ công bằng trong giới hạn ngày",
   );
 
   return source;
@@ -138,7 +138,6 @@ updateFile("src/components/LearningRoadmap.tsx", (initialSource) => {
     `  shiftedDates = {},
   subjects = SUBJECTS,`,
     `  subjects = SUBJECTS,`,
-    "subjects = SUBJECTS,\n  onSubjectsUpdated",
     "bỏ lịch điều chỉnh khỏi lộ trình gốc",
   );
 
@@ -159,7 +158,6 @@ updateFile("src/components/LearningRoadmap.tsx", (initialSource) => {
     source,
     "  }, [activeLessons, allLessonsFromSubjects, completed, shiftedDates]);",
     "  }, [activeLessons, allLessonsFromSubjects, completed]);",
-    "[activeLessons, allLessonsFromSubjects, completed]);",
     "dependency lộ trình gốc",
   );
 
