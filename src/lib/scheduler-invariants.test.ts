@@ -177,10 +177,7 @@ describe("review invariants", () => {
   });
 
   test("building review work does not mutate catalog ordering", () => {
-    const subjects = catalog([
-      lesson("first", "2029-12-01"),
-      lesson("second", "2030-01-10"),
-    ]);
+    const subjects = catalog([lesson("first", "2029-12-01"), lesson("second", "2030-01-10")]);
     const before = structuredClone(subjects);
 
     pickDayQueue({
@@ -193,10 +190,7 @@ describe("review invariants", () => {
     });
 
     expect(subjects).toEqual(before);
-    expect(subjects[0].milestones[0].lessons.map((item) => item.id)).toEqual([
-      "first",
-      "second",
-    ]);
+    expect(subjects[0].milestones[0].lessons.map((item) => item.id)).toEqual(["first", "second"]);
   });
 });
 
