@@ -95,24 +95,51 @@ export function LessonActionMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64 rounded-2xl p-1.5 z-50">
           <DropdownMenuLabel>Chọn phiên học</DropdownMenuLabel>
-          <DropdownMenuItem onSelect={() => onStart(2)} className="rounded-xl py-2.5 font-medium cursor-pointer">
+          <DropdownMenuItem
+            onSelect={() => onStart(2)}
+            className="rounded-xl py-2.5 font-medium cursor-pointer"
+          >
             <Zap className="mr-2 h-4 w-4 text-amber-500" />
-            <span><strong>Khởi động</strong><span className="ml-2 text-xs text-slate-500">2 phút</span></span>
+            <span>
+              <strong>Khởi động</strong>
+              <span className="ml-2 text-xs text-slate-500">2 phút</span>
+            </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onStart(25)} className="rounded-xl py-2.5 font-medium cursor-pointer">
+          <DropdownMenuItem
+            onSelect={() => onStart(25)}
+            className="rounded-xl py-2.5 font-medium cursor-pointer"
+          >
             <Timer className="mr-2 h-4 w-4 text-rose-600" />
-            <span><strong>Pomodoro</strong><span className="ml-2 text-xs text-slate-500">25 phút</span></span>
+            <span>
+              <strong>Pomodoro</strong>
+              <span className="ml-2 text-xs text-slate-500">25 phút</span>
+            </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onStart(50)} className="rounded-xl py-2.5 font-medium cursor-pointer">
+          <DropdownMenuItem
+            onSelect={() => onStart(50)}
+            className="rounded-xl py-2.5 font-medium cursor-pointer"
+          >
             <Clock3 className="mr-2 h-4 w-4 text-emerald-600" />
-            <span><strong>Deep Work</strong><span className="ml-2 text-xs text-slate-500">50 phút</span></span>
+            <span>
+              <strong>Deep Work</strong>
+              <span className="ml-2 text-xs text-slate-500">50 phút</span>
+            </span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onStart(90)} className="rounded-xl py-2.5 font-medium cursor-pointer">
+          <DropdownMenuItem
+            onSelect={() => onStart(90)}
+            className="rounded-xl py-2.5 font-medium cursor-pointer"
+          >
             <Rocket className="mr-2 h-4 w-4 text-indigo-600" />
-            <span><strong>Siêu tập trung</strong><span className="ml-2 text-xs text-slate-500">90 phút</span></span>
+            <span>
+              <strong>Siêu tập trung</strong>
+              <span className="ml-2 text-xs text-slate-500">90 phút</span>
+            </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={onManualEntry} className="rounded-xl py-2.5 font-medium cursor-pointer">
+          <DropdownMenuItem
+            onSelect={onManualEntry}
+            className="rounded-xl py-2.5 font-medium cursor-pointer"
+          >
             <Pencil className="mr-2 h-4 w-4 text-slate-600" /> Thời lượng tùy chỉnh / ghi thủ công
           </DropdownMenuItem>
         </DropdownMenuContent>

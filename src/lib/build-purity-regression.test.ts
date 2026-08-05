@@ -32,9 +32,7 @@ describe("build purity", () => {
 
   test("removes obsolete source-patching files", async () => {
     for (const fileName of legacyPatchFiles) {
-      await expect(
-        access(new URL(`../../scripts/${fileName}`, import.meta.url)),
-      ).rejects.toThrow();
+      await expect(access(new URL(`../../scripts/${fileName}`, import.meta.url))).rejects.toThrow();
     }
 
     await expect(
@@ -51,10 +49,7 @@ describe("build purity", () => {
       new URL("../components/CourseManagerModal.tsx", import.meta.url),
       "utf8",
     );
-    const routeSource = await readFile(
-      new URL("../routes/index.tsx", import.meta.url),
-      "utf8",
-    );
+    const routeSource = await readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
     expect(plannerSource).toContain("undoStack");
     expect(plannerSource).toContain("unplacedFixedLessons");

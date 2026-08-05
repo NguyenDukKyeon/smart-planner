@@ -111,23 +111,32 @@ export function normalizePushPreferences(value: unknown): PushPreferences {
     typeof time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   const volume = Number(parsed.volume);
   return {
-    enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : DEFAULT_PUSH_PREFERENCES.enabled,
+    enabled:
+      typeof parsed.enabled === "boolean" ? parsed.enabled : DEFAULT_PUSH_PREFERENCES.enabled,
     soundEnabled:
       typeof parsed.soundEnabled === "boolean"
         ? parsed.soundEnabled
         : DEFAULT_PUSH_PREFERENCES.soundEnabled,
-    volume: Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : DEFAULT_PUSH_PREFERENCES.volume,
+    volume: Number.isFinite(volume)
+      ? Math.min(1, Math.max(0, volume))
+      : DEFAULT_PUSH_PREFERENCES.volume,
     morningEnabled:
       typeof parsed.morningEnabled === "boolean"
         ? parsed.morningEnabled
         : DEFAULT_PUSH_PREFERENCES.morningEnabled,
-    morningTime: isTime(parsed.morningTime) ? parsed.morningTime : DEFAULT_PUSH_PREFERENCES.morningTime,
+    morningTime: isTime(parsed.morningTime)
+      ? parsed.morningTime
+      : DEFAULT_PUSH_PREFERENCES.morningTime,
     eveningEnabled:
       typeof parsed.eveningEnabled === "boolean"
         ? parsed.eveningEnabled
         : DEFAULT_PUSH_PREFERENCES.eveningEnabled,
-    eveningTime: isTime(parsed.eveningTime) ? parsed.eveningTime : DEFAULT_PUSH_PREFERENCES.eveningTime,
-    endOfDayTime: isTime(parsed.endOfDayTime) ? parsed.endOfDayTime : DEFAULT_PUSH_PREFERENCES.endOfDayTime,
+    eveningTime: isTime(parsed.eveningTime)
+      ? parsed.eveningTime
+      : DEFAULT_PUSH_PREFERENCES.eveningTime,
+    endOfDayTime: isTime(parsed.endOfDayTime)
+      ? parsed.endOfDayTime
+      : DEFAULT_PUSH_PREFERENCES.endOfDayTime,
     enableStreakGuard:
       typeof parsed.enableStreakGuard === "boolean"
         ? parsed.enableStreakGuard

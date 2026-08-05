@@ -10,19 +10,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SUBJECTS, type Lesson, type Subject } from "@/lib/mock-data";
-import {
-  buildFlexiblePlan,
-  findLessonById,
-  type PlanDay,
-} from "@/lib/planner";
+import { buildFlexiblePlan, findLessonById, type PlanDay } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
-import {
-  daysBetweenISO,
-  displayDate,
-  getSundayISO,
-  todayISO,
-  weekdayVi,
-} from "@/lib/date-utils";
+import { daysBetweenISO, displayDate, getSundayISO, todayISO, weekdayVi } from "@/lib/date-utils";
 import {
   updateLessonDetails,
   type CatalogUpdateOptions,
@@ -79,14 +69,8 @@ type UndoEntry = {
   toDateISO: string;
 };
 
-function catalogUpdateSucceeded(
-  result: CatalogUpdateResult | boolean | void,
-): boolean {
-  return result == null
-    ? true
-    : typeof result === "boolean"
-      ? result
-      : result.ok;
+function catalogUpdateSucceeded(result: CatalogUpdateResult | boolean | void): boolean {
+  return result == null ? true : typeof result === "boolean" ? result : result.ok;
 }
 
 function isTextEditingTarget(target: EventTarget | null): boolean {
@@ -100,31 +84,30 @@ function isTextEditingTarget(target: EventTarget | null): boolean {
 }
 
 function getLessonMode(lesson: Lesson): LessonMode {
-  return (
-    (lesson as Lesson & { scheduleMode?: LessonMode }).scheduleMode ?? "flexible"
-  );
+  return (lesson as Lesson & { scheduleMode?: LessonMode }).scheduleMode ?? "flexible";
 }
 
 function getUnplacedFixedLessons(day: PlanDay): Lesson[] {
   return (
-    day.queue as typeof day.queue & {
-      unplacedFixedLessons?: Lesson[];
-    }
-  ).unplacedFixedLessons ?? [];
+    (
+      day.queue as typeof day.queue & {
+        unplacedFixedLessons?: Lesson[];
+      }
+    ).unplacedFixedLessons ?? []
+  );
 }
 
 function getUnplacedFixedMinutes(day: PlanDay): number {
   return (
-    day.queue as typeof day.queue & {
-      unplacedFixedMinutes?: number;
-    }
-  ).unplacedFixedMinutes ?? 0;
+    (
+      day.queue as typeof day.queue & {
+        unplacedFixedMinutes?: number;
+      }
+    ).unplacedFixedMinutes ?? 0
+  );
 }
 
-function createLessonDragPreview(
-  event: ReactDragEvent<HTMLElement>,
-  item: DisplayLesson,
-) {
+function createLessonDragPreview(event: ReactDragEvent<HTMLElement>, item: DisplayLesson) {
   const preview = document.createElement("div");
   preview.textContent = `${item.subjectEmoji} ${item.lesson.title}`;
   Object.assign(preview.style, {
@@ -165,10 +148,7 @@ export function FlexiblePlanner({
   const sortedSubjects = useMemo(() => sortSubjects(subjects), [subjects]);
 
   useEffect(() => {
-    if (
-      subjectId !== "all" &&
-      !sortedSubjects.some((subject) => subject.id === subjectId)
-    ) {
+    if (subjectId !== "all" && !sortedSubjects.some((subject) => subject.id === subjectId)) {
       setSubjectId("all");
     }
   }, [sortedSubjects, subjectId]);
@@ -230,9 +210,7 @@ export function FlexiblePlanner({
             subjectId: subject.id,
             subjectName: subject.name,
             subjectEmoji: subject.emoji,
-            topic:
-              lesson.topic ||
-              (milestone.title !== "Toàn bộ bài học" ? milestone.title : ""),
+            topic: lesson.topic || (milestone.title !== "Toàn bộ bài học" ? milestone.title : ""),
           });
         }
       }
@@ -320,16 +298,11 @@ export function FlexiblePlanner({
   }, [days]);
 
   const visibleLessonCount = useMemo(
-    () =>
-      [...displayLessonsByDate.values()].reduce(
-        (total, items) => total + items.length,
-        0,
-      ),
+    () => [...displayLessonsByDate.values()].reduce((total, items) => total + items.length, 0),
     [displayLessonsByDate],
   );
 
-  const selectedSubject =
-    subjectTabs.find((subject) => subject.id === subjectId) ?? subjectTabs[0];
+  const selectedSubject = subjectTabs.find((subject) => subject.id === subjectId) ?? subjectTabs[0];
 
   const undoLastMove = useCallback(() => {
     const entry = undoStack.at(-1);
@@ -444,8 +417,8 @@ export function FlexiblePlanner({
               Lịch linh hoạt
             </h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              Kéo bằng tay cầm sang ngày khác. Bài linh hoạt lấy ngày thả làm ngày sớm
-              nhất; bài cố định chuyển đúng sang ngày đó.
+              Kéo bằng tay cầm sang ngày khác. Bài linh hoạt lấy ngày thả làm ngày sớm nhất; bài cố
+              định chuyển đúng sang ngày đó.
             </p>
           </div>
 
@@ -491,14 +464,14 @@ export function FlexiblePlanner({
                 {undoStack.length}
               </span>
             )}
-            <span className="hidden text-[10px] font-medium text-slate-400 sm:inline">
-              Ctrl+Z
-            </span>
+            <span className="hidden text-[10px] font-medium text-slate-400 sm:inline">Ctrl+Z</span>
           </button>
           <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800">
             Đang xem: {selectedSubject?.emoji} {selectedSubject?.name}
           </span>
-          <span>{visibleLessonCount} mục trong {days.length} ngày</span>
+          <span>
+            {visibleLessonCount} mục trong {days.length} ngày
+          </span>
           <span className="inline-flex items-center gap-1">
             <Move className="h-3.5 w-3.5" />
             Trên điện thoại hoặc bàn phím, dùng nút lùi/tiến một ngày.
@@ -517,12 +490,9 @@ export function FlexiblePlanner({
       <div className="space-y-3">
         {weeks.map((week, weekIndex) => {
           const collapsed =
-            userToggledWeeks[week.id] !== undefined
-              ? userToggledWeeks[week.id]
-              : weekIndex > 0;
+            userToggledWeeks[week.id] !== undefined ? userToggledWeeks[week.id] : weekIndex > 0;
           const weekVisibleCount = week.days.reduce(
-            (total, day) =>
-              total + (displayLessonsByDate.get(day.dateISO)?.length ?? 0),
+            (total, day) => total + (displayLessonsByDate.get(day.dateISO)?.length ?? 0),
             0,
           );
 
@@ -544,9 +514,7 @@ export function FlexiblePlanner({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-base font-bold text-slate-900">
-                      Tuần {week.number}
-                    </p>
+                    <p className="text-base font-bold text-slate-900">Tuần {week.number}</p>
                     {weekIndex === 0 && (
                       <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                         Tuần này
@@ -576,9 +544,7 @@ export function FlexiblePlanner({
                         today={today}
                         lessons={displayLessonsByDate.get(day.dateISO) ?? []}
                         previousDate={
-                          globalDayIndex > 0
-                            ? days[globalDayIndex - 1]?.dateISO
-                            : undefined
+                          globalDayIndex > 0 ? days[globalDayIndex - 1]?.dateISO : undefined
                         }
                         nextDate={days[globalDayIndex + 1]?.dateISO}
                         draggedLessonId={draggedLessonId}
@@ -675,19 +641,14 @@ function PlanDayCard({
   dragOverDate: string | null;
   recentlyMovedLessonId: string | null;
   onSetDayHours: (dateISO: string, hours: number | null) => void;
-  onDragStart: (
-    event: ReactDragEvent<HTMLElement>,
-    item: DisplayLesson,
-  ) => void;
+  onDragStart: (event: ReactDragEvent<HTMLElement>, item: DisplayLesson) => void;
   onDragEnd: () => void;
   onDragOverDate: (dateISO: string | null) => void;
   onDropLesson: (lessonId: string, targetDateISO: string) => void;
   onMoveLesson: (lessonId: string, targetDateISO: string) => boolean;
 }) {
   const isToday = day.dateISO === today;
-  const isDropTarget = Boolean(
-    draggedLessonId && dragOverDate === day.dateISO,
-  );
+  const isDropTarget = Boolean(draggedLessonId && dragOverDate === day.dateISO);
   const unplacedFixedMinutes = getUnplacedFixedMinutes(day);
 
   return (
@@ -700,10 +661,7 @@ function PlanDayCard({
       }}
       onDragLeave={(event) => {
         const relatedTarget = event.relatedTarget;
-        if (
-          !(relatedTarget instanceof Node) ||
-          !event.currentTarget.contains(relatedTarget)
-        ) {
+        if (!(relatedTarget instanceof Node) || !event.currentTarget.contains(relatedTarget)) {
           onDragOverDate(null);
         }
       }}
@@ -718,9 +676,7 @@ function PlanDayCard({
       }}
       className={cn(
         "relative min-w-0 space-y-2.5 rounded-xl border p-3.5 transition-all",
-        isToday
-          ? "border-emerald-200/80 bg-emerald-50/50"
-          : "border-slate-200/70 bg-slate-50/70",
+        isToday ? "border-emerald-200/80 bg-emerald-50/50" : "border-slate-200/70 bg-slate-50/70",
         isDropTarget &&
           "scale-[1.01] border-emerald-500 bg-emerald-50 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]",
       )}
@@ -754,10 +710,7 @@ function PlanDayCard({
               onChange={(event) => {
                 const value = Number(event.target.value);
                 if (Number.isFinite(value)) {
-                  onSetDayHours(
-                    day.dateISO,
-                    normalizeDailyStudyHours(value),
-                  );
+                  onSetDayHours(day.dateISO, normalizeDailyStudyHours(value));
                 }
               }}
               className="h-7 w-16 rounded-lg border-slate-200 bg-white px-1 text-center text-xs font-bold"
@@ -772,9 +725,7 @@ function PlanDayCard({
           {day.queue.overloadMinutes > 0
             ? `Quá: ${day.queue.overloadMinutes}p`
             : `Dự phòng: ${day.queue.unallocatedMinutes}p`}
-          {unplacedFixedMinutes > 0
-            ? ` • Chưa xếp được: ${unplacedFixedMinutes}p`
-            : ""}
+          {unplacedFixedMinutes > 0 ? ` • Chưa xếp được: ${unplacedFixedMinutes}p` : ""}
         </p>
       </header>
 
@@ -803,9 +754,7 @@ function PlanDayCard({
               : "border-slate-300 text-slate-500",
           )}
         >
-          {isDropTarget
-            ? "Thả bài vào ngày này"
-            : "Không có bài của môn đang xem."}
+          {isDropTarget ? "Thả bài vào ngày này" : "Không có bài của môn đang xem."}
         </div>
       )}
     </article>
@@ -827,10 +776,7 @@ function LessonCard({
   recentlyMoved: boolean;
   previousDate?: string;
   nextDate?: string;
-  onDragStart: (
-    event: ReactDragEvent<HTMLElement>,
-    item: DisplayLesson,
-  ) => void;
+  onDragStart: (event: ReactDragEvent<HTMLElement>, item: DisplayLesson) => void;
   onDragEnd: () => void;
   onMoveLesson: (lessonId: string, targetDateISO: string) => boolean;
 }) {
@@ -891,9 +837,7 @@ function LessonCard({
               <span
                 className={cn(
                   "rounded px-1.5 py-0.5 font-semibold",
-                  mode === "fixed"
-                    ? "bg-violet-100 text-violet-800"
-                    : "bg-sky-100 text-sky-800",
+                  mode === "fixed" ? "bg-violet-100 text-violet-800" : "bg-sky-100 text-sky-800",
                 )}
               >
                 {mode === "fixed" ? "Cố định" : "Linh hoạt"}
@@ -911,10 +855,7 @@ function LessonCard({
               <button
                 type="button"
                 disabled={!previousDate}
-                onClick={() =>
-                  previousDate &&
-                  onMoveLesson(item.lesson.id, previousDate)
-                }
+                onClick={() => previousDate && onMoveLesson(item.lesson.id, previousDate)}
                 className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
                 aria-label={`Chuyển ${item.lesson.title} lùi một ngày`}
                 title="Lùi một ngày"
@@ -925,9 +866,7 @@ function LessonCard({
               <button
                 type="button"
                 disabled={!nextDate}
-                onClick={() =>
-                  nextDate && onMoveLesson(item.lesson.id, nextDate)
-                }
+                onClick={() => nextDate && onMoveLesson(item.lesson.id, nextDate)}
                 className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
                 aria-label={`Chuyển ${item.lesson.title} tiến một ngày`}
                 title="Tiến một ngày"

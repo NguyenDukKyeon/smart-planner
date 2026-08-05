@@ -252,7 +252,8 @@ export function normalizeStoredTimerState(value: unknown): StoredTimerState | nu
     "session_waiting",
   ]);
   const status =
-    typeof parsed.status === "string" && allowedStatuses.has(parsed.status as StoredTimerState["status"])
+    typeof parsed.status === "string" &&
+    allowedStatuses.has(parsed.status as StoredTimerState["status"])
       ? (parsed.status as StoredTimerState["status"])
       : inferredStatus;
   const ambientSound: AmbientSoundType =
@@ -278,7 +279,10 @@ export function normalizeStoredTimerState(value: unknown): StoredTimerState | nu
     durationMinutes,
     shortBreakMinutes: finiteNonNegativeNumber(parsed.shortBreakMinutes, 10),
     longBreakMinutes: finiteNonNegativeNumber(parsed.longBreakMinutes, 15),
-    longBreakTargetCycles: Math.max(1, Math.round(finitePositiveNumber(parsed.longBreakTargetCycles, 4))),
+    longBreakTargetCycles: Math.max(
+      1,
+      Math.round(finitePositiveNumber(parsed.longBreakTargetCycles, 4)),
+    ),
     lastFocusDuration,
     isRunning: parsed.isRunning === true,
     displayMode,
@@ -288,11 +292,16 @@ export function normalizeStoredTimerState(value: unknown): StoredTimerState | nu
         ? parsed.startTimestamp
         : null,
     accumulatedSeconds: finiteNonNegativeNumber(parsed.accumulatedSeconds, 0),
-    completedPomodoros: Math.max(0, Math.round(finiteNonNegativeNumber(parsed.completedPomodoros, 0))),
+    completedPomodoros: Math.max(
+      0,
+      Math.round(finiteNonNegativeNumber(parsed.completedPomodoros, 0)),
+    ),
     ambientSound,
     isCompleted: typeof parsed.isCompleted === "boolean" ? parsed.isCompleted : undefined,
     targetMinutes:
-      typeof parsed.targetMinutes === "number" && Number.isFinite(parsed.targetMinutes) && parsed.targetMinutes > 0
+      typeof parsed.targetMinutes === "number" &&
+      Number.isFinite(parsed.targetMinutes) &&
+      parsed.targetMinutes > 0
         ? parsed.targetMinutes
         : undefined,
     reviewTaskId:
@@ -314,7 +323,8 @@ export function normalizeStoredTimerState(value: unknown): StoredTimerState | nu
       : [],
     status,
     activePresetId: typeof parsed.activePresetId === "string" ? parsed.activePresetId : undefined,
-    pendingPresetId: typeof parsed.pendingPresetId === "string" ? parsed.pendingPresetId : undefined,
+    pendingPresetId:
+      typeof parsed.pendingPresetId === "string" ? parsed.pendingPresetId : undefined,
     expiredAt: typeof parsed.expiredAt === "string" ? parsed.expiredAt : undefined,
   };
 }
@@ -507,10 +517,7 @@ export function acquireTimerLock(sessionId: string, ownerId = getTimerTabId()): 
   }
 }
 
-export function acquireOrRefreshTimerLock(
-  sessionId: string,
-  ownerId = getTimerTabId(),
-): boolean {
+export function acquireOrRefreshTimerLock(sessionId: string, ownerId = getTimerTabId()): boolean {
   return refreshTimerLock(sessionId, ownerId) || acquireTimerLock(sessionId, ownerId);
 }
 

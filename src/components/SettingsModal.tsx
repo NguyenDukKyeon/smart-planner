@@ -147,7 +147,12 @@ export function SettingsModal({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs key={initialTab} defaultValue={initialTab} orientation="vertical" className="grid min-h-0 flex-1 md:grid-cols-[220px_1fr]">
+        <Tabs
+          key={initialTab}
+          defaultValue={initialTab}
+          orientation="vertical"
+          className="grid min-h-0 flex-1 md:grid-cols-[220px_1fr]"
+        >
           <TabsList className="flex h-auto flex-row gap-1 overflow-x-auto rounded-none border-b bg-white p-3 md:flex-col md:items-stretch md:border-b-0 md:border-r">
             <SettingsNav value="pomodoro" icon={TimerReset} label="Pomodoro Studio" />
             <SettingsNav value="reminders" icon={Bell} label="Nhắc học" />
@@ -201,7 +206,9 @@ export function SettingsModal({
                   </span>
                   <div>
                     <h2 className="font-serif text-xl font-semibold text-slate-900">Giao diện</h2>
-                    <p className="text-sm text-slate-500">Giữ phong cách hiện tại và điều chỉnh mức chuyển động.</p>
+                    <p className="text-sm text-slate-500">
+                      Giữ phong cách hiện tại và điều chỉnh mức chuyển động.
+                    </p>
                   </div>
                 </div>
                 <AppearanceRow
@@ -226,9 +233,12 @@ export function SettingsModal({
                     <Database className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-serif text-xl font-semibold text-slate-900">Lộ trình & dữ liệu</h2>
+                    <h2 className="font-serif text-xl font-semibold text-slate-900">
+                      Lộ trình & dữ liệu
+                    </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      Lộ trình mẫu, nhập file, xuất dữ liệu và sao lưu được quản lý trong một màn hình riêng.
+                      Lộ trình mẫu, nhập file, xuất dữ liệu và sao lưu được quản lý trong một màn
+                      hình riêng.
                     </p>
                     <Button
                       type="button"
@@ -248,11 +258,19 @@ export function SettingsModal({
                 <div className="flex items-start gap-3">
                   <RotateCcw className="mt-0.5 h-5 w-5 text-amber-700" />
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-amber-950">Bắt đầu lại quy trình thiết lập</h3>
+                    <h3 className="font-semibold text-amber-950">
+                      Bắt đầu lại quy trình thiết lập
+                    </h3>
                     <p className="mt-1 text-sm text-amber-800">
-                      Mở lại màn hình chọn không gian trống hoặc lộ trình mẫu. Dữ liệu chỉ thay đổi sau khi bạn xác nhận.
+                      Mở lại màn hình chọn không gian trống hoặc lộ trình mẫu. Dữ liệu chỉ thay đổi
+                      sau khi bạn xác nhận.
                     </p>
-                    <Button type="button" variant="outline" className="mt-3 rounded-xl" onClick={onResetOnboarding}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3 rounded-xl"
+                      onClick={onResetOnboarding}
+                    >
                       Mở lại onboarding
                     </Button>
                   </div>
@@ -265,15 +283,26 @@ export function SettingsModal({
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-red-950">Khu vực nguy hiểm</h3>
                     <p className="mt-1 text-sm text-red-800">
-                      Các thao tác sau có thể thay đổi toàn bộ workspace. Ứng dụng luôn tạo snapshot hoàn tác trước khi thực hiện.
+                      Các thao tác sau có thể thay đổi toàn bộ workspace. Ứng dụng luôn tạo snapshot
+                      hoàn tác trước khi thực hiện.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {hasFactoryResetRollback && (
-                        <Button type="button" variant="outline" className="rounded-xl" onClick={handleRestoreFactoryReset}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-xl"
+                          onClick={handleRestoreFactoryReset}
+                        >
                           Khôi phục lần đặt lại gần nhất
                         </Button>
                       )}
-                      <Button type="button" variant="destructive" className="rounded-xl" onClick={handleFactoryReset}>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        className="rounded-xl"
+                        onClick={handleFactoryReset}
+                      >
                         Đặt lại toàn bộ ứng dụng
                       </Button>
                     </div>

@@ -138,7 +138,6 @@ export function studyMinutesInWeek(
   return Math.round(seconds / 60);
 }
 
-
 export function reviewSecondsForTask(sessions: StudySession[], taskId: string): number {
   if (!taskId.startsWith("review:")) return 0;
   return sessions

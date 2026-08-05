@@ -166,7 +166,9 @@ export const INITIAL_LESSON_XP: Record<string, number> = Object.fromEntries(
   ALL_LESSONS.filter((lesson) => lesson.initialDone).map((lesson) => [lesson.id, lesson.xp]),
 );
 
-const roadmapDates = ALL_LESSONS.map((lesson) => lesson.scheduledDate).filter(Boolean).sort();
+const roadmapDates = ALL_LESSONS.map((lesson) => lesson.scheduledDate)
+  .filter(Boolean)
+  .sort();
 
 export const ROADMAP_STATS = {
   totalLessons: ALL_LESSONS.length,

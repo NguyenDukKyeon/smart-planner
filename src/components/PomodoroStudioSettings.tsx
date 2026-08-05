@@ -48,11 +48,14 @@ export function PomodoroStudioSettings() {
     <div className="space-y-5">
       <section className="rounded-3xl border border-rose-100 bg-gradient-to-br from-white to-rose-50/70 p-5 shadow-xs">
         <div className="flex items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-100 text-xl">🍅</div>
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-100 text-xl">
+            🍅
+          </div>
           <div>
             <h2 className="font-serif text-xl font-semibold text-slate-900">Pomodoro Studio</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Thiết lập thời lượng, giờ nghỉ và cách Timer hoạt động. Đây là nơi cấu hình, không phải một Timer thứ hai.
+              Thiết lập thời lượng, giờ nghỉ và cách Timer hoạt động. Đây là nơi cấu hình, không
+              phải một Timer thứ hai.
             </p>
           </div>
         </div>
@@ -216,7 +219,9 @@ export function PomodoroStudioSettings() {
             <Label className="flex items-center gap-2 text-sm font-semibold">
               <Volume2 className="h-4 w-4" /> Âm lượng
             </Label>
-            <span className="text-xs font-bold text-slate-600">{Math.round(preferences.soundVolume * 100)}%</span>
+            <span className="text-xs font-bold text-slate-600">
+              {Math.round(preferences.soundVolume * 100)}%
+            </span>
           </div>
           <Slider
             value={[preferences.soundVolume * 100]}

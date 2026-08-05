@@ -81,14 +81,15 @@ export function AddLessonModal({
   }, [open, defaultSubjectName, currentSubjects]);
 
   const subjectName =
-    subjectChoice === NEW_SUBJECT ? customSubjectName.trim() : selectedSubject?.name ?? "";
+    subjectChoice === NEW_SUBJECT ? customSubjectName.trim() : (selectedSubject?.name ?? "");
 
   const topicName =
     topicChoice === NO_TOPIC
       ? ""
       : topicChoice === NEW_TOPIC
         ? customTopic.trim()
-        : selectedSubject?.milestones.find((milestone) => milestone.id === topicChoice)?.title ?? "";
+        : (selectedSubject?.milestones.find((milestone) => milestone.id === topicChoice)?.title ??
+          "");
 
   const handleSubjectChange = (value: string) => {
     setSubjectChoice(value);
@@ -152,9 +153,7 @@ export function AddLessonModal({
     // the exact chapter selected by the user.
     if (selectedSubject && topicChoice !== NO_TOPIC && topicChoice !== NEW_TOPIC) {
       const addedLesson = updatedSubjects
-        .flatMap((subject) =>
-          subject.milestones.flatMap((milestone) => milestone.lessons),
-        )
+        .flatMap((subject) => subject.milestones.flatMap((milestone) => milestone.lessons))
         .find((lesson) => !previousLessonIds.has(lesson.id));
       if (addedLesson) {
         updatedSubjects = moveLessonsToTopic(
@@ -290,11 +289,13 @@ export function AddLessonModal({
                 autoFocus
               />
             )}
-            {selectedSubject && selectedSubject.milestones.length === 0 && topicChoice !== NEW_TOPIC && (
-              <p className="text-[11px] text-amber-700">
-                Môn này chưa có chủ đề. Chọn “Tạo chủ đề mới” để tạo chủ đề đầu tiên.
-              </p>
-            )}
+            {selectedSubject &&
+              selectedSubject.milestones.length === 0 &&
+              topicChoice !== NEW_TOPIC && (
+                <p className="text-[11px] text-amber-700">
+                  Môn này chưa có chủ đề. Chọn “Tạo chủ đề mới” để tạo chủ đề đầu tiên.
+                </p>
+              )}
           </div>
 
           <div className="space-y-1.5">

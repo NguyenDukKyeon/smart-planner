@@ -253,11 +253,7 @@ function Dashboard() {
   }, [reloadStorageBoundaries]);
 
   useEffect(() => {
-    if (
-      timerRecoveryAttemptedRef.current ||
-      !workspaceStorageLoaded ||
-      subjects.length === 0
-    ) {
+    if (timerRecoveryAttemptedRef.current || !workspaceStorageLoaded || subjects.length === 0) {
       return;
     }
     timerRecoveryAttemptedRef.current = true;
@@ -275,9 +271,7 @@ function Dashboard() {
       id: stored.lessonId,
       title: stored.lessonTitle,
       xp: lesson?.xp ?? 0,
-      isCompleted: stored.reviewTaskId
-        ? false
-        : Boolean(state.completedLessons[stored.lessonId]),
+      isCompleted: stored.reviewTaskId ? false : Boolean(state.completedLessons[stored.lessonId]),
       targetMinutes: stored.targetMinutes ?? lesson?.plannedDurationMinutes,
       reviewTaskId: stored.reviewTaskId,
       reviewTargetMinutes: stored.reviewTargetMinutes,
@@ -397,8 +391,7 @@ function Dashboard() {
     workspaceStorageLoaded,
   ]);
 
-  const todayStudyDayRecorded =
-    state.habitLog[todayISO()]?.__study_day_complete__ === true;
+  const todayStudyDayRecorded = state.habitLog[todayISO()]?.__study_day_complete__ === true;
 
   useEffect(() => {
     if (todayStudyDayComplete == null || todayStudyDayRecorded === todayStudyDayComplete) return;
@@ -461,10 +454,7 @@ function Dashboard() {
   }, [hydrated, state, storageBlocked, subjects, workspaceStorageLoaded]);
 
   const updateSubjectsSafely = useCallback(
-    (
-      nextSubjects: Subject[],
-      options: CatalogUpdateOptions = {},
-    ): CatalogUpdateResult => {
+    (nextSubjects: Subject[], options: CatalogUpdateOptions = {}): CatalogUpdateResult => {
       if (storageBlocked) {
         const error = "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.";
         toast.error(error);
@@ -501,11 +491,11 @@ function Dashboard() {
       const stored = getStoredTimerState();
       const hasUnfinishedTimer = Boolean(
         stored &&
-          (stored.isRunning ||
-            stored.accumulatedSeconds > 0 ||
-            ["paused", "expired", "warmup_completed", "breaking", "session_waiting"].includes(
-              stored.status,
-            )),
+        (stored.isRunning ||
+          stored.accumulatedSeconds > 0 ||
+          ["paused", "expired", "warmup_completed", "breaking", "session_waiting"].includes(
+            stored.status,
+          )),
       );
       if (stored && hasUnfinishedTimer) {
         const storedLesson = findLessonById(stored.lessonId, subjects);
@@ -896,8 +886,12 @@ function Dashboard() {
           <TabsContent value="plan" className="mt-4 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-serif text-xl font-semibold text-slate-900">Kế hoạch học tập</h2>
-                <p className="text-sm text-slate-500">Phân bổ thời gian tại đây; nội dung môn và bài được quản lý riêng.</p>
+                <h2 className="font-serif text-xl font-semibold text-slate-900">
+                  Kế hoạch học tập
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Phân bổ thời gian tại đây; nội dung môn và bài được quản lý riêng.
+                </p>
               </div>
               <CourseManagerModal
                 currentSubjects={subjects}
@@ -1003,7 +997,11 @@ function Dashboard() {
                 onBuyStreakFreeze={buyStreakFreeze}
                 onClaimReward={claimReward}
                 onAddCustomReward={addCustomReward}
-                activeTimerLesson={activeTimerLesson ? { id: activeTimerLesson.id, title: activeTimerLesson.title } : null}
+                activeTimerLesson={
+                  activeTimerLesson
+                    ? { id: activeTimerLesson.id, title: activeTimerLesson.title }
+                    : null
+                }
               />
             </Suspense>
           </LazyModuleBoundary>

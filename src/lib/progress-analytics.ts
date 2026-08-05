@@ -67,10 +67,7 @@ export function getXpProgressInCurrentLevel(totalXp: number): {
     level++;
   }
   const requiredLevelXp = getXpForLevelStep(level);
-  const percentage = Math.min(
-    100,
-    Math.max(0, Math.round((remainingXp / requiredLevelXp) * 100))
-  );
+  const percentage = Math.min(100, Math.max(0, Math.round((remainingXp / requiredLevelXp) * 100)));
   return {
     level,
     currentLevelXp: remainingXp,
@@ -168,7 +165,10 @@ export function calculateSessionRewards(durationMinutes: number): { xp: number; 
   };
 }
 
-export function studyMinutesOnDate(sessions: ProgressState["studySessions"], dateISO: string): number {
+export function studyMinutesOnDate(
+  sessions: ProgressState["studySessions"],
+  dateISO: string,
+): number {
   const secs = studySecondsOnDate(sessions, dateISO);
   return Math.round(secs / 60);
 }

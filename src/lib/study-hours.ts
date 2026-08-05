@@ -6,10 +6,7 @@ export const HIGH_DAILY_STUDY_HOURS_THRESHOLD = 12;
 export function normalizeDailyStudyHours(value: number): number {
   if (!Number.isFinite(value)) return MIN_DAILY_STUDY_HOURS;
 
-  const clamped = Math.min(
-    MAX_DAILY_STUDY_HOURS,
-    Math.max(MIN_DAILY_STUDY_HOURS, value),
-  );
+  const clamped = Math.min(MAX_DAILY_STUDY_HOURS, Math.max(MIN_DAILY_STUDY_HOURS, value));
   const rounded = Math.round(clamped / DAILY_STUDY_HOURS_STEP) * DAILY_STUDY_HOURS_STEP;
 
   return Number(rounded.toFixed(1));

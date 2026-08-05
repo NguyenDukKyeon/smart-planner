@@ -145,7 +145,9 @@ function inferTopicFromTitle(title: string): string | undefined {
   if (!title.includes(" - ")) return undefined;
   const [prefix] = title.split(" - ");
   const normalized = prefix.toLowerCase();
-  return normalized.includes("chương") || normalized.includes("unit") || normalized.includes("chủ đề")
+  return normalized.includes("chương") ||
+    normalized.includes("unit") ||
+    normalized.includes("chủ đề")
     ? prefix.trim()
     : undefined;
 }
@@ -199,16 +201,26 @@ export function parseCSVInputWithDiagnostics(csvText: string): ImportParseResult
   let titleIdx = headerCols.findIndex((header) => header === "lesson_name");
   if (titleIdx === -1) {
     titleIdx = headerCols.findIndex(
-      (header) => header.includes("bài") || header.includes("tên bài") || header === "title" || header === "name",
+      (header) =>
+        header.includes("bài") ||
+        header.includes("tên bài") ||
+        header === "title" ||
+        header === "name",
     );
   }
   const minutesIdx = headerCols.findIndex(
-    (header) => header === "target_minutes" || header.includes("phút") || header.includes("thời gian") || header === "minutes",
+    (header) =>
+      header === "target_minutes" ||
+      header.includes("phút") ||
+      header.includes("thời gian") ||
+      header === "minutes",
   );
   const dateIdx = headerCols.findIndex(
     (header) => header === "planned_date" || header.includes("ngày") || header === "date",
   );
-  const xpIdx = headerCols.findIndex((header) => header === "xp_reward" || header.includes("xp") || header.includes("điểm"));
+  const xpIdx = headerCols.findIndex(
+    (header) => header === "xp_reward" || header.includes("xp") || header.includes("điểm"),
+  );
   const hasHeader = subjectIdx !== -1 || titleIdx !== -1 || topicIdx !== -1 || dateIdx !== -1;
   const sourceLines = hasHeader ? lines.slice(1) : lines;
   const issues: ImportIssue[] = [];
@@ -216,9 +228,23 @@ export function parseCSVInputWithDiagnostics(csvText: string): ImportParseResult
 
   for (const source of sourceLines) {
     const columns = parseCsvLine(source.text);
-    const subject = String(hasHeader ? columns[subjectIdx] ?? "" : columns[0] ?? "").trim();
-    const topic = String(hasHeader && topicIdx !== -1 ? columns[topicIdx] ?? "" : hasHeader ? "" : columns.length >= 6 ? columns[1] ?? "" : "").trim();
-    const title = String(hasHeader ? columns[titleIdx] ?? "" : columns.length >= 6 ? columns[2] ?? "" : columns[1] ?? "").trim();
+    const subject = String(hasHeader ? (columns[subjectIdx] ?? "") : (columns[0] ?? "")).trim();
+    const topic = String(
+      hasHeader && topicIdx !== -1
+        ? (columns[topicIdx] ?? "")
+        : hasHeader
+          ? ""
+          : columns.length >= 6
+            ? (columns[1] ?? "")
+            : "",
+    ).trim();
+    const title = String(
+      hasHeader
+        ? (columns[titleIdx] ?? "")
+        : columns.length >= 6
+          ? (columns[2] ?? "")
+          : (columns[1] ?? ""),
+    ).trim();
     if (!subject) {
       issues.push({ row: source.row, message: "Thiếu subject_name (tên môn học)." });
       continue;
@@ -227,12 +253,25 @@ export function parseCSVInputWithDiagnostics(csvText: string): ImportParseResult
       issues.push({ row: source.row, message: "Thiếu lesson_name (tên bài học)." });
       continue;
     }
-    const minutesRaw = hasHeader && minutesIdx !== -1 ? columns[minutesIdx] : columns.length >= 6 ? columns[3] : columns[2];
-    const dateRaw = hasHeader && dateIdx !== -1 ? columns[dateIdx] : columns.length >= 6 ? columns[4] : columns[3];
-    const xpRaw = hasHeader && xpIdx !== -1 ? columns[xpIdx] : columns.length >= 6 ? columns[5] : columns[4];
+    const minutesRaw =
+      hasHeader && minutesIdx !== -1
+        ? columns[minutesIdx]
+        : columns.length >= 6
+          ? columns[3]
+          : columns[2];
+    const dateRaw =
+      hasHeader && dateIdx !== -1
+        ? columns[dateIdx]
+        : columns.length >= 6
+          ? columns[4]
+          : columns[3];
+    const xpRaw =
+      hasHeader && xpIdx !== -1 ? columns[xpIdx] : columns.length >= 6 ? columns[5] : columns[4];
     items.push({
-      subjectId: hasHeader && subjectIdIdx !== -1 ? columns[subjectIdIdx]?.trim() || undefined : undefined,
-      lessonId: hasHeader && lessonIdIdx !== -1 ? columns[lessonIdIdx]?.trim() || undefined : undefined,
+      subjectId:
+        hasHeader && subjectIdIdx !== -1 ? columns[subjectIdIdx]?.trim() || undefined : undefined,
+      lessonId:
+        hasHeader && lessonIdIdx !== -1 ? columns[lessonIdIdx]?.trim() || undefined : undefined,
       subject,
       topic: topic || inferTopicFromTitle(title),
       title,
@@ -256,7 +295,11 @@ export function parseJSONInputWithDiagnostics(jsonText: string): ImportParseResu
     return { items: [], issues: [{ row: 1, message: "JSON không hợp lệ." }], totalRows: 0 };
   }
   if (!Array.isArray(parsed)) {
-    return { items: [], issues: [{ row: 1, message: "JSON phải là một mảng bài học." }], totalRows: 0 };
+    return {
+      items: [],
+      issues: [{ row: 1, message: "JSON phải là một mảng bài học." }],
+      totalRows: 0,
+    };
   }
   const items: ImportedRawLesson[] = [];
   const issues: ImportIssue[] = [];
@@ -279,7 +322,15 @@ export function parseJSONInputWithDiagnostics(jsonText: string): ImportParseResu
       issues.push({ row, message: "Thiếu lesson_name (tên bài học)." });
       return;
     }
-    let topic = String(item.topic || item.chu_de || item.chuDe || item.chuong || item.milestone || item.category || "").trim();
+    let topic = String(
+      item.topic ||
+        item.chu_de ||
+        item.chuDe ||
+        item.chuong ||
+        item.milestone ||
+        item.category ||
+        "",
+    ).trim();
     if (!topic) topic = inferTopicFromTitle(title) || "";
     items.push({
       subjectId: subjectId || undefined,
@@ -287,8 +338,18 @@ export function parseJSONInputWithDiagnostics(jsonText: string): ImportParseResu
       subject,
       topic: topic || undefined,
       title,
-      estimatedMinutes: parsePositiveNumber(item.target_minutes ?? item.estimatedMinutes ?? item.so_phut, 45, row, "target_minutes", issues),
-      scheduledDate: normalizeImportedDate(item.planned_date ?? item.scheduledDate ?? item.ngay_bat_dau ?? item.date, row, issues),
+      estimatedMinutes: parsePositiveNumber(
+        item.target_minutes ?? item.estimatedMinutes ?? item.so_phut,
+        45,
+        row,
+        "target_minutes",
+        issues,
+      ),
+      scheduledDate: normalizeImportedDate(
+        item.planned_date ?? item.scheduledDate ?? item.ngay_bat_dau ?? item.date,
+        row,
+        issues,
+      ),
       xp: parsePositiveNumber(item.xp_reward ?? item.xp, 30, row, "xp_reward", issues),
     });
   });
@@ -330,7 +391,8 @@ export function convertRawToSubjects(items: ImportedRawLesson[]): Subject[] {
   const subjects: Subject[] = [];
 
   subjectMap.forEach((rawLessons, subjectName) => {
-    const subId = rawLessons.find((item) => item.subjectId)?.subjectId || slugify(subjectName) || "custom";
+    const subId =
+      rawLessons.find((item) => item.subjectId)?.subjectId || slugify(subjectName) || "custom";
     const emoji = EMOJI_MAP[subjectName] || "📖";
 
     const resolveTopicName = (item: ImportedRawLesson) => {
@@ -540,7 +602,9 @@ export function normalizeSubjects(value: unknown): Subject[] | null {
             ? milestone.lessons.map((lesson) => ({
                 ...lesson,
                 topic: typeof lesson.topic === "string" ? lesson.topic : undefined,
-                scheduleMode: (lesson.scheduleMode === "fixed" ? "fixed" : "flexible") as LessonScheduleMode,
+                scheduleMode: (lesson.scheduleMode === "fixed"
+                  ? "fixed"
+                  : "flexible") as LessonScheduleMode,
                 plannedDurationMinutes: clampMinutes(
                   (lesson as Lesson & { estimatedMinutes?: number }).plannedDurationMinutes ??
                     (lesson as Lesson & { estimatedMinutes?: number }).estimatedMinutes,
@@ -639,9 +703,7 @@ export type CatalogUpdateOptions = {
   createBackup?: boolean;
 };
 
-export type CatalogUpdateResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type CatalogUpdateResult = { ok: true } | { ok: false; error: string };
 
 let lastCatalogStorageError: string | null = null;
 
@@ -704,10 +766,7 @@ export function updateLessonDetails(
     return {
       ...lesson,
       title: patch.title?.trim() || lesson.title,
-      topic:
-        typeof patch.topic === "string"
-          ? requestedTopic || "Chưa phân loại"
-          : lesson.topic,
+      topic: typeof patch.topic === "string" ? requestedTopic || "Chưa phân loại" : lesson.topic,
       plannedDurationMinutes:
         typeof patch.plannedDurationMinutes === "number"
           ? clampMinutes(patch.plannedDurationMinutes)
@@ -720,7 +779,7 @@ export function updateLessonDetails(
       scheduleMode:
         patch.scheduleMode === "fixed" || patch.scheduleMode === "flexible"
           ? patch.scheduleMode
-          : lesson.scheduleMode ?? "flexible",
+          : (lesson.scheduleMode ?? "flexible"),
       weekday: scheduledDate ? weekdayFullVi(scheduledDate) : "",
       sourceSubject: subjectName,
     };
@@ -815,7 +874,6 @@ export function moveLessonToSubject(
   });
   return next;
 }
-
 
 export function moveLessonsToSubject(
   existingSubjects: Subject[],
@@ -1024,14 +1082,9 @@ export function moveLessonBeforeInTopic(
       ...subject,
       milestones: subject.milestones.map((milestone) => {
         if (milestone.id !== topicId) return milestone;
-        const sourceIndex = milestone.lessons.findIndex(
-          (lesson) => lesson.id === sourceLessonId,
-        );
+        const sourceIndex = milestone.lessons.findIndex((lesson) => lesson.id === sourceLessonId);
         if (sourceIndex < 0) return milestone;
-        if (
-          targetLessonId &&
-          !milestone.lessons.some((lesson) => lesson.id === targetLessonId)
-        ) {
+        if (targetLessonId && !milestone.lessons.some((lesson) => lesson.id === targetLessonId)) {
           return milestone;
         }
 
@@ -1221,7 +1274,6 @@ export function archiveLesson(
   }
   return existingSubjects;
 }
-
 
 export function archiveLessons(
   existingSubjects: Subject[],

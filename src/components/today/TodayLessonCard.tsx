@@ -96,7 +96,12 @@ export function TodayLessonCard({
             <div className="mt-2.5 space-y-1">
               <div className="flex items-center justify-between text-[11px] font-medium text-slate-600">
                 <span>Tiến độ bài học:</span>
-                <span className={cn("font-bold", done || percent >= 100 ? "text-emerald-700" : "text-sky-800")}>
+                <span
+                  className={cn(
+                    "font-bold",
+                    done || percent >= 100 ? "text-emerald-700" : "text-sky-800",
+                  )}
+                >
                   {completedDuration} / {totalDuration} phút ({percent}%)
                 </span>
               </div>

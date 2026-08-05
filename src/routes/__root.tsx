@@ -174,8 +174,11 @@ function RootComponent() {
   useEffect(() => {
     const applyAppearance = () => {
       try {
-        const parsed = JSON.parse(localStorage.getItem("hocvien-appearance-preferences-v1") || "{}");
-        document.documentElement.dataset.smartAnimations = parsed.animations === false ? "off" : "on";
+        const parsed = JSON.parse(
+          localStorage.getItem("hocvien-appearance-preferences-v1") || "{}",
+        );
+        document.documentElement.dataset.smartAnimations =
+          parsed.animations === false ? "off" : "on";
       } catch {
         document.documentElement.dataset.smartAnimations = "on";
       }

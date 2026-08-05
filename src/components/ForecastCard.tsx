@@ -166,9 +166,7 @@ export function ForecastCard({
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">📚</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Bài còn lại
-            </div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Bài còn lại</div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
               {fc.remaining} bài
             </div>
@@ -185,7 +183,8 @@ export function ForecastCard({
               {formatHours(totalWorkloadHours)} giờ
             </div>
             <div className="mt-0.5 text-[10px] leading-tight text-slate-500">
-              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ ôn
+              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ
+              ôn
             </div>
           </div>
         </div>
@@ -193,9 +192,7 @@ export function ForecastCard({
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">🟢</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Mức tin cậy
-            </div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Mức tin cậy</div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
               {confidenceLabel}
             </div>
@@ -221,7 +218,9 @@ export function ForecastCard({
                   <span className="shrink-0 font-bold text-sky-700">{percent}%</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-                  <span>{item.done}/{item.total} bài đã xong</span>
+                  <span>
+                    {item.done}/{item.total} bài đã xong
+                  </span>
                   <span className="shrink-0">Còn {item.remaining}</span>
                 </div>
                 <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">

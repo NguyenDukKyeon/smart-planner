@@ -65,7 +65,6 @@ describe("progress migration", () => {
     expect(result.needsBackup).toBe(false);
   });
 
-
   test("awards and removes the exact lesson reward without allowing toggle farming", () => {
     const base = createInitialProgressState(false);
     const completed = toggleLessonCompletionState(base, "lesson-a", 20, "2026-07-25");
@@ -97,12 +96,7 @@ describe("progress migration", () => {
   test("completes a lesson idempotently without toggling it back", () => {
     const base = createInitialProgressState(false);
     const completed = completeLessonCompletionState(base, "lesson-a", 20, "2026-07-25");
-    const completedAgain = completeLessonCompletionState(
-      completed,
-      "lesson-a",
-      20,
-      "2026-07-26",
-    );
+    const completedAgain = completeLessonCompletionState(completed, "lesson-a", 20, "2026-07-26");
     expect(completedAgain).toBe(completed);
     expect(completedAgain.completedLessons["lesson-a"]).toBe("2026-07-25");
     expect(completedAgain.xp).toBe(completed.xp);

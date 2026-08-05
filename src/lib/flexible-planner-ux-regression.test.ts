@@ -7,10 +7,7 @@ describe("Flexible schedule UX", () => {
       new URL("../components/FlexiblePlanner.tsx", import.meta.url),
       "utf8",
     );
-    const routeSource = await fs.readFile(
-      new URL("../routes/index.tsx", import.meta.url),
-      "utf8",
-    );
+    const routeSource = await fs.readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
     expect(plannerSource).toContain("Lịch linh hoạt");
     expect(plannerSource).toContain("Tất cả môn");

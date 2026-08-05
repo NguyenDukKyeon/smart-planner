@@ -1,4 +1,9 @@
-import { getBrowserStorage, loadStorage, writeJsonVerified, type StorageAdapter } from "./app-storage";
+import {
+  getBrowserStorage,
+  loadStorage,
+  writeJsonVerified,
+  type StorageAdapter,
+} from "./app-storage";
 
 export const FOCUS_PREFERENCES_KEY = "hocvien-focus-preferences-v1";
 export const FOCUS_PREFERENCES_EVENT = "hocvien:focus-preferences-updated";
@@ -87,9 +92,7 @@ export function normalizeFocusPreferences(value: unknown): FocusPreferences | nu
   };
 }
 
-function migrateLegacyTimerPreferences(
-  storage: StorageAdapter | null,
-): FocusPreferences | null {
+function migrateLegacyTimerPreferences(storage: StorageAdapter | null): FocusPreferences | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(LEGACY_TIMER_KEY);
@@ -101,13 +104,9 @@ function migrateLegacyTimerPreferences(
       ...DEFAULT_FOCUS_PREFERENCES,
       defaultFocusMinutes: [25, 50, 90].includes(duration) ? duration : 25,
       autoStartBreak:
-        typeof legacy.autoStartBreak === "boolean"
-          ? legacy.autoStartBreak
-          : legacyAutoStart,
+        typeof legacy.autoStartBreak === "boolean" ? legacy.autoStartBreak : legacyAutoStart,
       autoStartFocus:
-        typeof legacy.autoStartFocus === "boolean"
-          ? legacy.autoStartFocus
-          : legacyAutoStart,
+        typeof legacy.autoStartFocus === "boolean" ? legacy.autoStartFocus : legacyAutoStart,
       soundAlertsEnabled:
         typeof legacy.soundAlertsEnabled === "boolean"
           ? legacy.soundAlertsEnabled

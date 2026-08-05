@@ -164,11 +164,7 @@ describe("fixed and flexible lesson scheduling", () => {
       hoursOverride: 6,
     });
 
-    expect(day.newLessons.map((item) => item.id)).toEqual([
-      "unit-13",
-      "unit-4",
-      "unit-10",
-    ]);
+    expect(day.newLessons.map((item) => item.id)).toEqual(["unit-13", "unit-4", "unit-10"]);
   });
 });
 

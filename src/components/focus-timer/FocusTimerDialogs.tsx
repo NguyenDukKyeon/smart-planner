@@ -103,11 +103,7 @@ export function TimerRecoveryDialogs({
               không tự ghi dữ liệu khi chưa có xác nhận.
             </p>
             <div className="mt-5 flex gap-2">
-              <Button
-                type="button"
-                className="flex-1"
-                onClick={() => onExpiredDecision(true)}
-              >
+              <Button type="button" className="flex-1" onClick={() => onExpiredDecision(true)}>
                 Lưu {durationMinutes} phút
               </Button>
               <Button

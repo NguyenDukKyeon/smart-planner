@@ -168,7 +168,9 @@ export function WeeklyStudySummary({ metrics, todayTargetMinutes }: Props) {
                   <p className="text-xs text-slate-500">Mức độ hoàn thành các bài học theo môn</p>
                 </div>
               </div>
-              <span className="text-xs text-slate-500 font-semibold">{metrics.subjects.length} môn</span>
+              <span className="text-xs text-slate-500 font-semibold">
+                {metrics.subjects.length} môn
+              </span>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -230,7 +232,9 @@ export function WeeklyStudySummary({ metrics, todayTargetMinutes }: Props) {
   );
 }
 
-{/* Biểu đồ Cột Đứng: Phiên tập trung theo ngày */}
+{
+  /* Biểu đồ Cột Đứng: Phiên tập trung theo ngày */
+}
 function WeeklyFocusBarChart({ metrics }: { metrics: WeeklyMetrics }) {
   const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
@@ -266,7 +270,7 @@ function WeeklyFocusBarChart({ metrics }: { metrics: WeeklyMetrics }) {
                       ? "bg-gradient-to-t from-emerald-600 to-emerald-400"
                       : actual > 0
                         ? "bg-gradient-to-t from-sky-600 to-sky-400"
-                        : "bg-transparent"
+                        : "bg-transparent",
                   )}
                   style={{ height: `${Math.max(rate, actual > 0 ? 8 : 0)}%` }}
                 />
@@ -279,7 +283,7 @@ function WeeklyFocusBarChart({ metrics }: { metrics: WeeklyMetrics }) {
                 <div
                   className={cn(
                     "text-[10px] font-bold mt-0.5 truncate",
-                    isMet ? "text-emerald-600" : actual > 0 ? "text-sky-700" : "text-slate-500"
+                    isMet ? "text-emerald-600" : actual > 0 ? "text-sky-700" : "text-slate-500",
                   )}
                 >
                   {actual}p/{target}p
@@ -293,12 +297,10 @@ function WeeklyFocusBarChart({ metrics }: { metrics: WeeklyMetrics }) {
   );
 }
 
-{/* Bảng Ma Trận Chi Tiết Thói Quen 7 Ngày */}
-function WeeklyHabitGrid({
-  habits,
-}: {
-  habits: WeeklyMetrics["habits"]["details"];
-}) {
+{
+  /* Bảng Ma Trận Chi Tiết Thói Quen 7 Ngày */
+}
+function WeeklyHabitGrid({ habits }: { habits: WeeklyMetrics["habits"]["details"] }) {
   if (habits.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500">
@@ -349,7 +351,7 @@ function WeeklyHabitGrid({
                       "inline-block rounded-md px-1.5 py-0.2 text-[10px] font-bold border",
                       isTargetMet
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-slate-100 text-slate-600 border-slate-200"
+                        : "bg-slate-100 text-slate-600 border-slate-200",
                     )}
                   >
                     {target > 0 ? `${occurrences}/${target} lượt` : `${occurrences} lượt`}

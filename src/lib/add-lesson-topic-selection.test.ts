@@ -84,16 +84,11 @@ describe("add lesson topic selection", () => {
       .find((lesson) => !previousIds.has(lesson.id));
     expect(newLesson).toBeDefined();
 
-    const moved = moveLessonsToTopic(
-      added,
-      [newLesson!.id],
-      subject.id,
-      targetTopic.id,
-    );
+    const moved = moveLessonsToTopic(added, [newLesson!.id], subject.id, targetTopic.id);
     expect(
-      moved[0].milestones.find((milestone) => milestone.id === targetTopic.id)?.lessons.map(
-        (lesson) => lesson.title,
-      ),
+      moved[0].milestones
+        .find((milestone) => milestone.id === targetTopic.id)
+        ?.lessons.map((lesson) => lesson.title),
     ).toEqual(["Review 2", "Review 3"]);
   });
 

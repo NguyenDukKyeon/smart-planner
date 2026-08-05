@@ -123,8 +123,20 @@ export function reviewDueLessons(
   refISO: string,
   subjects?: Subject[],
   reviewCompletions: Record<string, string> = {},
-): { lessonId: string; completedISO: string; ageDays: number; taskId: string; completed: boolean }[] {
-  const out: { lessonId: string; completedISO: string; ageDays: number; taskId: string; completed: boolean }[] = [];
+): {
+  lessonId: string;
+  completedISO: string;
+  ageDays: number;
+  taskId: string;
+  completed: boolean;
+}[] {
+  const out: {
+    lessonId: string;
+    completedISO: string;
+    ageDays: number;
+    taskId: string;
+    completed: boolean;
+  }[] = [];
   const activeLessonIds = subjects
     ? new Set(subjects.flatMap((s) => s.milestones.flatMap((m) => m.lessons.map((l) => l.id))))
     : null;
@@ -189,12 +201,7 @@ export function pickDayQueue(params: {
   );
 
   // Reviews first (they always run if due).
-  const due = reviewDueLessons(
-    completed,
-    dateISO,
-    subjects,
-    params.reviewCompletions ?? {},
-  );
+  const due = reviewDueLessons(completed, dateISO, subjects, params.reviewCompletions ?? {});
   const reviewLessons: DayQueue["reviewLessons"] = [];
   let reviewMinutes = 0;
   for (const item of due) {
@@ -232,13 +239,7 @@ export function pickDayQueue(params: {
 
     // Bài cố định chỉ có một cơ hội ở đúng ngày đã chọn. Bài không vừa
     // ngân sách được đưa vào khu vực "Chưa xếp được", không dời sang ngày sau.
-    const fixedCandidates = fixedLessonsScheduledOn(
-      subjects,
-      completed,
-      consumed,
-      dateISO,
-      meta,
-    );
+    const fixedCandidates = fixedLessonsScheduledOn(subjects, completed, consumed, dateISO, meta);
     for (const lesson of fixedCandidates) {
       const estimatedMinutes = estimateLessonMinutes(lesson.id, meta, subjects);
       if (newMinutes + estimatedMinutes <= newBudget) {
@@ -278,9 +279,7 @@ export function pickDayQueue(params: {
         const pickDifference =
           subjectPickCounts[left.subjectId] - subjectPickCounts[right.subjectId];
         if (pickDifference !== 0) return pickDifference;
-        const dateDifference = left.lesson.scheduledDate.localeCompare(
-          right.lesson.scheduledDate,
-        );
+        const dateDifference = left.lesson.scheduledDate.localeCompare(right.lesson.scheduledDate);
         if (dateDifference !== 0) return dateDifference;
         const durationDifference = left.estimatedMinutes - right.estimatedMinutes;
         if (durationDifference !== 0) return durationDifference;
@@ -295,13 +294,7 @@ export function pickDayQueue(params: {
       subjectPickCounts[selected.subjectId] += 1;
     }
   } else {
-    const fixedCandidates = fixedLessonsScheduledOn(
-      subjects,
-      completed,
-      consumed,
-      dateISO,
-      meta,
-    );
+    const fixedCandidates = fixedLessonsScheduledOn(subjects, completed, consumed, dateISO, meta);
     unplacedFixedLessons.push(...fixedCandidates);
     unplacedFixedMinutes = fixedCandidates.reduce(
       (sum, lesson) => sum + estimateLessonMinutes(lesson.id, meta, subjects),

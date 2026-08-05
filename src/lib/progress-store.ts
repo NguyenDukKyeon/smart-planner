@@ -217,18 +217,18 @@ export function migrateProgressState(raw: string | null): ProgressMigrationResul
   };
 
   const psIn = (parsed.plannerSettings as Partial<PlannerSettings>) ?? {};
-    const storedDefaultDailyHours = normalizeStoredDailyHours(
-      psIn.defaultDailyHours,
-      DEFAULT_PLANNER_SETTINGS.defaultDailyHours,
-    );
-    const plannerSettings: PlannerSettings = {
-      todayHours: normalizeStoredDailyHours(psIn.todayHours, storedDefaultDailyHours),
-      dailyHours:
-        psIn.dailyHours && typeof psIn.dailyHours === "object"
-          ? sanitizeDailyHours(psIn.dailyHours)
-          : {},
-      defaultDailyHours: storedDefaultDailyHours,
-      reviewShareMax:
+  const storedDefaultDailyHours = normalizeStoredDailyHours(
+    psIn.defaultDailyHours,
+    DEFAULT_PLANNER_SETTINGS.defaultDailyHours,
+  );
+  const plannerSettings: PlannerSettings = {
+    todayHours: normalizeStoredDailyHours(psIn.todayHours, storedDefaultDailyHours),
+    dailyHours:
+      psIn.dailyHours && typeof psIn.dailyHours === "object"
+        ? sanitizeDailyHours(psIn.dailyHours)
+        : {},
+    defaultDailyHours: storedDefaultDailyHours,
+    reviewShareMax:
       typeof psIn.reviewShareMax === "number"
         ? clamp(psIn.reviewShareMax, 0, 1)
         : DEFAULT_PLANNER_SETTINGS.reviewShareMax,
@@ -474,20 +474,20 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n));
 }
 function normalizeStoredDailyHours(value: unknown, fallback: number): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return normalizeDailyStudyHours(fallback);
-    }
-    return normalizeDailyStudyHours(value);
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return normalizeDailyStudyHours(fallback);
   }
+  return normalizeDailyStudyHours(value);
+}
 
-  function sanitizeDailyHours(raw: Record<string, unknown>): Record<string, number> {
-    const out: Record<string, number> = {};
-    for (const [dateISO, value] of Object.entries(raw)) {
-      if (typeof value !== "number" || !Number.isFinite(value)) continue;
-      out[dateISO] = normalizeDailyStudyHours(value);
-    }
-    return out;
+function sanitizeDailyHours(raw: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [dateISO, value] of Object.entries(raw)) {
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    out[dateISO] = normalizeDailyStudyHours(value);
   }
+  return out;
+}
 
 export function completeLessonCompletionState(
   state: ProgressState,
@@ -541,60 +541,57 @@ export function toggleLessonCompletionState(
 }
 
 export function setTodayHoursState(
-    state: ProgressState,
-    hours: number,
-    dateISO = todayISO(),
-  ): ProgressState {
-    const normalized = normalizeDailyStudyHours(hours);
-    return {
-      ...state,
-      plannerSettings: {
-        ...state.plannerSettings,
-        todayHours: normalized,
-        dailyHours: { ...state.plannerSettings.dailyHours, [dateISO]: normalized },
-      },
-    };
-  }
+  state: ProgressState,
+  hours: number,
+  dateISO = todayISO(),
+): ProgressState {
+  const normalized = normalizeDailyStudyHours(hours);
+  return {
+    ...state,
+    plannerSettings: {
+      ...state.plannerSettings,
+      todayHours: normalized,
+      dailyHours: { ...state.plannerSettings.dailyHours, [dateISO]: normalized },
+    },
+  };
+}
 
-  export function setDayHoursState(
-    state: ProgressState,
-    dateISO: string,
-    hours: number | null,
-    todayDateISO = todayISO(),
-  ): ProgressState {
-    const dailyHours = { ...state.plannerSettings.dailyHours };
-    if (hours == null) delete dailyHours[dateISO];
-    else dailyHours[dateISO] = normalizeDailyStudyHours(hours);
+export function setDayHoursState(
+  state: ProgressState,
+  dateISO: string,
+  hours: number | null,
+  todayDateISO = todayISO(),
+): ProgressState {
+  const dailyHours = { ...state.plannerSettings.dailyHours };
+  if (hours == null) delete dailyHours[dateISO];
+  else dailyHours[dateISO] = normalizeDailyStudyHours(hours);
 
-    return {
-      ...state,
-      plannerSettings: {
-        ...state.plannerSettings,
-        todayHours:
-          dateISO === todayDateISO
-            ? hours == null
-              ? state.plannerSettings.defaultDailyHours
-              : normalizeDailyStudyHours(hours)
-            : state.plannerSettings.todayHours,
-        dailyHours,
-      },
-    };
-  }
+  return {
+    ...state,
+    plannerSettings: {
+      ...state.plannerSettings,
+      todayHours:
+        dateISO === todayDateISO
+          ? hours == null
+            ? state.plannerSettings.defaultDailyHours
+            : normalizeDailyStudyHours(hours)
+          : state.plannerSettings.todayHours,
+      dailyHours,
+    },
+  };
+}
 
-  export function setDefaultDailyHoursState(
-    state: ProgressState,
-    hours: number,
-  ): ProgressState {
-    return {
-      ...state,
-      plannerSettings: {
-        ...state.plannerSettings,
-        defaultDailyHours: normalizeDailyStudyHours(hours),
-      },
-    };
-  }
+export function setDefaultDailyHoursState(state: ProgressState, hours: number): ProgressState {
+  return {
+    ...state,
+    plannerSettings: {
+      ...state.plannerSettings,
+      defaultDailyHours: normalizeDailyStudyHours(hours),
+    },
+  };
+}
 
-  export function useProgress() {
+export function useProgress() {
   const [state, setState] = useState<ProgressState>(FIRST_RUN_DEFAULT);
   const [hydrated, setHydrated] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -856,22 +853,22 @@ export function setTodayHoursState(
   );
 
   const setTodayHours = useCallback(
-      (hours: number) => commit((state) => setTodayHoursState(state, hours)),
-      [commit],
-    );
+    (hours: number) => commit((state) => setTodayHoursState(state, hours)),
+    [commit],
+  );
 
-    const setDayHours = useCallback(
-      (dateISO: string, hours: number | null) =>
-        commit((state) => setDayHoursState(state, dateISO, hours)),
-      [commit],
-    );
+  const setDayHours = useCallback(
+    (dateISO: string, hours: number | null) =>
+      commit((state) => setDayHoursState(state, dateISO, hours)),
+    [commit],
+  );
 
-    const setDefaultDailyHours = useCallback(
-      (hours: number) => commit((state) => setDefaultDailyHoursState(state, hours)),
-      [commit],
-    );
+  const setDefaultDailyHours = useCallback(
+    (hours: number) => commit((state) => setDefaultDailyHoursState(state, hours)),
+    [commit],
+  );
 
-    const addStudySession = useCallback(
+  const addStudySession = useCallback(
     (session: StudySession) => {
       if (!isValidStudySession(session)) return false;
       // The timer's two-key transaction persists progress before notifying this

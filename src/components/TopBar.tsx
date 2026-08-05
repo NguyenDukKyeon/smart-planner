@@ -109,7 +109,9 @@ export function TopBar({
   activeTimerLesson = null,
 }: Props) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"pomodoro" | "reminders" | "goals" | "appearance" | "data">("pomodoro");
+  const [settingsTab, setSettingsTab] = useState<
+    "pomodoro" | "reminders" | "goals" | "appearance" | "data"
+  >("pomodoro");
   const pwaInstall = usePwaInstall();
   const [isRewardShopOpen, setIsRewardShopOpen] = useState(false);
   const [workspaceTitle, setWorkspaceTitle] = useState<string>(() => {
@@ -122,7 +124,9 @@ export function TopBar({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(workspaceTitle);
   const [timerSnapshot, setTimerSnapshot] = useState<StoredTimerState | null>(null);
-  const [showTimerInHeader, setShowTimerInHeader] = useState(() => loadFocusPreferences().showTimerInHeader);
+  const [showTimerInHeader, setShowTimerInHeader] = useState(
+    () => loadFocusPreferences().showTimerInHeader,
+  );
 
   const [identityTitle, setIdentityTitle] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -365,7 +369,8 @@ export function TopBar({
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex justify-between text-[11px] font-semibold text-slate-700">
                 <span className="text-sky-800 font-mono">
-                  {xpProgress.currentLevelXp} / {xpProgress.requiredLevelXp} XP ({xpProgress.percentage}%)
+                  {xpProgress.currentLevelXp} / {xpProgress.requiredLevelXp} XP (
+                  {xpProgress.percentage}%)
                 </span>
                 <span className="text-emerald-700 font-mono font-bold">Tổng {xp} XP</span>
               </div>

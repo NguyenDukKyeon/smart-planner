@@ -91,8 +91,8 @@ export function LearningRoadmap({
       const effectiveDate = completed[lesson.id]
         ? completed[lesson.id]
         : mode === "fixed"
-          ? shiftedDates[lesson.id] ?? "unplaced-fixed"
-          : shiftedDates[lesson.id] ?? lesson.scheduledDate;
+          ? (shiftedDates[lesson.id] ?? "unplaced-fixed")
+          : (shiftedDates[lesson.id] ?? lesson.scheduledDate);
       return { ...lesson, effectiveDate };
     });
 
@@ -377,7 +377,9 @@ function MilestonePanel({
     <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-serif text-lg sm:text-xl font-bold text-slate-900">{milestone.title}</h3>
+          <h3 className="font-serif text-lg sm:text-xl font-bold text-slate-900">
+            {milestone.title}
+          </h3>
           <p className="text-xs text-slate-500 font-medium mt-0.5">{milestone.subtitle}</p>
         </div>
         <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-emerald-700 shrink-0">
@@ -415,7 +417,9 @@ function MilestonePanel({
                   <CheckCircle2
                     className={cn(
                       "h-4 w-4 transition-transform",
-                      isDone ? "text-emerald-600 scale-110" : "text-slate-300 group-hover:text-emerald-400",
+                      isDone
+                        ? "text-emerald-600 scale-110"
+                        : "text-slate-300 group-hover:text-emerald-400",
                     )}
                   />
                 </div>

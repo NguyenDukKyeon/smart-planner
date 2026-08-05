@@ -2,11 +2,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
 import { DEFAULT_PLANNER_SETTINGS, DEFAULT_STUDY_META, pickDayQueue } from "./planner";
 
-const capacitySurfaces = [
-  "TodayPanel.tsx",
-  "FlexiblePlanner.tsx",
-  "ForecastCard.tsx",
-] as const;
+const capacitySurfaces = ["TodayPanel.tsx", "FlexiblePlanner.tsx", "ForecastCard.tsx"] as const;
 
 describe("study-hour UI policy", () => {
   test("creates exactly 960 minutes of capacity for sixteen hours", () => {
@@ -24,10 +20,7 @@ describe("study-hour UI policy", () => {
 
   test("uses the canonical range on every capacity surface", async () => {
     for (const fileName of capacitySurfaces) {
-      const source = await readFile(
-        new URL(`../components/${fileName}`, import.meta.url),
-        "utf8",
-      );
+      const source = await readFile(new URL(`../components/${fileName}`, import.meta.url), "utf8");
 
       expect(source).toContain("MAX_DAILY_STUDY_HOURS");
       expect(source).toContain("MIN_DAILY_STUDY_HOURS");
@@ -51,10 +44,7 @@ describe("study-hour UI policy", () => {
     );
 
     for (const fileName of capacitySurfaces) {
-      const source = await readFile(
-        new URL(`../components/${fileName}`, import.meta.url),
-        "utf8",
-      );
+      const source = await readFile(new URL(`../components/${fileName}`, import.meta.url), "utf8");
       expect(source).toContain("HighStudyHoursNote");
     }
   });
