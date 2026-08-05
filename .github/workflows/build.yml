@@ -2,13 +2,13 @@ name: Build diagnostics
 
 on:
   push:
-    branches: [main]
+    branches: [main, improve/p0a-hours-build-purity]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -17,6 +17,79 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+          ref: ${{ github.event_name == 'push' && github.ref_name || '' }}
+      - name: Apply reviewed study-day fix
+        if: github.event_name == 'push' && github.ref == 'refs/heads/improve/p0a-hours-build-purity'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/routes/index.tsx")
+          source = path.read_text()
+          old_import = 'import { buildShiftedSchedule, pickTodayQueue } from "@/lib/planner";'
+          new_import = 'import { buildShiftedSchedule } from "@/lib/planner";\nimport { isStudyDayQueueComplete } from "@/lib/study-day-completion";'
+          if old_import in source:
+              source = source.replace(old_import, new_import, 1)
+
+          old_block = '''  const todayStudyDayComplete = useMemo<boolean | null>(() => {
+            if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
+            const queue = pickTodayQueue({
+              subjects,
+              completed: state.completedLessons,
+              reviewCompletions: state.reviewCompletions,
+              meta: state.studyMeta,
+              settings: state.plannerSettings,
+            });
+            const completedNew = queue.newLessons.filter((lesson) =>
+              Boolean(state.completedLessons[lesson.id]),
+            ).length;
+            const completedReviews = queue.reviewLessons.filter((review) => review.completed).length;
+            const total = queue.newLessons.length + queue.reviewLessons.length;
+            return total > 0 && completedNew + completedReviews === total;
+          }, [
+            hydrated,
+            state.completedLessons,
+            state.plannerSettings,
+            state.reviewCompletions,
+            state.studyMeta,
+            subjects,
+            workspaceStorageLoaded,
+          ]);
+'''
+          new_block = '''  const todayStudyDayComplete = useMemo<boolean | null>(() => {
+            if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
+            return isStudyDayQueueComplete({
+              subjects,
+              completed: state.completedLessons,
+              reviewCompletions: state.reviewCompletions,
+              meta: state.studyMeta,
+              settings: state.plannerSettings,
+              dateISO: todayISO(),
+            });
+          }, [
+            hydrated,
+            state.completedLessons,
+            state.plannerSettings,
+            state.reviewCompletions,
+            state.studyMeta,
+            subjects,
+            workspaceStorageLoaded,
+          ]);
+'''
+          if old_block in source:
+              source = source.replace(old_block, new_block, 1)
+          elif "isStudyDayQueueComplete({" not in source:
+              raise SystemExit("Expected study-day block not found")
+
+          path.write_text(source)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/index.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: base streak on the original daily queue"
+            git push origin HEAD:improve/p0a-hours-build-purity
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
