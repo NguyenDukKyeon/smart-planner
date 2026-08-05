@@ -1,0 +1,30 @@
+name: Restore canonical P0B lockfile
+
+"on":
+  push:
+    branches:
+      - improve/p0b-schedule-transactions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: "${{ github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[p0b-restore-lock-v2]') }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: improve/p0b-schedule-transactions
+          fetch-depth: 0
+      - name: Restore lockfile from clean pre-format commit
+        run: |
+          git checkout 8a62ffe4d5a03d29ddf230515128a530bdf6b02a -- package-lock.json
+          rm .github/workflows/p0b-restore-lockfile-v2.yml
+      - name: Commit restoration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: restore pre-format package lock [p0b-restore-lock-v2]"
+          git push origin HEAD:improve/p0b-schedule-transactions
