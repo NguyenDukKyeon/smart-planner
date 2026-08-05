@@ -21,4 +21,4 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npx vitest run src/lib/study-hours.test.ts
+      - run: npx vitest run src/lib/study-hours.test.ts src/lib/progress-study-hours.test.ts
