@@ -716,6 +716,37 @@ export function useProgress() {
     return true;
   }, []);
 
+  const persistPlannerSettings = useCallback(
+  (plannerSettings: PlannerSettings): StorageWriteResult => {
+    if (!persistenceEnabled.current) {
+      const error = "Bộ nhớ trình duyệt chưa sẵn sàng; thay đổi chưa được áp dụng.";
+      setStorageError(error);
+      return { ok: false, error };
+    }
+
+    const saved = savePlannerSettingsStorage(stateRef.current, plannerSettings);
+    if (!saved.ok) {
+      persistenceEnabled.current = false;
+      setStorageStatus({ status: "unavailable", error: saved.error });
+      setStorageError(saved.error);
+    }
+    return saved;
+  },
+  [],
+);
+
+const applyPersistedPlannerSettings = useCallback(
+  (plannerSettings: PlannerSettings): boolean => {
+    const next = applyPlannerSettingsToProgressState(stateRef.current, plannerSettings);
+    stateRef.current = next;
+    setState(next);
+    setStorageStatus({ status: "ok", value: next });
+    setStorageError(null);
+    return true;
+  },
+  [],
+);
+
   const toggleLesson = useCallback(
     (lessonId: string, xp: number) => {
       return commit((state) => toggleLessonCompletionState(state, lessonId, xp));
@@ -1052,6 +1083,8 @@ export function useProgress() {
     setTodayHours,
     setDayHours,
     setDefaultDailyHours,
+    persistPlannerSettings,
+    applyPersistedPlannerSettings,
     addStudySession,
     initializeProgress,
     resetOnboarding,
