@@ -10,11 +10,13 @@ export type PersistScheduleCandidateParams = {
   savePlannerSettings: (plannerSettings: PlannerSettings) => StorageWriteResult;
 };
 
-export type PersistScheduleCandidateResult = { ok: true } | {
-  ok: false;
-  error: string;
-  rollbackError?: string;
-};
+export type PersistScheduleCandidateResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: string;
+      rollbackError?: string;
+    };
 
 function structurallyEqual(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
