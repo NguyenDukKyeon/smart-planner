@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -16,127 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
           submodules: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - name: Apply canonical daily-hour controls
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from "node:fs";
-
-          const policyImport = `import {
-            DAILY_STUDY_HOURS_STEP,
-            MAX_DAILY_STUDY_HOURS,
-            MIN_DAILY_STUDY_HOURS,
-            normalizeDailyStudyHours,
-          } from "@/lib/study-hours";`;
-          const noteImport = 'import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";';
-
-          function addImports(source, anchor) {
-            if (source.includes("MAX_DAILY_STUDY_HOURS")) return source;
-            if (!source.includes(anchor)) throw new Error(`Missing import anchor: ${anchor}`);
-            return source.replace(anchor, `${anchor}\n${policyImport}\n${noteImport}`);
-          }
-
-          function patchToday() {
-            const path = "src/components/TodayPanel.tsx";
-            let source = addImports(
-              fs.readFileSync(path, "utf8"),
-              'import { cn } from "@/lib/utils";',
-            );
-            source = source.replaceAll("min={0}", "min={MIN_DAILY_STUDY_HOURS}");
-            source = source.replaceAll("max={12}", "max={MAX_DAILY_STUDY_HOURS}");
-            source = source.replaceAll("step={0.5}", "step={DAILY_STUDY_HOURS_STEP}");
-            source = source.replace(
-              "onValueChange={([value]) => onSetTodayHours(value)}",
-              "onValueChange={([value]) => onSetTodayHours(normalizeDailyStudyHours(value))}",
-            );
-            source = source.replace(
-              "if (Number.isFinite(value)) onSetTodayHours(Math.min(12, Math.max(0, value)));",
-              "if (Number.isFinite(value)) onSetTodayHours(normalizeDailyStudyHours(value));",
-            );
-            if (!source.includes("<HighStudyHoursNote hours={state.plannerSettings.todayHours}")) {
-              const inputPattern = /(<Input[\s\S]*?aria-label="Số giờ học hôm nay"[\s\S]*?className="h-9 bg-white text-xs sm:text-sm font-bold text-slate-800"\s*\/>)/;
-              if (!inputPattern.test(source)) throw new Error("Missing Today capacity input");
-              source = source.replace(
-                inputPattern,
-                `$1\n              <HighStudyHoursNote\n                hours={state.plannerSettings.todayHours}\n                className="sm:col-span-3"\n              />`,
-              );
-            }
-            fs.writeFileSync(path, source);
-          }
-
-          function patchFlexiblePlanner() {
-            const path = "src/components/FlexiblePlanner.tsx";
-            let source = addImports(
-              fs.readFileSync(path, "utf8"),
-              'import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";',
-            );
-            source = source.replace(
-              /min=\{0\}\s*max=\{12\}\s*step=\{0\.5\}/,
-              "min={MIN_DAILY_STUDY_HOURS}\n              max={MAX_DAILY_STUDY_HOURS}\n              step={DAILY_STUDY_HOURS_STEP}",
-            );
-            source = source.replace(
-              /onSetDayHours\(\s*day\.dateISO,\s*Math\.min\(12, Math\.max\(0, value\)\),\s*\);/,
-              "onSetDayHours(\n                    day.dateISO,\n                    normalizeDailyStudyHours(value),\n                  );",
-            );
-            if (!source.includes("<HighStudyHoursNote hours={day.hours}")) {
-              const headerPattern = /(<\/label>\s*<\/div>)\s*(<p className="text-\[11px\] font-medium text-slate-500">)/;
-              if (!headerPattern.test(source)) throw new Error("Missing Flexible day header");
-              source = source.replace(
-                headerPattern,
-                `$1\n        <HighStudyHoursNote hours={day.hours} />\n\n        $2`,
-              );
-            }
-            fs.writeFileSync(path, source);
-          }
-
-          function patchForecast() {
-            const path = "src/components/ForecastCard.tsx";
-            let source = addImports(
-              fs.readFileSync(path, "utf8"),
-              'import { sortSubjects } from "@/lib/subject-order";',
-            );
-            source = source.replace(
-              /const hours = Number\.isFinite\(state\.plannerSettings\.defaultDailyHours\)\s*\? Math\.max\(0, state\.plannerSettings\.defaultDailyHours\)\s*: 2;/,
-              "const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)\n    ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)\n    : 2;",
-            );
-            source = source.replace(
-              "onSetDefaultDailyHours(h);",
-              "onSetDefaultDailyHours(normalizeDailyStudyHours(h));",
-            );
-            source = source.replaceAll("min={0}", "min={MIN_DAILY_STUDY_HOURS}");
-            source = source.replaceAll("max={12}", "max={MAX_DAILY_STUDY_HOURS}");
-            source = source.replaceAll("step={0.5}", "step={DAILY_STUDY_HOURS_STEP}");
-            source = source.replace(
-              "handleHoursChange(Math.min(12, Math.max(0, nextHours)));",
-              "handleHoursChange(normalizeDailyStudyHours(nextHours));",
-            );
-            if (!source.includes("<HighStudyHoursNote hours={hours}")) {
-              const gridPattern = /(<div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200\/60 bg-slate-50\/60 p-2\.5 lg:grid-cols-4">)/;
-              if (!gridPattern.test(source)) throw new Error("Missing Forecast metrics grid");
-              source = source.replace(
-                gridPattern,
-                `<HighStudyHoursNote hours={hours} />\n\n      $1`,
-              );
-            }
-            fs.writeFileSync(path, source);
-          }
-
-          patchToday();
-          patchFlexiblePlanner();
-          patchForecast();
-          NODE
-      - name: Verify planner UI capacity policy
-        run: npx vitest run src/lib/study-hours.test.ts src/lib/progress-study-hours.test.ts src/lib/study-hours-ui-regression.test.ts
-      - run: npx tsc --noEmit
-      - name: Commit planner UI integration
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/components/TodayPanel.tsx src/components/FlexiblePlanner.tsx src/components/ForecastCard.tsx
-          git commit -m "feat: support sixteen-hour capacity across planner UI [skip ci]"
-          git push origin HEAD:${{ github.head_ref || github.ref_name }}
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
