@@ -1,10 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { SUBJECTS, type Subject } from "./mock-data";
 import { DEFAULT_PLANNER_SETTINGS, type PlannerSettings } from "./planner";
-import {
-  commitScheduleMutation,
-  undoLastScheduleMutation,
-} from "./schedule-mutation-controller";
+import { commitScheduleMutation, undoLastScheduleMutation } from "./schedule-mutation-controller";
 import { createScheduleSnapshot, type ScheduleCandidate } from "./schedule-transactions";
 
 function snapshot() {
