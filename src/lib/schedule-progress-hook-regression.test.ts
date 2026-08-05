@@ -34,5 +34,6 @@ describe("useProgress schedule persistence boundary", () => {
       'setStorageStatus({ status: "unavailable", error: saved.error })',
     );
     expect(persistBlock).toContain("return saved");
+    expect(persistBlock).not.toContain("setState(");
   });
 });
