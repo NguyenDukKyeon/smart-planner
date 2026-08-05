@@ -460,7 +460,13 @@ function Dashboard() {
           error: "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.",
         };
       }
-      return saveStoredCustomSubjects(nextSubjects);
+      const saved = saveStoredCustomSubjects(nextSubjects);
+      if (!saved.ok) {
+        setSubjectStorageStatus({ status: "unavailable", error: saved.error });
+        return saved;
+      }
+      setSubjectStorageStatus({ status: "ok", value: nextSubjects });
+      return saved;
     },
     [storageBlocked],
   );
