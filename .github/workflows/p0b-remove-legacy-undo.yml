@@ -1,0 +1,39 @@
+name: Remove P0B legacy undo state
+
+"on":
+  push:
+    branches:
+      - improve/p0b-schedule-transactions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: "${{ github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[p0b-remove-legacy-undo]') }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: improve/p0b-schedule-transactions
+          fetch-depth: 0
+      - name: Remove stale move-only undo state
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path("src/components/FlexiblePlanner.tsx")
+          source = path.read_text(encoding="utf-8")
+          stale = "  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);\n"
+          if stale not in source:
+              raise SystemExit("Legacy undo state marker was not found")
+          path.write_text(source.replace(stale, "", 1), encoding="utf-8")
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/p0b-remove-legacy-undo.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/FlexiblePlanner.tsx .github/workflows/p0b-remove-legacy-undo.yml
+          git commit -m "fix: remove stale Flexible Planner undo state [p0b-remove-legacy-undo]"
+          git push origin HEAD:improve/p0b-schedule-transactions
