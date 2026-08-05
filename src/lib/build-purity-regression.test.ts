@@ -41,7 +41,7 @@ describe("build purity", () => {
     ).rejects.toThrow();
   });
 
-  test("keeps accepted generated behavior in committed source", async () => {
+  test("keeps accepted behavior in authoritative committed source", async () => {
     const plannerSource = await readFile(
       new URL("../components/FlexiblePlanner.tsx", import.meta.url),
       "utf8",
@@ -52,11 +52,14 @@ describe("build purity", () => {
     );
     const routeSource = await readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
-    expect(plannerSource).toContain("undoStack");
+    expect(plannerSource).toContain("useScheduleTransactions");
+    expect(plannerSource).toContain("buildMoveLessonDateCandidate");
     expect(plannerSource).toContain("unplacedFixedLessons");
     expect(plannerSource).toContain("application/x-smart-lesson-id");
+    expect(plannerSource).not.toContain("type UndoEntry =");
+    expect(plannerSource).not.toContain("setUndoStack");
     expect(courseManagerSource).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
     expect(courseManagerSource).toContain("draggable={false}");
-    expect(routeSource).toContain("onSubjectsUpdated={updateSubjectsSafely}");
+    expect(routeSource).toContain("transactionAdapters={scheduleTransactionAdapters}");
   });
 });
