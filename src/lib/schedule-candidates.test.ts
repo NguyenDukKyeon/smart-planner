@@ -60,9 +60,7 @@ describe("buildMoveLessonDateCandidate", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.error);
-    expect(result.candidate.subjects[0].milestones[0].lessons[0].scheduledDate).toBe(
-      "2030-01-04",
-    );
+    expect(result.candidate.subjects[0].milestones[0].lessons[0].scheduledDate).toBe("2030-01-04");
     expect(result.candidate.plannerSettings).toEqual(current.plannerSettings);
     expect(current.subjects[0].milestones[0].lessons[0].scheduledDate).toBe("2030-01-01");
   });
