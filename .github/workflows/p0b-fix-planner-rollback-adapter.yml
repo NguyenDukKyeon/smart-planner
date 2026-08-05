@@ -1,0 +1,105 @@
+name: P0B fix planner rollback adapter
+
+on:
+  push:
+    branches:
+      - improve/p0b-schedule-transactions
+    paths:
+      - .github/workflows/p0b-fix-planner-rollback-adapter.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: improve/p0b-schedule-transactions
+      - name: Allow one verified rollback write
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/lib/progress-store.ts")
+          source = path.read_text()
+
+          ref_old = '''  const stateRef = useRef(state);
+          const persistenceEnabled = useRef(false);
+          '''
+          ref_new = '''  const stateRef = useRef(state);
+          const persistenceEnabled = useRef(false);
+          const plannerSettingsRollbackPendingRef = useRef(false);
+          '''
+
+          callback_old = '''  const persistPlannerSettings = useCallback(
+            (plannerSettings: PlannerSettings): StorageWriteResult => {
+              if (!persistenceEnabled.current) {
+                const error = "Bộ nhớ trình duyệt chưa sẵn sàng; thay đổi chưa được áp dụng.";
+                setStorageError(error);
+                return { ok: false, error };
+              }
+
+              const saved = savePlannerSettingsStorage(stateRef.current, plannerSettings);
+              if (!saved.ok) {
+                persistenceEnabled.current = false;
+                setStorageStatus({ status: "unavailable", error: saved.error });
+                setStorageError(saved.error);
+              }
+              return saved;
+            },
+            [],
+          );
+          '''
+          callback_new = '''  const persistPlannerSettings = useCallback(
+            (plannerSettings: PlannerSettings): StorageWriteResult => {
+              const isRollbackAttempt = plannerSettingsRollbackPendingRef.current;
+              if (!persistenceEnabled.current && !isRollbackAttempt) {
+                const error = "Bộ nhớ trình duyệt chưa sẵn sàng; thay đổi chưa được áp dụng.";
+                setStorageError(error);
+                return { ok: false, error };
+              }
+
+              const saved = savePlannerSettingsStorage(stateRef.current, plannerSettings);
+              if (!saved.ok) {
+                plannerSettingsRollbackPendingRef.current = !isRollbackAttempt;
+                persistenceEnabled.current = false;
+                setStorageStatus({ status: "unavailable", error: saved.error });
+                setStorageError(saved.error);
+                return saved;
+              }
+
+              plannerSettingsRollbackPendingRef.current = false;
+              persistenceEnabled.current = true;
+              setStorageStatus({ status: "ok", value: stateRef.current });
+              setStorageError(null);
+              return saved;
+            },
+            [],
+          );
+          '''
+
+          for old, new, label in [
+              (ref_old, ref_new, "rollback ref"),
+              (callback_old, callback_new, "persist callback"),
+          ]:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one {label} target, found {count}")
+              source = source.replace(old, new)
+
+          path.write_text(source)
+          PY
+          grep -F 'const plannerSettingsRollbackPendingRef = useRef(false);' src/lib/progress-store.ts
+          grep -F 'const isRollbackAttempt = plannerSettingsRollbackPendingRef.current;' src/lib/progress-store.ts
+          grep -F 'plannerSettingsRollbackPendingRef.current = !isRollbackAttempt;' src/lib/progress-store.ts
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/p0b-fix-planner-rollback-adapter.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/progress-store.ts .github/workflows/p0b-fix-planner-rollback-adapter.yml
+          git diff --cached --check
+          git commit -m "fix: allow planner settings rollback write"
+          git push origin HEAD:improve/p0b-schedule-transactions
