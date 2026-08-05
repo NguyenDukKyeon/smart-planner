@@ -115,7 +115,6 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [recentlyMovedLessonId, setRecentlyMovedLessonId] = useState<string | null>(null);
-  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const today = todayISO();
 
   const sortedSubjects = useMemo(() => sortSubjects(subjects), [subjects]);
