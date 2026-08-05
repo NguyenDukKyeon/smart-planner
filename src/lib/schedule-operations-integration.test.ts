@@ -131,7 +131,11 @@ describe("schedule operation transactions", () => {
       "first",
     ]);
 
-    const committed = commitCandidate({ current, candidate: built.candidate, kind: "reorder-lesson" });
+    const committed = commitCandidate({
+      current,
+      candidate: built.candidate,
+      kind: "reorder-lesson",
+    });
     expect(committed.ok).toBe(true);
     if (!committed.ok || committed.status !== "committed") throw new Error("Expected commit");
     expect(committed.history).toHaveLength(1);
