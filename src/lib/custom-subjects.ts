@@ -814,9 +814,7 @@ export function updateLessonDetails(
       scheduleMode: nextMode,
       weekday: scheduledDate ? weekdayFullVi(scheduledDate) : "",
       sourceSubject: subjectName,
-      ...(placementProvenance
-        ? { placementProvenance }
-        : { placementProvenance: undefined }),
+      ...(placementProvenance ? { placementProvenance } : { placementProvenance: undefined }),
     };
   };
 
