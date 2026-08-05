@@ -3,7 +3,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onBlur, onKeyDown, ...props }, ref) => {
+    const cancelNextBlurCommitRef = React.useRef(false);
+
     return (
       <input
         type={type}
@@ -13,6 +15,23 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         {...props}
+        onKeyDown={(event) => {
+          const shouldCancelBlurCommit = event.key === "Escape";
+          if (shouldCancelBlurCommit) cancelNextBlurCommitRef.current = true;
+
+          onKeyDown?.(event);
+
+          if (shouldCancelBlurCommit && document.activeElement === event.currentTarget) {
+            cancelNextBlurCommitRef.current = false;
+          }
+        }}
+        onBlur={(event) => {
+          if (cancelNextBlurCommitRef.current) {
+            cancelNextBlurCommitRef.current = false;
+            return;
+          }
+          onBlur?.(event);
+        }}
       />
     );
   },
