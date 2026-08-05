@@ -6,6 +6,13 @@ import { displayDate } from "@/lib/date-utils";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { sortSubjects } from "@/lib/subject-order";
+import {
+  DAILY_STUDY_HOURS_STEP,
+  MAX_DAILY_STUDY_HOURS,
+  MIN_DAILY_STUDY_HOURS,
+  normalizeDailyStudyHours,
+} from "@/lib/study-hours";
+import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
 
 type Props = {
   state: ProgressState;
@@ -31,12 +38,12 @@ export function ForecastCard({
   shiftedDates,
 }: Props) {
   const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
-    ? Math.max(0, state.plannerSettings.defaultDailyHours)
+    ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)
     : 2;
 
   const handleHoursChange = (h: number) => {
     if (onSetDefaultDailyHours) {
-      onSetDefaultDailyHours(h);
+      onSetDefaultDailyHours(normalizeDailyStudyHours(h));
     }
   };
 
@@ -118,21 +125,21 @@ export function ForecastCard({
           <Slider
             className="w-24 sm:w-32"
             value={[hours]}
-            min={0}
-            max={12}
-            step={0.5}
+            min={MIN_DAILY_STUDY_HOURS}
+            max={MAX_DAILY_STUDY_HOURS}
+            step={DAILY_STUDY_HOURS_STEP}
             onValueChange={(value) => handleHoursChange(value[0])}
           />
           <Input
             type="number"
-            min={0}
-            max={12}
-            step={0.5}
+            min={MIN_DAILY_STUDY_HOURS}
+            max={MAX_DAILY_STUDY_HOURS}
+            step={DAILY_STUDY_HOURS_STEP}
             value={hours}
             onChange={(event) => {
               const nextHours = Number(event.target.value);
               if (Number.isFinite(nextHours)) {
-                handleHoursChange(Math.min(12, Math.max(0, nextHours)));
+                handleHoursChange(normalizeDailyStudyHours(nextHours));
               }
             }}
             className="h-7 w-20 min-w-[80px] rounded-lg border-slate-300 bg-white px-3 text-center text-xs font-bold"
@@ -140,6 +147,8 @@ export function ForecastCard({
           <span className="text-xs font-medium text-slate-500">h/ngày</span>
         </div>
       </div>
+
+      <HighStudyHoursNote hours={hours} />
 
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">
         <div className="flex min-w-0 items-center gap-2">

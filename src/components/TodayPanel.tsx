@@ -21,6 +21,13 @@ import { ManualStudyDialog } from "@/components/today/ManualStudyDialog";
 import { TodayLessonCard } from "@/components/today/TodayLessonCard";
 import type { ManualStudyRequest, TimerLessonRequest } from "@/components/today/types";
 import { cn } from "@/lib/utils";
+import {
+  DAILY_STUDY_HOURS_STEP,
+  MAX_DAILY_STUDY_HOURS,
+  MIN_DAILY_STUDY_HOURS,
+  normalizeDailyStudyHours,
+} from "@/lib/study-hours";
+import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
 
 function StudyStreakBadge({ streak }: { streak: number }) {
   return (
@@ -250,23 +257,27 @@ export function TodayPanel({
               </span>
               <Slider
                 value={[state.plannerSettings.todayHours]}
-                min={0}
-                max={12}
-                step={0.5}
-                onValueChange={([value]) => onSetTodayHours(value)}
+                min={MIN_DAILY_STUDY_HOURS}
+                max={MAX_DAILY_STUDY_HOURS}
+                step={DAILY_STUDY_HOURS_STEP}
+                onValueChange={([value]) => onSetTodayHours(normalizeDailyStudyHours(value))}
               />
               <Input
                 type="number"
                 aria-label="Số giờ học hôm nay"
-                min={0}
-                max={12}
-                step={0.5}
+                min={MIN_DAILY_STUDY_HOURS}
+                max={MAX_DAILY_STUDY_HOURS}
+                step={DAILY_STUDY_HOURS_STEP}
                 value={state.plannerSettings.todayHours}
                 onChange={(event) => {
                   const value = Number(event.target.value);
-                  if (Number.isFinite(value)) onSetTodayHours(Math.min(12, Math.max(0, value)));
+                  if (Number.isFinite(value)) onSetTodayHours(normalizeDailyStudyHours(value));
                 }}
                 className="h-9 bg-white text-xs sm:text-sm font-bold text-slate-800"
+              />
+              <HighStudyHoursNote
+                hours={state.plannerSettings.todayHours}
+                className="sm:col-span-3"
               />
             </div>
           </div>
@@ -313,7 +324,7 @@ export function TodayPanel({
             className="h-2.5 overflow-hidden rounded-full bg-slate-100"
             role="progressbar"
             aria-label="Tiến độ bài học hôm nay"
-            aria-valuemin={0}
+            aria-valuemin={MIN_DAILY_STUDY_HOURS}
             aria-valuemax={Math.max(totalTodayQueue, 1)}
             aria-valuenow={completedTodayTasks}
           >

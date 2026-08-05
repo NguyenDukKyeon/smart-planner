@@ -31,6 +31,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";
+import {
+  DAILY_STUDY_HOURS_STEP,
+  MAX_DAILY_STUDY_HOURS,
+  MIN_DAILY_STUDY_HOURS,
+  normalizeDailyStudyHours,
+} from "@/lib/study-hours";
+import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
 
 type Props = {
   state: ProgressState;
@@ -740,16 +747,16 @@ function PlanDayCard({
             <Input
               type="number"
               aria-label={`Giờ học ngày ${displayDate(day.dateISO)}`}
-              min={0}
-              max={12}
-              step={0.5}
+              min={MIN_DAILY_STUDY_HOURS}
+              max={MAX_DAILY_STUDY_HOURS}
+              step={DAILY_STUDY_HOURS_STEP}
               value={day.hours}
               onChange={(event) => {
                 const value = Number(event.target.value);
                 if (Number.isFinite(value)) {
                   onSetDayHours(
                     day.dateISO,
-                    Math.min(12, Math.max(0, value)),
+                    normalizeDailyStudyHours(value),
                   );
                 }
               }}
@@ -758,6 +765,7 @@ function PlanDayCard({
             <span>giờ</span>
           </label>
         </div>
+        <HighStudyHoursNote hours={day.hours} />
 
         <p className="text-[11px] font-medium text-slate-500">
           ⏱️ Công suất: {day.queue.quotaMinutes}p •{" "}
