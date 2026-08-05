@@ -55,6 +55,28 @@ export function createScheduleSnapshot(
   };
 }
 
+export function scheduleSnapshotsEqual(
+  left: ScheduleSnapshot | ScheduleCandidate,
+  right: ScheduleSnapshot | ScheduleCandidate,
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+export function shouldInvalidateScheduleHistory(params: {
+  observed: ScheduleSnapshot;
+  current: ScheduleSnapshot;
+  expectedPublished?: ScheduleSnapshot | null;
+}): boolean {
+  if (scheduleSnapshotsEqual(params.observed, params.current)) return false;
+  if (
+    params.expectedPublished &&
+    scheduleSnapshotsEqual(params.expectedPublished, params.current)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function createScheduleMutationEntry(params: {
   kind: ScheduleMutationKind;
   description: string;
