@@ -25,16 +25,27 @@ describe("useProgress schedule persistence boundary", () => {
     expect(applyBlock).toContain("setState(next)");
   });
 
-  test("keeps persistence disabled and reports the error after a failed persist-only write", () => {
+  test("allows exactly one rollback write after a failed persist-only write", () => {
+    expect(source).toContain("const plannerSettingsRollbackPendingRef = useRef(false)");
     const persistBlock = source.slice(
       source.indexOf("const persistPlannerSettings = useCallback("),
       source.indexOf("const applyPersistedPlannerSettings = useCallback("),
     );
+
+    expect(persistBlock).toContain(
+      "const isRollbackAttempt = plannerSettingsRollbackPendingRef.current",
+    );
+    expect(persistBlock).toContain("!persistenceEnabled.current && !isRollbackAttempt");
+    expect(persistBlock).toContain(
+      "plannerSettingsRollbackPendingRef.current = !isRollbackAttempt",
+    );
     expect(persistBlock).toContain("persistenceEnabled.current = false");
+    expect(persistBlock).toContain("plannerSettingsRollbackPendingRef.current = false");
+    expect(persistBlock).toContain("persistenceEnabled.current = true");
     expect(persistBlock).toContain(
       'setStorageStatus({ status: "unavailable", error: saved.error })',
     );
-    expect(persistBlock).toContain("return saved");
+    expect(persistBlock).toContain('setStorageStatus({ status: "ok", value: stateRef.current })');
     expect(persistBlock).not.toContain("setState(");
   });
 });
