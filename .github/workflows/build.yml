@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -16,52 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
           submodules: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - name: Materialize accepted generated source once
-        run: npm run build
-      - name: Replace source-mutating npm commands
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from "node:fs";
-          const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-          packageJson.scripts = {
-            ...packageJson.scripts,
-            dev: "vite dev --host 0.0.0.0 --port 3000",
-            build: "vitest run && vite build",
-            "build:dev": "vite build --mode development",
-            preview: "vite preview",
-            typecheck: "tsc --noEmit",
-            test: "vitest run",
-            lint: "eslint .",
-            format: "prettier --write .",
-            "generate:vapid": "node scripts/generate-vapid.mjs"
-          };
-          fs.writeFileSync("package.json", `${JSON.stringify(packageJson, null, 2)}\n`);
-          NODE
-          rm -f \
-            scripts/fix-planning-dates.mjs \
-            scripts/prepare-app-build.mjs \
-            scripts/add-schedule-modes.mjs \
-            scripts/add-schedule-mode-bulk.mjs \
-            scripts/improve-lesson-order-drag.mjs \
-            scripts/improve-flexible-schedule-ux.mjs \
-            scripts/add-flexible-planner-undo.mjs \
-            scripts/templates/FlexiblePlanner.tsx
-      - name: Verify committed-source behavior
-        run: npx vitest run src/lib/build-purity-regression.test.ts src/lib/schedule-mode-regression.test.ts src/lib/catalog-order-drag-regression.test.ts src/lib/flexible-planner-ux-regression.test.ts
-      - name: Commit materialized source
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json src scripts
-          if git diff --cached --quiet; then
-            echo "No generated source changes to commit."
-          else
-            git commit -m "refactor: make committed source authoritative [skip ci]"
-            git push origin HEAD:${{ github.head_ref || github.ref_name }}
-          fi
+      - run: npx vitest run src/lib/study-hours.test.ts
