@@ -30,33 +30,26 @@ jobs:
           const path = "src/lib/progress-store.ts";
           let source = fs.readFileSync(path, "utf8");
 
-          function replaceRequired(before, after, label) {
+          function replaceText(before, after, label) {
             if (source.includes(after)) return;
             if (!source.includes(before)) throw new Error(`Missing ${label}`);
             source = source.replace(before, after);
           }
 
-          replaceRequired(
+          function replacePattern(pattern, after, marker, label) {
+            if (source.includes(marker)) return;
+            if (!pattern.test(source)) throw new Error(`Missing ${label}`);
+            source = source.replace(pattern, after);
+          }
+
+          replaceText(
             'import { addDaysISO, isDateISO, todayISO } from "./date-utils";',
             'import { addDaysISO, isDateISO, todayISO } from "./date-utils";\nimport { normalizeDailyStudyHours } from "./study-hours";',
             "study-hours import",
           );
 
-          replaceRequired(
-            `  const psIn = (parsed.plannerSettings as Partial<PlannerSettings>) ?? {};
-          const plannerSettings: PlannerSettings = {
-            todayHours:
-              typeof psIn.todayHours === "number"
-                ? clamp(psIn.todayHours, 0, 12)
-                : DEFAULT_PLANNER_SETTINGS.todayHours,
-            dailyHours:
-              psIn.dailyHours && typeof psIn.dailyHours === "object"
-                ? sanitizeDailyHours(psIn.dailyHours)
-                : {},
-            defaultDailyHours:
-              typeof psIn.defaultDailyHours === "number"
-                ? clamp(psIn.defaultDailyHours, 0, 12)
-                : DEFAULT_PLANNER_SETTINGS.defaultDailyHours,`,
+          replacePattern(
+            /  const psIn = \(parsed\.plannerSettings as Partial<PlannerSettings>\) \?\? \{\};\n  const plannerSettings: PlannerSettings = \{\n[\s\S]*?    reviewShareMax:/,
             `  const psIn = (parsed.plannerSettings as Partial<PlannerSettings>) ?? {};
           const storedDefaultDailyHours = normalizeStoredDailyHours(
             psIn.defaultDailyHours,
@@ -68,18 +61,14 @@ jobs:
               psIn.dailyHours && typeof psIn.dailyHours === "object"
                 ? sanitizeDailyHours(psIn.dailyHours)
                 : {},
-            defaultDailyHours: storedDefaultDailyHours,`,
+            defaultDailyHours: storedDefaultDailyHours,
+            reviewShareMax:`,
+            "storedDefaultDailyHours",
             "planner settings migration",
           );
 
-          replaceRequired(
-            `function sanitizeDailyHours(raw: Record<string, unknown>): Record<string, number> {
-            const out: Record<string, number> = {};
-            for (const [k, v] of Object.entries(raw)) {
-              if (typeof v === "number" && v >= 0 && v <= 12) out[k] = v;
-            }
-            return out;
-          }`,
+          replacePattern(
+            /function sanitizeDailyHours\(raw: Record<string, unknown>\): Record<string, number> \{[\s\S]*?\n\}/,
             `function normalizeStoredDailyHours(value: unknown, fallback: number): number {
             if (typeof value !== "number" || !Number.isFinite(value)) {
               return normalizeDailyStudyHours(fallback);
@@ -95,11 +84,12 @@ jobs:
             }
             return out;
           }`,
+            "normalizeStoredDailyHours(value: unknown",
             "daily hour sanitizer",
           );
 
-          replaceRequired(
-            `export function useProgress() {`,
+          replaceText(
+            "export function useProgress() {",
             `export function setTodayHoursState(
             state: ProgressState,
             hours: number,
@@ -158,10 +148,8 @@ jobs:
             "pure study hour mutations",
           );
 
-          const setterPattern = /  const setTodayHours = useCallback\([\s\S]*?  const addStudySession = useCallback\(/;
-          if (!setterPattern.test(source)) throw new Error("Missing progress hour setters");
-          source = source.replace(
-            setterPattern,
+          replacePattern(
+            /  const setTodayHours = useCallback\([\s\S]*?  const addStudySession = useCallback\(/,
             `  const setTodayHours = useCallback(
               (hours: number) => commit((state) => setTodayHoursState(state, hours)),
               [commit],
@@ -179,6 +167,8 @@ jobs:
             );
 
             const addStudySession = useCallback(`,
+            "setTodayHoursState(state, hours)",
+            "progress hour setters",
           );
 
           fs.writeFileSync(path, source);
