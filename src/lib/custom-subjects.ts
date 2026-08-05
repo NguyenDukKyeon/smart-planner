@@ -1,4 +1,9 @@
-import { type Subject, type Lesson, SUBJECTS as DEFAULT_SUBJECTS } from "./mock-data";
+import {
+  type Subject,
+  type Lesson,
+  type LessonScheduleMode,
+  SUBJECTS as DEFAULT_SUBJECTS,
+} from "./mock-data";
 import { weekdayFullVi, normalizeDateToISO } from "./date-utils";
 import { sortSubjects } from "./subject-order";
 import {
@@ -84,6 +89,7 @@ export type ImportedRawLesson = {
   title: string;
   estimatedMinutes?: number;
   scheduledDate: string;
+  scheduleMode?: LessonScheduleMode;
   xp?: number;
   habitAnchor?: string;
 };
@@ -382,6 +388,7 @@ export function convertRawToSubjects(items: ImportedRawLesson[]): Subject[] {
           xp: item.xp || 30,
           plannedDurationMinutes: clampMinutes(item.estimatedMinutes),
           scheduledDate: lessonDate,
+          scheduleMode: item.scheduleMode === "fixed" ? "fixed" : "flexible",
           weekday: lessonDate ? weekdayFullVi(lessonDate) : "",
           sourceSubject: subjectName,
           week: 1,
@@ -428,6 +435,7 @@ export function addCustomLessonToSubjects(
     xp: rawLesson.xp || 30,
     plannedDurationMinutes: clampMinutes(rawLesson.estimatedMinutes),
     scheduledDate: lessonDate,
+    scheduleMode: rawLesson.scheduleMode === "fixed" ? "fixed" : "flexible",
     weekday: lessonDate ? weekdayFullVi(lessonDate) : "",
     sourceSubject: subjectName,
     week: 1,
@@ -532,6 +540,7 @@ export function normalizeSubjects(value: unknown): Subject[] | null {
             ? milestone.lessons.map((lesson) => ({
                 ...lesson,
                 topic: typeof lesson.topic === "string" ? lesson.topic : undefined,
+                scheduleMode: lesson.scheduleMode === "fixed" ? "fixed" : "flexible",
                 plannedDurationMinutes: clampMinutes(
                   (lesson as Lesson & { estimatedMinutes?: number }).plannedDurationMinutes ??
                     (lesson as Lesson & { estimatedMinutes?: number }).estimatedMinutes,
@@ -682,7 +691,10 @@ export function updateLessonDetails(
   existingSubjects: Subject[],
   lessonId: string,
   patch: Partial<
-    Pick<Lesson, "title" | "topic" | "plannedDurationMinutes" | "scheduledDate" | "xp">
+    Pick<
+      Lesson,
+      "title" | "topic" | "plannedDurationMinutes" | "scheduledDate" | "scheduleMode" | "xp"
+    >
   >,
 ): Subject[] {
   const normalizeLesson = (lesson: Lesson, subjectName: string): Lesson => {
@@ -705,6 +717,10 @@ export function updateLessonDetails(
           ? Math.min(1000, Math.max(0, Math.round(patch.xp)))
           : lesson.xp,
       scheduledDate,
+      scheduleMode:
+        patch.scheduleMode === "fixed" || patch.scheduleMode === "flexible"
+          ? patch.scheduleMode
+          : lesson.scheduleMode ?? "flexible",
       weekday: scheduledDate ? weekdayFullVi(scheduledDate) : "",
       sourceSubject: subjectName,
     };
@@ -998,9 +1014,9 @@ export function moveLessonBeforeInTopic(
   subjectId: string,
   topicId: string,
   sourceLessonId: string,
-  targetLessonId: string,
+  targetLessonId: string | null,
 ): Subject[] {
-  if (sourceLessonId === targetLessonId) return existingSubjects;
+  if (targetLessonId && sourceLessonId === targetLessonId) return existingSubjects;
   let changed = false;
   const next = existingSubjects.map((subject) => {
     if (subject.id !== subjectId) return subject;
@@ -1008,13 +1024,28 @@ export function moveLessonBeforeInTopic(
       ...subject,
       milestones: subject.milestones.map((milestone) => {
         if (milestone.id !== topicId) return milestone;
-        const sourceIndex = milestone.lessons.findIndex((lesson) => lesson.id === sourceLessonId);
-        const targetIndex = milestone.lessons.findIndex((lesson) => lesson.id === targetLessonId);
-        if (sourceIndex < 0 || targetIndex < 0) return milestone;
+        const sourceIndex = milestone.lessons.findIndex(
+          (lesson) => lesson.id === sourceLessonId,
+        );
+        if (sourceIndex < 0) return milestone;
+        if (
+          targetLessonId &&
+          !milestone.lessons.some((lesson) => lesson.id === targetLessonId)
+        ) {
+          return milestone;
+        }
+
         const lessons = [...milestone.lessons];
         const [moving] = lessons.splice(sourceIndex, 1);
-        const adjustedTarget = lessons.findIndex((lesson) => lesson.id === targetLessonId);
-        lessons.splice(adjustedTarget, 0, moving);
+        const insertionIndex = targetLessonId
+          ? lessons.findIndex((lesson) => lesson.id === targetLessonId)
+          : lessons.length;
+        lessons.splice(insertionIndex < 0 ? lessons.length : insertionIndex, 0, moving);
+
+        const unchanged = lessons.every(
+          (lesson, index) => lesson.id === milestone.lessons[index]?.id,
+        );
+        if (unchanged) return milestone;
         changed = true;
         return { ...milestone, lessons };
       }),

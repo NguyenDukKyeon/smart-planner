@@ -28,7 +28,7 @@ function StudyStreakBadge({ streak }: { streak: number }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          title="Học ít nhất 1 bài hoặc hoàn thành 25 phút Pomodoro mỗi ngày để giữ chuỗi!"
+          title="Hoàn thành toàn bộ bài mới và bài ôn hôm nay để giữ chuỗi!"
           aria-label={`Chuỗi học: ${streak} ngày liên tiếp`}
           className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/90 bg-gradient-to-r from-amber-50 to-orange-50 px-3.5 py-2 text-xs sm:text-sm font-medium text-amber-900 shadow-2xs transition hover:border-amber-300 hover:bg-amber-100/90 focus:outline-none focus:ring-2 focus:ring-amber-400/50 cursor-pointer shrink-0 self-start sm:self-auto"
         >

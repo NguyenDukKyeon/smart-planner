@@ -1,28 +1,58 @@
-import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
+  Move,
+  Undo2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { SUBJECTS, type Lesson, type Subject } from "@/lib/mock-data";
-import { buildFlexiblePlan, findLessonById, findLessonPosition, type PlanDay } from "@/lib/planner";
+import {
+  buildFlexiblePlan,
+  findLessonById,
+  type PlanDay,
+} from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
-import { daysBetweenISO, displayDate, getSundayISO, todayISO, weekdayVi } from "@/lib/date-utils";
+import {
+  daysBetweenISO,
+  displayDate,
+  getSundayISO,
+  todayISO,
+  weekdayVi,
+} from "@/lib/date-utils";
+import {
+  updateLessonDetails,
+  type CatalogUpdateOptions,
+  type CatalogUpdateResult,
+} from "@/lib/custom-subjects";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { sortLessonsBySubjectPriority } from "@/lib/subject-order";
+import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";
 
 type Props = {
   state: ProgressState;
   subjects?: Subject[];
   onSetDayHours: (dateISO: string, hours: number | null) => void;
   onSetDefaultDailyHours?: (hours: number) => void;
+  onSubjectsUpdated: (
+    subjects: Subject[],
+    options?: CatalogUpdateOptions,
+  ) => CatalogUpdateResult | boolean | void;
 };
 
 type DisplayLesson = {
   id: string;
+  kind: "lesson" | "review";
   lesson: Lesson;
   subjectId: string;
   subjectName: string;
   subjectEmoji: string;
   topic: string;
   reviewAgeDays?: number;
+  unplacedFixed?: boolean;
 };
 
 type WeekGroup = {
@@ -33,14 +63,120 @@ type WeekGroup = {
   days: PlanDay[];
 };
 
+type LessonMode = "fixed" | "flexible";
+
+type UndoEntry = {
+  subjects: Subject[];
+  lessonTitle: string;
+  fromDateISO?: string;
+  toDateISO: string;
+};
+
+function catalogUpdateSucceeded(
+  result: CatalogUpdateResult | boolean | void,
+): boolean {
+  return result == null
+    ? true
+    : typeof result === "boolean"
+      ? result
+      : result.ok;
+}
+
+function isTextEditingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.isContentEditable ||
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  );
+}
+
+function getLessonMode(lesson: Lesson): LessonMode {
+  return (
+    (lesson as Lesson & { scheduleMode?: LessonMode }).scheduleMode ?? "flexible"
+  );
+}
+
+function getUnplacedFixedLessons(day: PlanDay): Lesson[] {
+  return (
+    day.queue as typeof day.queue & {
+      unplacedFixedLessons?: Lesson[];
+    }
+  ).unplacedFixedLessons ?? [];
+}
+
+function getUnplacedFixedMinutes(day: PlanDay): number {
+  return (
+    day.queue as typeof day.queue & {
+      unplacedFixedMinutes?: number;
+    }
+  ).unplacedFixedMinutes ?? 0;
+}
+
+function createLessonDragPreview(
+  event: ReactDragEvent<HTMLElement>,
+  item: DisplayLesson,
+) {
+  const preview = document.createElement("div");
+  preview.textContent = `${item.subjectEmoji} ${item.lesson.title}`;
+  Object.assign(preview.style, {
+    position: "fixed",
+    top: "-10000px",
+    left: "-10000px",
+    maxWidth: "360px",
+    padding: "10px 14px",
+    border: "1px solid rgb(110 231 183)",
+    borderRadius: "12px",
+    background: "white",
+    color: "rgb(15 23 42)",
+    boxShadow: "0 16px 36px rgba(15, 23, 42, 0.18)",
+    fontSize: "13px",
+    fontWeight: "700",
+    lineHeight: "1.35",
+  });
+  document.body.appendChild(preview);
+  event.dataTransfer.setDragImage(preview, 24, 20);
+  window.setTimeout(() => preview.remove(), 0);
+}
+
 export function FlexiblePlanner({
   state,
   subjects = SUBJECTS,
   onSetDayHours,
+  onSubjectsUpdated,
 }: Props) {
   const [numWeeks, setNumWeeks] = useState(2);
+  const [subjectId, setSubjectId] = useState("all");
   const [userToggledWeeks, setUserToggledWeeks] = useState<Record<string, boolean>>({});
+  const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  const [recentlyMovedLessonId, setRecentlyMovedLessonId] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const today = todayISO();
+
+  const sortedSubjects = useMemo(() => sortSubjects(subjects), [subjects]);
+
+  useEffect(() => {
+    if (
+      subjectId !== "all" &&
+      !sortedSubjects.some((subject) => subject.id === subjectId)
+    ) {
+      setSubjectId("all");
+    }
+  }, [sortedSubjects, subjectId]);
+
+  const subjectTabs = useMemo(
+    () => [
+      { id: "all", name: "Tất cả môn", emoji: "🌟" },
+      ...sortedSubjects.map((subject) => ({
+        id: subject.id,
+        name: subject.name,
+        emoji: subject.emoji,
+      })),
+    ],
+    [sortedSubjects],
+  );
 
   const horizonDays = useMemo(() => {
     const sunday = getSundayISO(today);
@@ -69,6 +205,95 @@ export function FlexiblePlanner({
     ],
   );
 
+  const lessonPositionById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        subjectId: string;
+        subjectName: string;
+        subjectEmoji: string;
+        topic: string;
+      }
+    >();
+
+    for (const subject of subjects) {
+      for (const milestone of subject.milestones) {
+        for (const lesson of milestone.lessons) {
+          map.set(lesson.id, {
+            subjectId: subject.id,
+            subjectName: subject.name,
+            subjectEmoji: subject.emoji,
+            topic:
+              lesson.topic ||
+              (milestone.title !== "Toàn bộ bài học" ? milestone.title : ""),
+          });
+        }
+      }
+    }
+    return map;
+  }, [subjects]);
+
+  const displayLessonsByDate = useMemo(() => {
+    const map = new Map<string, DisplayLesson[]>();
+
+    for (const day of days) {
+      const items: DisplayLesson[] = [];
+      const queuedIds = new Set<string>();
+
+      for (const lesson of sortLessonsBySubjectPriority(day.queue.newLessons)) {
+        queuedIds.add(lesson.id);
+        const position = lessonPositionById.get(lesson.id);
+        const item: DisplayLesson = {
+          id: lesson.id,
+          kind: "lesson",
+          lesson,
+          subjectId: position?.subjectId ?? "unknown",
+          subjectName: position?.subjectName ?? lesson.sourceSubject,
+          subjectEmoji: position?.subjectEmoji ?? "📚",
+          topic: position?.topic ?? lesson.topic ?? "",
+        };
+        if (subjectId === "all" || item.subjectId === subjectId) items.push(item);
+      }
+
+      for (const lesson of getUnplacedFixedLessons(day)) {
+        if (queuedIds.has(lesson.id)) continue;
+        const position = lessonPositionById.get(lesson.id);
+        const item: DisplayLesson = {
+          id: lesson.id,
+          kind: "lesson",
+          lesson,
+          subjectId: position?.subjectId ?? "unknown",
+          subjectName: position?.subjectName ?? lesson.sourceSubject,
+          subjectEmoji: position?.subjectEmoji ?? "📚",
+          topic: position?.topic ?? lesson.topic ?? "",
+          unplacedFixed: true,
+        };
+        if (subjectId === "all" || item.subjectId === subjectId) items.push(item);
+      }
+
+      for (const review of day.queue.reviewLessons) {
+        const lesson = findLessonById(review.lessonId, subjects);
+        if (!lesson) continue;
+        const position = lessonPositionById.get(lesson.id);
+        const item: DisplayLesson = {
+          id: `review-${lesson.id}-${day.dateISO}`,
+          kind: "review",
+          lesson,
+          subjectId: position?.subjectId ?? "unknown",
+          subjectName: position?.subjectName ?? lesson.sourceSubject,
+          subjectEmoji: position?.subjectEmoji ?? "📚",
+          topic: position?.topic ?? lesson.topic ?? "",
+          reviewAgeDays: review.ageDays,
+        };
+        if (subjectId === "all" || item.subjectId === subjectId) items.push(item);
+      }
+
+      map.set(day.dateISO, items);
+    }
+
+    return map;
+  }, [days, lessonPositionById, subjectId, subjects]);
+
   const weeks = useMemo<WeekGroup[]>(() => {
     const groups: WeekGroup[] = [];
     for (const day of days) {
@@ -87,59 +312,212 @@ export function FlexiblePlanner({
     return groups;
   }, [days]);
 
-  const displayLessonsForDay = (day: PlanDay): DisplayLesson[] => {
-    const items: DisplayLesson[] = [];
-    for (const lesson of sortLessonsBySubjectPriority(day.queue.newLessons)) {
-      const position = findLessonPosition(subjects, lesson.id);
-      items.push({
-        id: lesson.id,
-        lesson,
-        subjectId: position?.subject.id ?? "unknown",
-        subjectName: position?.subject.name ?? lesson.sourceSubject,
-        subjectEmoji: position?.subject.emoji ?? "📚",
-        topic:
-          lesson.topic ||
-          (position?.milestone && position.milestone !== "Toàn bộ bài học"
-            ? position.milestone
-            : ""),
-      });
-    }
-    for (const review of day.queue.reviewLessons) {
-      const lesson = findLessonById(review.lessonId, subjects);
-      if (!lesson) continue;
-      const position = findLessonPosition(subjects, lesson.id);
-      items.push({
-        id: `review-${lesson.id}`,
-        lesson,
-        subjectId: position?.subject.id ?? "unknown",
-        subjectName: position?.subject.name ?? lesson.sourceSubject,
-        subjectEmoji: position?.subject.emoji ?? "📚",
-        topic:
-          lesson.topic ||
-          (position?.milestone && position.milestone !== "Toàn bộ bài học"
-            ? position.milestone
-            : ""),
-        reviewAgeDays: review.ageDays,
-      });
-    }
-    return items;
-  };
+  const visibleLessonCount = useMemo(
+    () =>
+      [...displayLessonsByDate.values()].reduce(
+        (total, items) => total + items.length,
+        0,
+      ),
+    [displayLessonsByDate],
+  );
+
+  const selectedSubject =
+    subjectTabs.find((subject) => subject.id === subjectId) ?? subjectTabs[0];
+
+  const undoLastMove = useCallback(() => {
+    const entry = undoStack.at(-1);
+    if (!entry) return false;
+
+    const result = onSubjectsUpdated(entry.subjects, { createBackup: false });
+    if (!catalogUpdateSucceeded(result)) return false;
+
+    setUndoStack((current) => current.slice(0, -1));
+    setRecentlyMovedLessonId(null);
+    toast.success(`Đã hoàn tác “${entry.lessonTitle}”.`, {
+      description: entry.fromDateISO
+        ? `Khôi phục từ ${displayDate(entry.toDateISO)} về ${displayDate(entry.fromDateISO)}.`
+        : `Đã trả lại trạng thái trước khi chuyển sang ${displayDate(entry.toDateISO)}.`,
+    });
+    return true;
+  }, [onSubjectsUpdated, undoStack]);
+
+  useEffect(() => {
+    const handleUndoShortcut = (event: KeyboardEvent) => {
+      if (
+        !(event.ctrlKey || event.metaKey) ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== "z" ||
+        isTextEditingTarget(event.target) ||
+        undoStack.length === 0
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      undoLastMove();
+    };
+
+    window.addEventListener("keydown", handleUndoShortcut);
+    return () => window.removeEventListener("keydown", handleUndoShortcut);
+  }, [undoLastMove, undoStack.length]);
 
   const toggleWeek = (id: string, isCurrentlyCollapsed: boolean) => {
-    setUserToggledWeeks((prev) => ({
-      ...prev,
+    setUserToggledWeeks((previous) => ({
+      ...previous,
       [id]: !isCurrentlyCollapsed,
     }));
   };
 
+  const moveLessonToDate = (lessonId: string, targetDateISO: string) => {
+    const lesson = findLessonById(lessonId, subjects);
+    if (!lesson) {
+      toast.error("Không tìm thấy bài học để di chuyển.");
+      return false;
+    }
+
+    if (lesson.scheduledDate === targetDateISO) {
+      setRecentlyMovedLessonId(lessonId);
+      window.setTimeout(() => setRecentlyMovedLessonId(null), 700);
+      return true;
+    }
+
+    const nextSubjects = updateLessonDetails(subjects, lessonId, {
+      scheduledDate: targetDateISO,
+    });
+    if (nextSubjects === subjects) {
+      toast.error("Không thể cập nhật ngày của bài học.");
+      return false;
+    }
+
+    const result = onSubjectsUpdated(nextSubjects, { createBackup: true });
+    if (!catalogUpdateSucceeded(result)) return false;
+
+    setUndoStack((current) =>
+      [
+        ...current,
+        {
+          subjects,
+          lessonTitle: lesson.title,
+          fromDateISO: lesson.scheduledDate || undefined,
+          toDateISO: targetDateISO,
+        },
+      ].slice(-20),
+    );
+
+    const mode = getLessonMode(lesson);
+    toast.success(
+      mode === "fixed"
+        ? `Đã chuyển “${lesson.title}” sang ${displayDate(targetDateISO)}.`
+        : `Đã đặt “${lesson.title}” có thể học từ ${displayDate(targetDateISO)}.`,
+      {
+        description:
+          mode === "fixed"
+            ? "Bài cố định sẽ chỉ xuất hiện đúng ngày này. Nhấn Ctrl+Z để hoàn tác."
+            : "Nếu ngày đó quá tải, lịch linh hoạt có thể dời bài sang ngày sau. Nhấn Ctrl+Z để hoàn tác.",
+      },
+    );
+
+    setRecentlyMovedLessonId(lessonId);
+    window.setTimeout(() => setRecentlyMovedLessonId(null), 850);
+    return true;
+  };
+
+  const handleDrop = (lessonId: string, targetDateISO: string) => {
+    moveLessonToDate(lessonId, targetDateISO);
+    setDraggedLessonId(null);
+    setDragOverDate(null);
+  };
+
   return (
     <section className="min-w-0 space-y-4">
-      {/* Accordion List các tuần */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="font-serif text-lg font-bold text-slate-900 sm:text-xl">
+              Lịch linh hoạt
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Kéo bằng tay cầm sang ngày khác. Bài linh hoạt lấy ngày thả làm ngày sớm
+              nhất; bài cố định chuyển đúng sang ngày đó.
+            </p>
+          </div>
+
+          <div
+            className="flex max-w-full gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1"
+            role="tablist"
+            aria-label="Xem lịch theo môn"
+          >
+            {subjectTabs.map((subject) => (
+              <button
+                key={subject.id}
+                type="button"
+                role="tab"
+                aria-selected={subject.id === subjectId}
+                onClick={() => setSubjectId(subject.id)}
+                className={cn(
+                  "shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                  subject.id === subjectId
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800",
+                )}
+              >
+                <span className="mr-1">{subject.emoji}</span>
+                {subject.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+          <button
+            type="button"
+            disabled={undoStack.length === 0}
+            onClick={undoLastMove}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 font-semibold text-slate-700 shadow-2xs transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Hoàn tác lần chuyển lịch gần nhất"
+            title="Hoàn tác lần chuyển gần nhất (Ctrl+Z)"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+            Hoàn tác
+            {undoStack.length > 0 && (
+              <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                {undoStack.length}
+              </span>
+            )}
+            <span className="hidden text-[10px] font-medium text-slate-400 sm:inline">
+              Ctrl+Z
+            </span>
+          </button>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800">
+            Đang xem: {selectedSubject?.emoji} {selectedSubject?.name}
+          </span>
+          <span>{visibleLessonCount} mục trong {days.length} ngày</span>
+          <span className="inline-flex items-center gap-1">
+            <Move className="h-3.5 w-3.5" />
+            Trên điện thoại hoặc bàn phím, dùng nút lùi/tiến một ngày.
+          </span>
+        </div>
+      </div>
+
+      <p className="sr-only" aria-live="polite">
+        {draggedLessonId && dragOverDate
+          ? `Sẵn sàng chuyển bài sang ${displayDate(dragOverDate)}`
+          : draggedLessonId
+            ? "Đang kéo bài học"
+            : ""}
+      </p>
+
       <div className="space-y-3">
-        {weeks.map((week, idx) => {
-          // Mặc định: Tuần 1 (idx === 0) MỞ (collapsed = false), các tuần sau GẬP (collapsed = true)
+        {weeks.map((week, weekIndex) => {
           const collapsed =
-            userToggledWeeks[week.id] !== undefined ? userToggledWeeks[week.id] : idx > 0;
+            userToggledWeeks[week.id] !== undefined
+              ? userToggledWeeks[week.id]
+              : weekIndex > 0;
+          const weekVisibleCount = week.days.reduce(
+            (total, day) =>
+              total + (displayLessonsByDate.get(day.dateISO)?.length ?? 0),
+            0,
+          );
 
           return (
             <section
@@ -159,34 +537,67 @@ export function FlexiblePlanner({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-slate-900 text-base">Tuần {week.number}</p>
-                    {idx === 0 && (
-                      <span className="rounded-full bg-emerald-600 px-2 py-0.2 text-[10px] font-bold text-white">
+                    <p className="text-base font-bold text-slate-900">
+                      Tuần {week.number}
+                    </p>
+                    {weekIndex === 0 && (
+                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                         Tuần này
                       </span>
                     )}
                   </div>
-                  <p className="truncate text-xs text-slate-500 font-medium">
+                  <p className="truncate text-xs font-medium text-slate-500">
                     {weekdayVi(week.startISO)} {displayDate(week.startISO)} → CN{" "}
                     {displayDate(week.endISO)}
                   </p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 border border-slate-200/80 shadow-2xs">
-                  {week.days.length} ngày
+                <span className="rounded-full border border-slate-200/80 bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-2xs">
+                  {weekVisibleCount} mục
                 </span>
               </button>
 
               {!collapsed && (
                 <div className="grid gap-3 p-3.5 lg:grid-cols-2">
-                  {week.days.map((day) => (
-                    <PlanDayCard
-                      key={day.dateISO}
-                      day={day}
-                      today={today}
-                      lessons={displayLessonsForDay(day)}
-                      onSetDayHours={onSetDayHours}
-                    />
-                  ))}
+                  {week.days.map((day) => {
+                    const globalDayIndex = days.findIndex(
+                      (candidate) => candidate.dateISO === day.dateISO,
+                    );
+                    return (
+                      <PlanDayCard
+                        key={day.dateISO}
+                        day={day}
+                        today={today}
+                        lessons={displayLessonsByDate.get(day.dateISO) ?? []}
+                        previousDate={
+                          globalDayIndex > 0
+                            ? days[globalDayIndex - 1]?.dateISO
+                            : undefined
+                        }
+                        nextDate={days[globalDayIndex + 1]?.dateISO}
+                        draggedLessonId={draggedLessonId}
+                        dragOverDate={dragOverDate}
+                        recentlyMovedLessonId={recentlyMovedLessonId}
+                        onSetDayHours={onSetDayHours}
+                        onDragStart={(event, item) => {
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData(
+                            "application/x-smart-lesson-id",
+                            item.lesson.id,
+                          );
+                          event.dataTransfer.setData("text/plain", item.lesson.id);
+                          createLessonDragPreview(event, item);
+                          setDraggedLessonId(item.lesson.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedLessonId(null);
+                          setDragOverDate(null);
+                        }}
+                        onDragOverDate={setDragOverDate}
+                        onDropLesson={handleDrop}
+                        onMoveLesson={moveLessonToDate}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -194,20 +605,22 @@ export function FlexiblePlanner({
         })}
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between px-1">
+      <div className="mt-4 flex flex-col gap-3 px-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <span>
           Hiển thị {numWeeks} tuần · {days.length} ngày · đến{" "}
           {displayDate(days.at(-1)?.dateISO ?? today)}
         </span>
         <div className="grid grid-cols-3 gap-1.5 sm:flex">
           <button
-            className="min-h-9 rounded-lg border border-slate-200 bg-white px-2.5 font-semibold text-slate-700 hover:bg-slate-100 shadow-2xs"
+            type="button"
+            className="min-h-9 rounded-lg border border-slate-200 bg-white px-2.5 font-semibold text-slate-700 shadow-2xs hover:bg-slate-100"
             onClick={() => setNumWeeks((value) => Math.max(1, value - 1))}
           >
             − 1 tuần
           </button>
           <button
-            className="min-h-9 rounded-lg border border-slate-200 bg-white px-2.5 font-semibold text-slate-700 hover:bg-slate-100 shadow-2xs"
+            type="button"
+            className="min-h-9 rounded-lg border border-slate-200 bg-white px-2.5 font-semibold text-slate-700 shadow-2xs hover:bg-slate-100"
             onClick={() => setNumWeeks((value) => Math.min(52, value + 1))}
           >
             + 1 tuần
@@ -234,35 +647,96 @@ function PlanDayCard({
   day,
   today,
   lessons,
+  previousDate,
+  nextDate,
+  draggedLessonId,
+  dragOverDate,
+  recentlyMovedLessonId,
   onSetDayHours,
+  onDragStart,
+  onDragEnd,
+  onDragOverDate,
+  onDropLesson,
+  onMoveLesson,
 }: {
   day: PlanDay;
   today: string;
   lessons: DisplayLesson[];
+  previousDate?: string;
+  nextDate?: string;
+  draggedLessonId: string | null;
+  dragOverDate: string | null;
+  recentlyMovedLessonId: string | null;
   onSetDayHours: (dateISO: string, hours: number | null) => void;
+  onDragStart: (
+    event: ReactDragEvent<HTMLElement>,
+    item: DisplayLesson,
+  ) => void;
+  onDragEnd: () => void;
+  onDragOverDate: (dateISO: string | null) => void;
+  onDropLesson: (lessonId: string, targetDateISO: string) => void;
+  onMoveLesson: (lessonId: string, targetDateISO: string) => boolean;
 }) {
   const isToday = day.dateISO === today;
+  const isDropTarget = Boolean(
+    draggedLessonId && dragOverDate === day.dateISO,
+  );
+  const unplacedFixedMinutes = getUnplacedFixedMinutes(day);
+
   return (
     <article
+      onDragOver={(event) => {
+        if (!draggedLessonId) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        onDragOverDate(day.dateISO);
+      }}
+      onDragLeave={(event) => {
+        const relatedTarget = event.relatedTarget;
+        if (
+          !(relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(relatedTarget)
+        ) {
+          onDragOverDate(null);
+        }
+      }}
+      onDrop={(event) => {
+        if (!draggedLessonId) return;
+        event.preventDefault();
+        const lessonId =
+          event.dataTransfer.getData("application/x-smart-lesson-id") ||
+          event.dataTransfer.getData("text/plain") ||
+          draggedLessonId;
+        if (lessonId) onDropLesson(lessonId, day.dateISO);
+      }}
       className={cn(
-        "min-w-0 rounded-xl p-3.5 space-y-2.5 border transition-colors",
-        isToday ? "bg-emerald-50/50 border-emerald-200/80" : "bg-slate-50/70 border-slate-200/70",
+        "relative min-w-0 space-y-2.5 rounded-xl border p-3.5 transition-all",
+        isToday
+          ? "border-emerald-200/80 bg-emerald-50/50"
+          : "border-slate-200/70 bg-slate-50/70",
+        isDropTarget &&
+          "scale-[1.01] border-emerald-500 bg-emerald-50 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]",
       )}
     >
-      <header className="space-y-1">
-        {/* Hàng 1: Thứ & Ngày + Badge Hôm nay + Ô nhập giờ */}
+      {isDropTarget && (
+        <div className="pointer-events-none absolute inset-x-3 top-2 z-10 rounded-lg border border-emerald-300 bg-emerald-600 px-3 py-1.5 text-center text-[11px] font-bold text-white shadow-sm">
+          Thả để chuyển sang {weekdayVi(day.dateISO)} {displayDate(day.dateISO)}
+        </div>
+      )}
+
+      <header className={cn("space-y-1", isDropTarget && "pt-8")}>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <h4 className="font-bold text-slate-900 text-sm truncate">
+          <div className="flex min-w-0 items-center gap-2">
+            <h4 className="truncate text-sm font-bold text-slate-900">
               {weekdayVi(day.dateISO)} - {displayDate(day.dateISO)}
             </h4>
             {isToday && (
-              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shrink-0">
+              <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                 Hôm nay
               </span>
             )}
           </div>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 shrink-0">
+          <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
             <Input
               type="number"
               aria-label={`Giờ học ngày ${displayDate(day.dateISO)}`}
@@ -272,68 +746,191 @@ function PlanDayCard({
               value={day.hours}
               onChange={(event) => {
                 const value = Number(event.target.value);
-                if (Number.isFinite(value))
-                  onSetDayHours(day.dateISO, Math.min(12, Math.max(0, value)));
+                if (Number.isFinite(value)) {
+                  onSetDayHours(
+                    day.dateISO,
+                    Math.min(12, Math.max(0, value)),
+                  );
+                }
               }}
-              className="h-7 w-16 text-center text-xs font-bold bg-white border-slate-200 px-1 rounded-lg"
+              className="h-7 w-16 rounded-lg border-slate-200 bg-white px-1 text-center text-xs font-bold"
             />
             <span>giờ</span>
           </label>
         </div>
 
-        {/* Hàng 2: Text mờ nhỏ gọn */}
-        <p className="text-[11px] text-slate-500 font-medium">
+        <p className="text-[11px] font-medium text-slate-500">
           ⏱️ Công suất: {day.queue.quotaMinutes}p •{" "}
           {day.queue.overloadMinutes > 0
             ? `Quá: ${day.queue.overloadMinutes}p`
             : `Dự phòng: ${day.queue.unallocatedMinutes}p`}
+          {unplacedFixedMinutes > 0
+            ? ` • Chưa xếp được: ${unplacedFixedMinutes}p`
+            : ""}
         </p>
       </header>
 
-      {/* Danh sách bài học */}
       {lessons.length > 0 ? (
         <ul className="space-y-2 pt-0.5">
           {lessons.map((item) => (
-            <li
+            <LessonCard
               key={item.id}
-              className={cn(
-                "rounded-lg border bg-white p-3 text-xs transition-colors hover:border-emerald-400",
-                item.reviewAgeDays
-                  ? "border-amber-200/90 bg-amber-50/40"
-                  : "border-slate-200/80 bg-white",
-              )}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="break-words font-medium text-slate-900 leading-snug">
-                  {item.reviewAgeDays ? "↻ " : ""}
-                  {item.lesson.title}
-                </p>
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700 shrink-0">
-                  {item.subjectEmoji} {item.subjectName}
-                </span>
-              </div>
-              {(item.topic || item.reviewAgeDays) && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  {item.topic && (
-                    <span className="rounded bg-slate-100/80 px-1.5 py-0.5 text-slate-600 font-medium">
-                      {item.topic}
-                    </span>
-                  )}
-                  {item.reviewAgeDays && (
-                    <span className="text-amber-800 font-medium">
-                      ôn sau {item.reviewAgeDays} ngày
-                    </span>
-                  )}
-                </div>
-              )}
-            </li>
+              item={item}
+              isDragging={draggedLessonId === item.lesson.id}
+              recentlyMoved={recentlyMovedLessonId === item.lesson.id}
+              previousDate={previousDate}
+              nextDate={nextDate}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveLesson={onMoveLesson}
+            />
           ))}
         </ul>
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500 font-medium">
-          Không có bài được phân bổ.
+        <div
+          className={cn(
+            "rounded-lg border border-dashed p-3 text-center text-xs font-medium",
+            isDropTarget
+              ? "border-emerald-400 bg-white text-emerald-800"
+              : "border-slate-300 text-slate-500",
+          )}
+        >
+          {isDropTarget
+            ? "Thả bài vào ngày này"
+            : "Không có bài của môn đang xem."}
         </div>
       )}
     </article>
+  );
+}
+
+function LessonCard({
+  item,
+  isDragging,
+  recentlyMoved,
+  previousDate,
+  nextDate,
+  onDragStart,
+  onDragEnd,
+  onMoveLesson,
+}: {
+  item: DisplayLesson;
+  isDragging: boolean;
+  recentlyMoved: boolean;
+  previousDate?: string;
+  nextDate?: string;
+  onDragStart: (
+    event: ReactDragEvent<HTMLElement>,
+    item: DisplayLesson,
+  ) => void;
+  onDragEnd: () => void;
+  onMoveLesson: (lessonId: string, targetDateISO: string) => boolean;
+}) {
+  const mode = getLessonMode(item.lesson);
+  const movable = item.kind === "lesson";
+
+  return (
+    <li
+      className={cn(
+        "relative rounded-lg border p-3 text-xs transition-all",
+        item.reviewAgeDays
+          ? "border-amber-200/90 bg-amber-50/40"
+          : item.unplacedFixed
+            ? "border-rose-300 bg-rose-50/60"
+            : "border-slate-200/80 bg-white",
+        isDragging && "scale-[0.99] opacity-35",
+        recentlyMoved &&
+          "animate-pulse border-emerald-400 bg-emerald-50 shadow-[0_0_0_2px_rgba(16,185,129,0.12)]",
+      )}
+    >
+      <div className="flex items-start gap-2">
+        {movable && (
+          <button
+            type="button"
+            draggable
+            onDragStart={(event) => onDragStart(event, item)}
+            onDragEnd={onDragEnd}
+            className="mt-0.5 inline-flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 shadow-2xs transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:cursor-grabbing"
+            aria-label={`Kéo ${item.lesson.title} sang ngày khác`}
+            title="Giữ tay cầm rồi kéo sang ngày khác"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="min-w-0 flex-1 break-words font-semibold leading-snug text-slate-900">
+              {item.reviewAgeDays ? "↻ " : ""}
+              {item.lesson.title}
+            </p>
+            <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+              {item.subjectEmoji} {item.subjectName}
+            </span>
+          </div>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+            {item.topic && (
+              <span className="rounded bg-slate-100/80 px-1.5 py-0.5 font-medium text-slate-600">
+                {item.topic}
+              </span>
+            )}
+            {item.kind === "review" ? (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">
+                Ôn sau {item.reviewAgeDays} ngày
+              </span>
+            ) : (
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 font-semibold",
+                  mode === "fixed"
+                    ? "bg-violet-100 text-violet-800"
+                    : "bg-sky-100 text-sky-800",
+                )}
+              >
+                {mode === "fixed" ? "Cố định" : "Linh hoạt"}
+              </span>
+            )}
+            {item.unplacedFixed && (
+              <span className="rounded bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-800">
+                Chưa xếp được trong công suất
+              </span>
+            )}
+          </div>
+
+          {movable && (
+            <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-slate-100 pt-2">
+              <button
+                type="button"
+                disabled={!previousDate}
+                onClick={() =>
+                  previousDate &&
+                  onMoveLesson(item.lesson.id, previousDate)
+                }
+                className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+                aria-label={`Chuyển ${item.lesson.title} lùi một ngày`}
+                title="Lùi một ngày"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">1 ngày</span>
+              </button>
+              <button
+                type="button"
+                disabled={!nextDate}
+                onClick={() =>
+                  nextDate && onMoveLesson(item.lesson.id, nextDate)
+                }
+                className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+                aria-label={`Chuyển ${item.lesson.title} tiến một ngày`}
+                title="Tiến một ngày"
+              >
+                <span className="hidden sm:inline">1 ngày</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }

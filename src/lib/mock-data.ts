@@ -7,6 +7,8 @@ import roadmapLessons5 from "@/data/grade11-roadmap-lessons-5.json";
 import roadmapLessons6 from "@/data/grade11-roadmap-lessons-6.json";
 import { sortSubjects } from "./subject-order";
 
+export type LessonScheduleMode = "fixed" | "flexible";
+
 export type Lesson = {
   id: string;
   title: string;
@@ -14,6 +16,7 @@ export type Lesson = {
   xp: number;
   plannedDurationMinutes: number;
   scheduledDate: string;
+  scheduleMode?: LessonScheduleMode;
   weekday: string;
   sourceSubject: string;
   week: number;
@@ -121,6 +124,7 @@ function buildSampleRoadmap(raw: CompactRoadmap): Subject[] {
       xp,
       plannedDurationMinutes: raw.minutes,
       scheduledDate: raw.date,
+      scheduleMode: "flexible",
       weekday: "Thứ 7",
       sourceSubject: subject.name,
       week: 1,

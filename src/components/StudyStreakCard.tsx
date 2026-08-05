@@ -72,8 +72,7 @@ export function StudyStreakCard({ studyStreak, state }: Props) {
         <p className="font-medium text-indigo-900">{message}</p>
         <p className="mt-1 flex items-start gap-1.5 text-slate-600">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" />
-          Một ngày học được ghi nhận khi có bài học hoàn thành trong ngày, thói quen học đã đánh
-          dấu, hoặc phiên tập trung có thời lượng dương.
+          Một ngày chỉ được ghi nhận khi bạn hoàn thành toàn bộ bài mới và bài ôn trong hàng đợi\n          hôm nay. Học một phần hoặc chỉ chạy Pomodoro chưa làm tăng chuỗi.
         </p>
       </div>
     </section>

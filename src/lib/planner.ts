@@ -72,22 +72,46 @@ export function remainingBySubject(
   subjects: Subject[],
   completed: Record<string, string>,
   consumed: Set<string> = new Set(),
+  dateISO?: string,
 ): Record<string, Lesson[]> {
   const sortedSubjects = sortSubjects(subjects);
   const out: Record<string, Lesson[]> = {};
   for (const subject of sortedSubjects) {
     const list: Lesson[] = [];
-    for (const m of subject.milestones) {
-      for (const l of m.lessons) {
-        if (completed[l.id]) continue;
-        if (consumed.has(l.id)) continue;
-        if (!l.scheduledDate) continue;
-        list.push(l);
+    for (const milestone of subject.milestones) {
+      for (const lesson of milestone.lessons) {
+        if (completed[lesson.id] || consumed.has(lesson.id)) continue;
+        if ((lesson.scheduleMode ?? "flexible") !== "flexible") continue;
+        if (!lesson.scheduledDate) continue;
+        if (dateISO && lesson.scheduledDate > dateISO) continue;
+        list.push(lesson);
       }
     }
+    list.sort((left, right) => left.scheduledDate.localeCompare(right.scheduledDate));
     out[subject.id] = list;
   }
   return out;
+}
+
+function fixedLessonsScheduledOn(
+  subjects: Subject[],
+  completed: Record<string, string>,
+  consumed: Set<string>,
+  dateISO: string,
+  meta: StudyMeta,
+): Lesson[] {
+  const lessons = subjects.flatMap((subject) =>
+    subject.milestones.flatMap((milestone) =>
+      milestone.lessons.filter(
+        (lesson) =>
+          !completed[lesson.id] &&
+          !consumed.has(lesson.id) &&
+          (lesson.scheduleMode ?? "flexible") === "fixed" &&
+          lesson.scheduledDate === dateISO,
+      ),
+    ),
+  );
+  return lessons;
 }
 
 export function reviewTaskId(lessonId: string, dateISO: string): string {
@@ -126,6 +150,7 @@ export function reviewDueLessons(
 
 export type DayQueue = {
   newLessons: Lesson[];
+  unplacedFixedLessons: Lesson[];
   reviewLessons: {
     lessonId: string;
     ageDays: number;
@@ -136,6 +161,7 @@ export type DayQueue = {
   quotaMinutes: number;
   newMinutes: number;
   reviewMinutes: number;
+  unplacedFixedMinutes: number;
   unallocatedMinutes: number;
   overloadMinutes: number;
 };
@@ -198,45 +224,101 @@ export function pickDayQueue(params: {
     consumed.add(l.id);
   }
 
-  if (quotaMinutes > 0) {
-    const newBudget = quotaMinutes - reviewMinutes;
-    const sortedSubjects = sortSubjects(subjects);
-    const pools = remainingBySubject(sortedSubjects, completed, consumed);
-    const order = sortedSubjects.map((s) => s.id);
-    const cursors: Record<string, number> = Object.fromEntries(order.map((id) => [id, 0]));
+  const unplacedFixedLessons: Lesson[] = [];
+  let unplacedFixedMinutes = 0;
 
-    // Round-robin or priority pick until budget filled or all pools empty.
+  if (quotaMinutes > 0) {
+    const newBudget = Math.max(0, quotaMinutes - reviewMinutes);
+
+    // Bài cố định chỉ có một cơ hội ở đúng ngày đã chọn. Bài không vừa
+    // ngân sách được đưa vào khu vực "Chưa xếp được", không dời sang ngày sau.
+    const fixedCandidates = fixedLessonsScheduledOn(
+      subjects,
+      completed,
+      consumed,
+      dateISO,
+      meta,
+    );
+    for (const lesson of fixedCandidates) {
+      const estimatedMinutes = estimateLessonMinutes(lesson.id, meta, subjects);
+      if (newMinutes + estimatedMinutes <= newBudget) {
+        newLessons.push(lesson);
+        newMinutes += estimatedMinutes;
+        consumed.add(lesson.id);
+      } else {
+        unplacedFixedLessons.push(lesson);
+        unplacedFixedMinutes += estimatedMinutes;
+      }
+    }
+
+    // Bài linh hoạt được mang sang các ngày sau, nhưng không bao giờ bị kéo
+    // lên trước ngày bắt đầu mà người dùng đã chọn.
+    const sortedSubjects = sortSubjects(subjects);
+    const pools = remainingBySubject(sortedSubjects, completed, consumed, dateISO);
+    const order = sortedSubjects.map((subject) => subject.id);
+    const cursors: Record<string, number> = Object.fromEntries(order.map((id) => [id, 0]));
+    const subjectPickCounts: Record<string, number> = Object.fromEntries(
+      order.map((id) => [id, 0]),
+    );
+
     let guard = 0;
     while (guard++ < 1000) {
-      let picked = false;
-      for (const sid of order) {
-        const pool = pools[sid] || [];
-        while (cursors[sid] < pool.length) {
-          const lesson = pool[cursors[sid]];
-          const est = estimateLessonMinutes(lesson.id, meta, subjects);
-          if (newMinutes + est > newBudget) {
-            cursors[sid] = pool.length; // this subject is done for the day
-            break;
-          }
-          newLessons.push(lesson);
-          newMinutes += est;
-          cursors[sid]++;
-          picked = true;
-          break;
-        }
-      }
-      if (!picked) break;
+      const remainingBudget = newBudget - newMinutes;
+      const candidates = order.flatMap((subjectId, subjectOrder) => {
+        const pool = pools[subjectId] || [];
+        const lesson = pool[cursors[subjectId]];
+        if (!lesson) return [];
+        const estimatedMinutes = estimateLessonMinutes(lesson.id, meta, subjects);
+        if (estimatedMinutes > remainingBudget) return [];
+        return [{ subjectId, subjectOrder, lesson, estimatedMinutes }];
+      });
+      if (candidates.length === 0) break;
+
+      candidates.sort((left, right) => {
+        const pickDifference =
+          subjectPickCounts[left.subjectId] - subjectPickCounts[right.subjectId];
+        if (pickDifference !== 0) return pickDifference;
+        const dateDifference = left.lesson.scheduledDate.localeCompare(
+          right.lesson.scheduledDate,
+        );
+        if (dateDifference !== 0) return dateDifference;
+        const durationDifference = left.estimatedMinutes - right.estimatedMinutes;
+        if (durationDifference !== 0) return durationDifference;
+        return left.subjectOrder - right.subjectOrder;
+      });
+
+      const selected = candidates[0];
+      newLessons.push(selected.lesson);
+      newMinutes += selected.estimatedMinutes;
+      consumed.add(selected.lesson.id);
+      cursors[selected.subjectId] += 1;
+      subjectPickCounts[selected.subjectId] += 1;
     }
+  } else {
+    const fixedCandidates = fixedLessonsScheduledOn(
+      subjects,
+      completed,
+      consumed,
+      dateISO,
+      meta,
+    );
+    unplacedFixedLessons.push(...fixedCandidates);
+    unplacedFixedMinutes = fixedCandidates.reduce(
+      (sum, lesson) => sum + estimateLessonMinutes(lesson.id, meta, subjects),
+      0,
+    );
   }
 
   const sortedNewLessons = sortLessonsBySubjectPriority(newLessons);
 
   return {
     newLessons: sortedNewLessons,
+    unplacedFixedLessons,
     reviewLessons,
     quotaMinutes,
     newMinutes,
     reviewMinutes,
+    unplacedFixedMinutes,
     unallocatedMinutes: Math.max(0, quotaMinutes - newMinutes - reviewMinutes),
     overloadMinutes: Math.max(0, newMinutes + reviewMinutes - quotaMinutes),
   };

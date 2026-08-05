@@ -51,7 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { Lesson, Subject } from "@/lib/mock-data";
+import type { Lesson, LessonScheduleMode, Subject } from "@/lib/mock-data";
 import type { ProgressState } from "@/lib/progress-store";
 import {
   addSubjectToSubjects,
@@ -119,6 +119,26 @@ function allLessons(subject: Subject): Lesson[] {
   return subject.milestones.flatMap((milestone) => milestone.lessons);
 }
 
+function autoScrollDuringLessonDrag(event: DragEvent<HTMLElement>) {
+  const container = event.currentTarget.closest<HTMLElement>("[data-course-scroll-container]");
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const threshold = Math.min(120, Math.max(64, rect.height * 0.18));
+  const maxStep = 30;
+  let delta = 0;
+
+  if (event.clientY < rect.top + threshold) {
+    const intensity = Math.min(1, (rect.top + threshold - event.clientY) / threshold);
+    delta = -Math.max(6, Math.ceil(maxStep * intensity));
+  } else if (event.clientY > rect.bottom - threshold) {
+    const intensity = Math.min(1, (event.clientY - (rect.bottom - threshold)) / threshold);
+    delta = Math.max(6, Math.ceil(maxStep * intensity));
+  }
+
+  if (delta !== 0) container.scrollTop += delta;
+}
+
 export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progress, activeTimerLessonId, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState(currentSubjects[0]?.id ?? "");
@@ -132,6 +152,7 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
   const [bulkTargetSubjectId, setBulkTargetSubjectId] = useState("");
   const [bulkTargetTopicId, setBulkTargetTopicId] = useState("");
   const [bulkDate, setBulkDate] = useState("");
+  const [bulkScheduleMode, setBulkScheduleMode] = useState<LessonScheduleMode>("flexible");
   const [bulkMinutes, setBulkMinutes] = useState(120);
   const [archiveView, setArchiveView] = useState(false);
   const [archiveVersion, setArchiveVersion] = useState(0);
@@ -141,9 +162,17 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [topicEditor, setTopicEditor] = useState<{ id: string | null; title: string } | null>(null);
   const [subjectDraft, setSubjectDraft] = useState({ name: "", emoji: "📖" });
-  const [lessonDraft, setLessonDraft] = useState({ title: "", topic: "", minutes: 120, date: "" });
+  const [lessonDraft, setLessonDraft] = useState({
+    title: "",
+    subjectId: "",
+    topicId: "",
+    minutes: 120,
+    date: "",
+    scheduleMode: "flexible" as LessonScheduleMode,
+  });
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
+  const [dragArmedLessonId, setDragArmedLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentSubjects.some((subject) => subject.id === selectedSubjectId)) {
@@ -156,7 +185,14 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
     setSelectionMode(false);
     setBulkTargetSubjectId("");
     setBulkTargetTopicId("");
+    setDragArmedLessonId(null);
   }, [selectedSubjectId]);
+
+  useEffect(() => {
+    if (!dragArmedLessonId || draggedLessonId) return;
+    const timeout = window.setTimeout(() => setDragArmedLessonId(null), 2600);
+    return () => window.clearTimeout(timeout);
+  }, [dragArmedLessonId, draggedLessonId]);
 
   const minutesByLesson = useMemo(() => {
     const map = new Map<string, number>();
@@ -291,14 +327,27 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
   };
 
   const openLessonEdit = (lesson: Lesson) => {
+    const ownerSubject = currentSubjects.find((subject) =>
+      subject.milestones.some((milestone) =>
+        milestone.lessons.some((candidate) => candidate.id === lesson.id),
+      ),
+    );
+    const ownerTopic = ownerSubject?.milestones.find((milestone) =>
+      milestone.lessons.some((candidate) => candidate.id === lesson.id),
+    );
     setEditingLesson(lesson);
     setLessonDraft({
       title: lesson.title,
-      topic: lesson.topic ?? "",
+      subjectId: ownerSubject?.id ?? selectedSubjectId,
+      topicId: ownerTopic?.id ?? ownerSubject?.milestones[0]?.id ?? "",
       minutes: lesson.plannedDurationMinutes,
       date: lesson.scheduledDate,
+      scheduleMode: lesson.scheduleMode ?? "flexible",
     });
   };
+
+  const editingTargetSubject =
+    currentSubjects.find((subject) => subject.id === lessonDraft.subjectId) ?? null;
 
   const saveLesson = () => {
     if (!editingLesson) return;
@@ -307,17 +356,42 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
     if (!Number.isFinite(lessonDraft.minutes) || lessonDraft.minutes <= 0) {
       return toast.error("Thời lượng mục tiêu phải lớn hơn 0.");
     }
-    if (
-      apply(
-        updateLessonDetails(currentSubjects, editingLesson.id, {
-          title,
-          topic: lessonDraft.topic.trim(),
-          plannedDurationMinutes: lessonDraft.minutes,
-          scheduledDate: lessonDraft.date,
-        }),
-        `Đã cập nhật bài “${title}”.`,
-      )
-    ) {
+    if (lessonDraft.scheduleMode === "fixed" && !lessonDraft.date) {
+      return toast.error("Bài cố định cần có ngày học cụ thể.");
+    }
+
+    const targetSubject = currentSubjects.find(
+      (subject) => subject.id === lessonDraft.subjectId,
+    );
+    if (!targetSubject) return toast.error("Vui lòng chọn môn học đích.");
+    const targetTopic = targetSubject.milestones.find(
+      (milestone) => milestone.id === lessonDraft.topicId,
+    );
+    if (!targetTopic) return toast.error("Vui lòng chọn chủ đề đích.");
+
+    const currentOwner = currentSubjects.find((subject) =>
+      subject.milestones.some((milestone) =>
+        milestone.lessons.some((candidate) => candidate.id === editingLesson.id),
+      ),
+    );
+
+    let next = updateLessonDetails(currentSubjects, editingLesson.id, {
+      title,
+      plannedDurationMinutes: lessonDraft.minutes,
+      scheduledDate: lessonDraft.date,
+      scheduleMode: lessonDraft.scheduleMode,
+    });
+    if (currentOwner?.id !== targetSubject.id) {
+      next = moveLessonToSubject(next, editingLesson.id, targetSubject.id);
+    }
+    next = moveLessonsToTopic(
+      next,
+      [editingLesson.id],
+      targetSubject.id,
+      targetTopic.id,
+    );
+
+    if (apply(next, `Đã cập nhật bài “${title}”.`)) {
       setEditingLesson(null);
     }
   };
@@ -396,6 +470,7 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
         lesson_name: lesson.title,
         target_minutes: lesson.plannedDurationMinutes,
         planned_date: lesson.scheduledDate,
+        schedule_mode: lesson.scheduleMode ?? "flexible",
         xp_reward: lesson.xp,
       })),
     );
@@ -654,6 +729,36 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
                         <Button type="button" size="sm" variant="outline" className="rounded-xl" disabled={selectedLessonIds.size === 0} onClick={() => applyBulk(updateLessonsDetails(currentSubjects, selectedLessonIds, { scheduledDate: bulkDate }), `Đã cập nhật ngày cho ${selectedLessonIds.size} bài.`)} aria-label="Cập nhật ngày dự kiến"><CalendarDays className="h-4 w-4" /></Button>
                       </div>
                       <div className="flex gap-2">
+                        <select
+                          value={bulkScheduleMode}
+                          onChange={(event) =>
+                            setBulkScheduleMode(event.target.value as LessonScheduleMode)
+                          }
+                          className="h-9 min-w-0 flex-1 rounded-xl border border-indigo-200 bg-white px-2 text-xs"
+                        >
+                          <option value="flexible">Linh hoạt</option>
+                          <option value="fixed">Cố định</option>
+                        </select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl"
+                          disabled={selectedLessonIds.size === 0}
+                          onClick={() =>
+                            applyBulk(
+                              updateLessonsDetails(currentSubjects, selectedLessonIds, {
+                                scheduleMode: bulkScheduleMode,
+                              }),
+                              `Đã đổi cách xếp lịch cho ${selectedLessonIds.size} bài.`,
+                            )
+                          }
+                          aria-label="Cập nhật cách xếp lịch"
+                        >
+                          <CalendarDays className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
                         <select value={bulkMinutes} onChange={(event) => setBulkMinutes(Number(event.target.value))} className="h-9 min-w-0 flex-1 rounded-xl border border-indigo-200 bg-white px-2 text-xs">
                           {[30, 60, 90, 120].map((minutes) => <option key={minutes} value={minutes}>{minutes} phút</option>)}
                         </select>
@@ -711,6 +816,8 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
                       canReorder={sort === "roadmap" && filter === "all" && search.trim().length === 0}
                       draggedLessonId={draggedLessonId}
                       onDraggedLessonChange={setDraggedLessonId}
+                      dragArmedLessonId={dragArmedLessonId}
+                      onDragArmedLessonChange={setDragArmedLessonId}
                       onRequestDelete={(lesson) => {
                         if (!confirmTimerImpact([lesson.id], `xóa bài ${lesson.title}`)) return;
                         setPendingDelete({
@@ -770,14 +877,150 @@ export function CourseManagerModal({ currentSubjects, onSubjectsUpdated, progres
       </Dialog>
 
       <Dialog open={Boolean(editingLesson)} onOpenChange={(next) => !next && setEditingLesson(null)}>
-        <DialogContent className="max-w-lg rounded-3xl">
-          <DialogHeader><DialogTitle>Chỉnh sửa bài học</DialogTitle><DialogDescription>Thời lượng mục tiêu khác với thời lượng một phiên Pomodoro.</DialogDescription></DialogHeader>
+        <DialogContent className="max-w-xl rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa bài học</DialogTitle>
+            <DialogDescription>Đổi chủ đề, ngày dự kiến và tổng thời lượng mục tiêu của bài.</DialogDescription>
+          </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2"><Label>Tên bài học</Label><Input value={lessonDraft.title} onChange={(event) => setLessonDraft((current) => ({ ...current, title: event.target.value }))} /></div>
-            <div className="sm:col-span-2"><Label>Chủ đề hoặc chương</Label><Input value={lessonDraft.topic} onChange={(event) => setLessonDraft((current) => ({ ...current, topic: event.target.value }))} /></div>
-            <div><Label>Thời lượng mục tiêu</Label><Input type="number" min={1} value={lessonDraft.minutes} onChange={(event) => setLessonDraft((current) => ({ ...current, minutes: Number(event.target.value) }))} /></div>
-            <div><Label>Ngày dự kiến</Label><Input type="date" value={lessonDraft.date} onChange={(event) => setLessonDraft((current) => ({ ...current, date: event.target.value }))} /></div>
-            <div className="flex justify-end gap-2 sm:col-span-2"><Button variant="outline" onClick={() => setEditingLesson(null)}>Hủy</Button><Button onClick={saveLesson}>Lưu thay đổi</Button></div>
+            <div className="sm:col-span-2">
+              <Label>Tên bài học</Label>
+              <Input
+                value={lessonDraft.title}
+                onChange={(event) =>
+                  setLessonDraft((current) => ({ ...current, title: event.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <Label>Môn học</Label>
+              <select
+                aria-label="Chọn môn học đích"
+                value={lessonDraft.subjectId}
+                onChange={(event) => {
+                  const targetSubject = currentSubjects.find(
+                    (subject) => subject.id === event.target.value,
+                  );
+                  setLessonDraft((current) => ({
+                    ...current,
+                    subjectId: event.target.value,
+                    topicId: targetSubject?.milestones[0]?.id ?? "",
+                  }));
+                }}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+              >
+                {currentSubjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.emoji} {subject.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label>Chủ đề / chương</Label>
+              <select
+                aria-label="Chọn chủ đề đích"
+                value={lessonDraft.topicId}
+                onChange={(event) =>
+                  setLessonDraft((current) => ({ ...current, topicId: event.target.value }))
+                }
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+              >
+                {editingTargetSubject?.milestones.map((milestone) => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.title} ({milestone.lessons.length} bài)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label>Thời lượng học mục tiêu</Label>
+              <div className="mt-1 grid grid-cols-5 gap-2">
+                {[30, 45, 60, 90, 120].map((minutes) => (
+                  <Button
+                    key={minutes}
+                    type="button"
+                    size="sm"
+                    variant={lessonDraft.minutes === minutes ? "default" : "outline"}
+                    className="rounded-xl"
+                    onClick={() =>
+                      setLessonDraft((current) => ({ ...current, minutes }))
+                    }
+                  >
+                    {minutes}p
+                  </Button>
+                ))}
+              </div>
+              <Input
+                className="mt-2"
+                type="number"
+                min={1}
+                max={1440}
+                value={lessonDraft.minutes}
+                onChange={(event) =>
+                  setLessonDraft((current) => ({
+                    ...current,
+                    minutes: Number(event.target.value),
+                  }))
+                }
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Đây là tổng thời lượng của bài; các phiên Pomodoro sẽ cộng dồn vào mục tiêu này.
+              </p>
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label>Cách xếp lịch</Label>
+              <select
+                aria-label="Chọn cách xếp lịch"
+                value={lessonDraft.scheduleMode}
+                onChange={(event) =>
+                  setLessonDraft((current) => ({
+                    ...current,
+                    scheduleMode: event.target.value as LessonScheduleMode,
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+              >
+                <option value="flexible">Linh hoạt — có thể dời sang ngày sau</option>
+                <option value="fixed">Cố định — chỉ học đúng ngày đã chọn</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label>
+                {lessonDraft.scheduleMode === "fixed"
+                  ? "Ngày học cố định"
+                  : "Có thể học từ ngày"}
+              </Label>
+              <div className="mt-1 flex gap-2">
+                <Input
+                  type="date"
+                  value={lessonDraft.date}
+                  onChange={(event) =>
+                    setLessonDraft((current) => ({ ...current, date: event.target.value }))
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 rounded-xl"
+                  onClick={() =>
+                    setLessonDraft((current) => ({ ...current, date: "" }))
+                  }
+                >
+                  Bỏ ngày
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 sm:col-span-2">
+              <Button variant="outline" onClick={() => setEditingLesson(null)}>Hủy</Button>
+              <Button onClick={saveLesson}>Lưu bài học</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -896,6 +1139,8 @@ function TopicGroup({
   canReorder,
   draggedLessonId,
   onDraggedLessonChange,
+  dragArmedLessonId,
+  onDragArmedLessonChange,
   onRequestDelete,
 }: {
   topicId: string;
@@ -925,9 +1170,15 @@ function TopicGroup({
   canReorder: boolean;
   draggedLessonId: string | null;
   onDraggedLessonChange: (lessonId: string | null) => void;
+  dragArmedLessonId: string | null;
+  onDragArmedLessonChange: (lessonId: string | null) => void;
   onRequestDelete: (lesson: Lesson) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const [dropIndicator, setDropIndicator] = useState<{
+    lessonId: string;
+    edge: "before" | "after";
+  } | null>(null);
   const completed = lessons.filter((lesson) => Boolean(progress?.completedLessons[lesson.id]) || (minutesByLesson.get(lesson.id) ?? 0) >= lesson.plannedDurationMinutes).length;
   const remaining = lessons.reduce((sum, lesson) => sum + Math.max(0, lesson.plannedDurationMinutes - (minutesByLesson.get(lesson.id) ?? 0)), 0);
   return (
@@ -967,29 +1218,92 @@ function TopicGroup({
               return (
                 <li
                   key={lesson.id}
+                  draggable={false}
                   onDragOver={(event) => {
                     if (canReorder && draggedLessonId && draggedLessonId !== lesson.id) {
                       event.preventDefault();
                       event.dataTransfer.dropEffect = "move";
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      setDropIndicator({
+                        lessonId: lesson.id,
+                        edge: event.clientY < rect.top + rect.height / 2 ? "before" : "after",
+                      });
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    const nextTarget = event.relatedTarget;
+                    if (
+                      !(nextTarget instanceof Node) ||
+                      !event.currentTarget.contains(nextTarget)
+                    ) {
+                      setDropIndicator(null);
                     }
                   }}
                   onDrop={(event) => {
                     event.preventDefault();
                     const sourceId = event.dataTransfer.getData("text/plain") || draggedLessonId;
-                    if (!canReorder || !sourceId || sourceId === lesson.id) return;
+                    if (!canReorder || !sourceId || sourceId === lesson.id) {
+                      setDropIndicator(null);
+                      return;
+                    }
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const edge =
+                      dropIndicator?.lessonId === lesson.id
+                        ? dropIndicator.edge
+                        : event.clientY < rect.top + rect.height / 2
+                          ? "before"
+                          : "after";
+                    const beforeLessonId =
+                      edge === "before" ? lesson.id : lessons[index + 1]?.id ?? null;
                     onApply(
-                      moveLessonBeforeInTopic(subjects, subject.id, topicId, sourceId, lesson.id),
+                      moveLessonBeforeInTopic(
+                        subjects,
+                        subject.id,
+                        topicId,
+                        sourceId,
+                        beforeLessonId,
+                      ),
                       "Đã sắp xếp lại bài học.",
                     );
+                    setDropIndicator(null);
                     onDraggedLessonChange(null);
+                    onDragArmedLessonChange(null);
                   }}
-                  onDragEnd={() => onDraggedLessonChange(null)}
+                  onDragEnd={() => {
+                    setDropIndicator(null);
+                    onDraggedLessonChange(null);
+                    onDragArmedLessonChange(null);
+                  }}
                   className={cn(
-                    "flex items-start gap-3 p-3 sm:items-center",
+                    "relative flex items-start gap-3 p-3 sm:items-center",
+                    canReorder && !selectionMode && "select-none",
                     selectedLessonIds.has(lesson.id) && "bg-indigo-50/70",
-                    draggedLessonId === lesson.id && "opacity-50",
+                    draggedLessonId === lesson.id && "bg-indigo-50 opacity-60",
                   )}
                 >
+                  {dropIndicator?.lessonId === lesson.id && draggedLessonId && (
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute left-3 right-3 z-20 h-0.5 bg-indigo-600 shadow-[0_0_0_1px_white]",
+                        dropIndicator.edge === "before" ? "-top-px" : "-bottom-px",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <span className="absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-indigo-600 bg-white" />
+                      <span
+                        className={cn(
+                          "absolute left-4 rounded-md bg-indigo-700 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm",
+                          dropIndicator.edge === "before"
+                            ? "bottom-1"
+                            : "top-1",
+                        )}
+                      >
+                        {dropIndicator.edge === "before"
+                          ? "Chèn phía trên"
+                          : "Chèn phía dưới"}
+                      </span>
+                    </span>
+                  )}
                   {selectionMode && (
                     <input
                       type="checkbox"
@@ -1003,14 +1317,41 @@ function TopicGroup({
                     <span
                       draggable
                       onDragStart={(event: DragEvent<HTMLSpanElement>) => {
+                        event.stopPropagation();
                         event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData(
+                          "application/x-smart-lesson-id",
+                          lesson.id,
+                        );
                         event.dataTransfer.setData("text/plain", lesson.id);
+
+                        const card = event.currentTarget.closest("li");
+                        if (card) {
+                          const preview = card.cloneNode(true) as HTMLElement;
+                          preview.style.position = "fixed";
+                          preview.style.top = "-10000px";
+                          preview.style.left = "-10000px";
+                          preview.style.width = "360px";
+                          preview.style.maxWidth = "90vw";
+                          preview.style.background = "white";
+                          preview.style.border = "1px solid rgb(129 140 248)";
+                          preview.style.borderRadius = "12px";
+                          preview.style.boxShadow = "0 16px 36px rgba(15, 23, 42, 0.18)";
+                          preview.style.opacity = "0.96";
+                          document.body.appendChild(preview);
+                          event.dataTransfer.setDragImage(preview, 24, 20);
+                          window.setTimeout(() => preview.remove(), 0);
+                        }
+
                         onDraggedLessonChange(lesson.id);
                       }}
-                      onDragEnd={() => onDraggedLessonChange(null)}
-                      className="mt-1 inline-flex cursor-grab touch-none text-slate-400 active:cursor-grabbing sm:mt-0"
-                      title="Kéo để đổi vị trí trong chủ đề"
-                      aria-label={`Kéo để sắp xếp ${lesson.title}`}
+                      onDragEnd={(event) => {
+                        event.stopPropagation();
+                        onDraggedLessonChange(null);
+                      }}
+                      className="mt-1 inline-flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:cursor-grabbing sm:mt-0"
+                      title="Kéo một lần bằng tay cầm để đổi vị trí"
+                      aria-label="Kéo để sắp xếp bài học"
                       role="button"
                       tabIndex={0}
                     >
@@ -1033,7 +1374,7 @@ function TopicGroup({
                     <p className="break-words text-sm font-semibold text-slate-900">{lesson.title}</p>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
                       <span>{minutes} / {lesson.plannedDurationMinutes} phút · {percent}%</span>
-                      <span>{lesson.scheduledDate ? `Dự kiến ${lesson.scheduledDate}` : "Chưa lên lịch"}</span>
+                      <span>{lesson.scheduledDate ? `${lesson.scheduleMode === "fixed" ? "Cố định" : "Từ"} ${lesson.scheduledDate}` : "Chưa lên lịch"}</span>
                     </div>
                     <Progress value={percent} className="mt-2 h-1.5" />
                   </div>
@@ -1062,6 +1403,19 @@ function TopicGroup({
                         <ArrowDown className="h-4 w-4" />
                       </Button>
                     </div>
+                  )}
+                  {!selectionMode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 rounded-lg"
+                      onClick={() => onEdit(lesson)}
+                      aria-label={`Chỉnh sửa ${lesson.title}`}
+                      title="Chỉnh ngày, thời lượng và chủ đề"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
                   )}
                   {!selectionMode && <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-xl" aria-label={`Quản lý ${lesson.title}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>

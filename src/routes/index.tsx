@@ -32,7 +32,7 @@ import {
   type HabitEntry,
 } from "@/lib/progress-store";
 import { SUBJECTS, type Subject } from "@/lib/mock-data";
-import { buildShiftedSchedule } from "@/lib/planner";
+import { buildShiftedSchedule, pickTodayQueue } from "@/lib/planner";
 import {
   ARCHIVED_CATALOG_KEY,
   CUSTOM_SUBJECTS_BACKUP_KEY,
@@ -371,6 +371,39 @@ function Dashboard() {
       }),
     [subjects, state.completedLessons, state.studyMeta, state.plannerSettings],
   );
+
+  const todayStudyDayComplete = useMemo<boolean | null>(() => {
+    if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
+    const queue = pickTodayQueue({
+      subjects,
+      completed: state.completedLessons,
+      reviewCompletions: state.reviewCompletions,
+      meta: state.studyMeta,
+      settings: state.plannerSettings,
+    });
+    const completedNew = queue.newLessons.filter((lesson) =>
+      Boolean(state.completedLessons[lesson.id]),
+    ).length;
+    const completedReviews = queue.reviewLessons.filter((review) => review.completed).length;
+    const total = queue.newLessons.length + queue.reviewLessons.length;
+    return total > 0 && completedNew + completedReviews === total;
+  }, [
+    hydrated,
+    state.completedLessons,
+    state.plannerSettings,
+    state.reviewCompletions,
+    state.studyMeta,
+    subjects,
+    workspaceStorageLoaded,
+  ]);
+
+  const todayStudyDayRecorded =
+    state.habitLog[todayISO()]?.__study_day_complete__ === true;
+
+  useEffect(() => {
+    if (todayStudyDayComplete == null || todayStudyDayRecorded === todayStudyDayComplete) return;
+    updateHabit({ __study_day_complete__: todayStudyDayComplete });
+  }, [todayStudyDayComplete, todayStudyDayRecorded, updateHabit]);
 
   const realStudyStreak = useMemo(() => computeStudyStreak(state), [state]);
   const weeklyMetrics = useMemo(
@@ -893,7 +926,7 @@ function Dashboard() {
                   value="flex"
                   className="rounded-lg px-4 py-1.5 text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all"
                 >
-                  Lịch điều chỉnh
+                  Lịch linh hoạt
                 </TabsTrigger>
                 <TabsTrigger
                   value="original"
@@ -907,6 +940,7 @@ function Dashboard() {
                   state={state}
                   subjects={subjects}
                   onSetDayHours={setDayHours}
+                  onSubjectsUpdated={updateSubjectsSafely}
                 />
               </TabsContent>
               <TabsContent value="original" className="mt-4 space-y-4">
