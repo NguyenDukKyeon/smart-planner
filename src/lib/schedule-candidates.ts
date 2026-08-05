@@ -7,10 +7,12 @@ import {
   type ScheduleSnapshot,
 } from "./schedule-transactions";
 
-export type MoveLessonDateCandidateResult = { ok: true; candidate: ScheduleCandidate } | {
-  ok: false;
-  error: string;
-};
+export type MoveLessonDateCandidateResult =
+  | { ok: true; candidate: ScheduleCandidate }
+  | {
+      ok: false;
+      error: string;
+    };
 
 export function buildMoveLessonDateCandidate(params: {
   current: ScheduleSnapshot;
