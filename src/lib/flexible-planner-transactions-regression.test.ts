@@ -45,8 +45,9 @@ describe("Flexible Planner shared schedule transactions", () => {
     );
   });
 
-  test("Escape cancels the draft without letting the following blur commit it", () => {
+  test("Escape cancellation has one owner and cannot suppress the next valid blur", () => {
     expect(plannerSource).toContain('event.key === "Escape"');
+    expect(plannerSource).not.toContain("cancelNextBlurCommitRef");
     expect(inputSource).toContain("cancelNextBlurCommitRef");
     expect(inputSource).toContain("cancelNextBlurCommitRef.current = true");
     expect(inputSource).toContain("cancelNextBlurCommitRef.current = false");
