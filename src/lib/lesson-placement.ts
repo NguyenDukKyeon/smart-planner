@@ -2,11 +2,7 @@ import { isDateISO } from "./date-utils";
 import type { Lesson, LessonPlacementProvenance } from "./mock-data";
 
 export type LessonPlacementReasonKind =
-  | "fixed-today"
-  | "manual-move"
-  | "carried-from-earlier-date"
-  | "next-in-roadmap"
-  | "review-due";
+  "fixed-today" | "manual-move" | "carried-from-earlier-date" | "next-in-roadmap" | "review-due";
 
 export type ManualMoveDetail = LessonPlacementProvenance;
 
@@ -86,9 +82,7 @@ export function deriveLessonPlacementReason(params: {
   };
 }
 
-export function deriveReviewPlacementReason(params: {
-  ageDays: number;
-}): LessonPlacementReason {
+export function deriveReviewPlacementReason(params: { ageDays: number }): LessonPlacementReason {
   return {
     kind: "review-due",
     label: `Ôn sau ${params.ageDays} ngày`,
