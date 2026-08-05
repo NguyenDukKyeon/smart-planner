@@ -540,7 +540,7 @@ export function normalizeSubjects(value: unknown): Subject[] | null {
             ? milestone.lessons.map((lesson) => ({
                 ...lesson,
                 topic: typeof lesson.topic === "string" ? lesson.topic : undefined,
-                scheduleMode: lesson.scheduleMode === "fixed" ? "fixed" : "flexible",
+                scheduleMode: (lesson.scheduleMode === "fixed" ? "fixed" : "flexible") as LessonScheduleMode,
                 plannedDurationMinutes: clampMinutes(
                   (lesson as Lesson & { estimatedMinutes?: number }).plannedDurationMinutes ??
                     (lesson as Lesson & { estimatedMinutes?: number }).estimatedMinutes,
@@ -908,7 +908,7 @@ export function moveLessonsToTopic(
 export function updateLessonsDetails(
   existingSubjects: Subject[],
   lessonIds: Iterable<string>,
-  patch: Partial<Pick<Lesson, "plannedDurationMinutes" | "scheduledDate">>,
+  patch: Partial<Pick<Lesson, "plannedDurationMinutes" | "scheduledDate" | "scheduleMode">>,
 ): Subject[] {
   const selected = new Set(lessonIds);
   if (selected.size === 0) return existingSubjects;
