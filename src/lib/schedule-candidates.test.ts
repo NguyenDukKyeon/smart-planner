@@ -180,7 +180,9 @@ describe("buildMoveLessonDateCandidate", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.error);
-    expect(result.candidate.subjects[0].milestones[0].lessons[0].placementProvenance).toEqual(previous);
+    expect(
+      result.candidate.subjects[0].milestones[0].lessons[0].placementProvenance,
+    ).toEqual(previous);
     expect(now).not.toHaveBeenCalled();
   });
 
