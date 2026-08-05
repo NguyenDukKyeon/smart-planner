@@ -9,6 +9,7 @@ const hookSource = readFileSync(
   new URL("../components/flexible-planner/useScheduleTransactions.ts", import.meta.url),
   "utf8",
 );
+const inputSource = readFileSync(new URL("../components/ui/input.tsx", import.meta.url), "utf8");
 const dashboardSource = readFileSync(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
 describe("Flexible Planner shared schedule transactions", () => {
@@ -38,10 +39,11 @@ describe("Flexible Planner shared schedule transactions", () => {
   });
 
   test("Escape cancels the draft without letting the following blur commit it", () => {
-    expect(plannerSource).toContain("cancelNextBlurCommitRef");
-    expect(plannerSource).toContain("cancelNextBlurCommitRef.current = true");
-    expect(plannerSource).toContain("cancelNextBlurCommitRef.current = false");
     expect(plannerSource).toContain('event.key === "Escape"');
+    expect(inputSource).toContain("cancelNextBlurCommitRef");
+    expect(inputSource).toContain("cancelNextBlurCommitRef.current = true");
+    expect(inputSource).toContain("cancelNextBlurCommitRef.current = false");
+    expect(inputSource).toContain("document.activeElement === event.currentTarget");
   });
 
   test("Dashboard separates persistence from publishing for both stores", () => {
