@@ -120,9 +120,13 @@ describe("commitScheduleMutation", () => {
     expect(applyCandidate).not.toHaveBeenCalled();
   });
 
-  test("does not publish or create history when persistence fails", () => {
+  test("does not publish or create history when persistence fails but rollback succeeds", () => {
     const current = snapshot();
     const applyCandidate = vi.fn();
+    const savePlannerSettings = vi
+      .fn()
+      .mockReturnValueOnce(failure("settings failed"))
+      .mockReturnValueOnce(success());
 
     const result = commitScheduleMutation({
       current,
@@ -131,11 +135,12 @@ describe("commitScheduleMutation", () => {
       kind: "change-day-capacity",
       description: "Đổi công suất",
       saveSubjects: vi.fn(success),
-      savePlannerSettings: vi.fn(() => failure("settings failed")),
+      savePlannerSettings,
       applyCandidate,
     });
 
     expect(result).toEqual({ ok: false, error: "settings failed", history: [] });
+    expect(savePlannerSettings).toHaveBeenCalledTimes(2);
     expect(applyCandidate).not.toHaveBeenCalled();
   });
 });
@@ -175,7 +180,7 @@ describe("undoLastScheduleMutation", () => {
     expect(undone.entry.id).toBe("mutation-1");
   });
 
-  test("retains history and does not publish when undo persistence fails", () => {
+  test("retains history and does not publish when undo persistence fails but rollback succeeds", () => {
     const before = snapshot();
     const committed = commitScheduleMutation({
       current: before,
@@ -190,12 +195,16 @@ describe("undoLastScheduleMutation", () => {
     });
     if (!committed.ok || committed.status !== "committed") throw new Error("Expected commit");
     const applyCandidate = vi.fn();
+    const savePlannerSettings = vi
+      .fn()
+      .mockReturnValueOnce(failure("undo failed"))
+      .mockReturnValueOnce(success());
 
     const result = undoLastScheduleMutation({
       current: candidateWithSettingsChange(),
       history: committed.history,
       saveSubjects: vi.fn(success),
-      savePlannerSettings: vi.fn(() => failure("undo failed")),
+      savePlannerSettings,
       applyCandidate,
     });
 
@@ -204,6 +213,7 @@ describe("undoLastScheduleMutation", () => {
       error: "undo failed",
       history: committed.history,
     });
+    expect(savePlannerSettings).toHaveBeenCalledTimes(2);
     expect(applyCandidate).not.toHaveBeenCalled();
   });
 });
