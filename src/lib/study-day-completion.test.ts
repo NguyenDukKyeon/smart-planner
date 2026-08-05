@@ -131,7 +131,9 @@ describe("strict study-day queue completion", () => {
   test("Dashboard delegates the marker decision to the reviewed helper", async () => {
     const source = await readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
-    expect(source).toContain('import { isStudyDayQueueComplete } from "@/lib/study-day-completion";');
+    expect(source).toContain(
+      'import { isStudyDayQueueComplete } from "@/lib/study-day-completion";',
+    );
     expect(source).toContain("isStudyDayQueueComplete({");
     expect(source).not.toContain("const completedNew = queue.newLessons.filter");
   });
