@@ -21,6 +21,13 @@ describe("Flexible Planner shared schedule transactions", () => {
     expect(hookSource).toContain("historyRef.current");
   });
 
+  test("the hook discards stale history after an unrelated external schedule change", () => {
+    expect(hookSource).toContain("shouldInvalidateScheduleHistory");
+    expect(hookSource).toContain("observedSnapshotRef");
+    expect(hookSource).toContain("expectedPublishedSnapshotRef");
+    expect(hookSource).toContain("replaceHistory([])");
+  });
+
   test("lesson moves and day capacity use shared candidate builders", () => {
     expect(plannerSource).toContain("useScheduleTransactions");
     expect(plannerSource).toContain("buildMoveLessonDateCandidate");
