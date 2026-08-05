@@ -1,0 +1,44 @@
+name: P0B format schedule candidate
+
+on:
+  push:
+    branches:
+      - improve/p0b-schedule-transactions
+    paths:
+      - .github/workflows/p0b-format-candidate.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: improve/p0b-schedule-transactions
+      - name: Apply exact formatting fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/lib/schedule-candidates.ts")
+          source = path.read_text()
+          old = '''  const targetSubject = current.subjects.find(
+            (subject) => subject.id === params.target.subjectId,
+          );'''
+          new = '''  const targetSubject = current.subjects.find((subject) => subject.id === params.target.subjectId);'''
+          if source.count(old) != 1:
+              raise SystemExit(f"Expected one formatting target, found {source.count(old)}")
+          path.write_text(source.replace(old, new))
+          PY
+          grep -F 'const targetSubject = current.subjects.find((subject) => subject.id === params.target.subjectId);' src/lib/schedule-candidates.ts
+      - name: Remove workflow and commit
+        run: |
+          rm .github/workflows/p0b-format-candidate.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/schedule-candidates.ts .github/workflows/p0b-format-candidate.yml
+          git diff --cached --check
+          git commit -m "style: finish schedule candidate formatting"
+          git push origin HEAD:improve/p0b-schedule-transactions
