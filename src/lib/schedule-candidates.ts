@@ -167,9 +167,7 @@ export function buildReorderLessonCandidate(params: {
     return { ok: false, error: "Không tìm thấy bài học để sắp xếp." };
   }
 
-  const targetSubject = current.subjects.find(
-    (subject) => subject.id === params.target.subjectId,
-  );
+  const targetSubject = current.subjects.find((subject) => subject.id === params.target.subjectId);
   const targetTopic = targetSubject?.milestones.find(
     (milestone) => milestone.id === params.target.topicId,
   );
