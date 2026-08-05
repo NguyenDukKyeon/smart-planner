@@ -371,6 +371,27 @@ export function saveProgressStorage(
   );
 }
 
+export function applyPlannerSettingsToProgressState(
+  state: ProgressState,
+  plannerSettings: PlannerSettings,
+): ProgressState {
+  return {
+    ...state,
+    plannerSettings: structuredClone(plannerSettings),
+  };
+}
+
+export function savePlannerSettingsStorage(
+  state: ProgressState,
+  plannerSettings: PlannerSettings,
+  storage?: StorageAdapter | null,
+): StorageWriteResult {
+  return saveProgressStorage(
+    applyPlannerSettingsToProgressState(state, plannerSettings),
+    storage,
+  );
+}
+
 /** Pure candidate builder shared by the timer transaction and React store. */
 export function appendStudySessionToProgress(
   current: ProgressState,
