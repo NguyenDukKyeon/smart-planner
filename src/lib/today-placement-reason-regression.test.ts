@@ -39,3 +39,18 @@ describe("LessonPlacementReason", () => {
     expect(source).not.toContain("onMouseEnter");
   });
 });
+
+test("TodayPanel derives reasons and TodayLessonCard renders them", () => {
+  const panel = readFileSync(new URL("../components/TodayPanel.tsx", import.meta.url), "utf8");
+  const card = readFileSync(
+    new URL("../components/today/TodayLessonCard.tsx", import.meta.url),
+    "utf8",
+  );
+
+  expect(panel).toContain("deriveLessonPlacementReason");
+  expect(panel).toContain("deriveReviewPlacementReason");
+  expect(panel).toContain("assignedDateISO: today");
+  expect(panel).toContain("placementReason=");
+  expect(card).toContain("placementReason: PlacementReason");
+  expect(card).toContain("<LessonPlacementReason reason={placementReason}");
+});
