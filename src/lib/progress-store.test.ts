@@ -18,6 +18,7 @@ import {
 } from "./progress-store";
 import { addDaysISO, localDayBoundsEpoch, todayISO } from "./date-utils";
 import { createStudySession, type StudySession } from "./study-sessions";
+import { STUDY_DAY_COMPLETE_KEY } from "./progress-analytics";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -151,7 +152,7 @@ describe("progress migration", () => {
     expect(result.ok).toBe(false);
   });
 
-  test("counts a real focus session as a study day without lesson completion", () => {
+  test("does not count a focus session before the full daily queue marker", () => {
     const result = migrateProgressState(null);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -164,27 +165,43 @@ describe("progress migration", () => {
       durationSeconds: 25 * 60,
       source: "focus-timer",
     });
-    const state = {
+    const partial = {
       ...result.state,
       onboardingComplete: true,
       studySessions: [session],
     };
-    expect(computeStudyStreak(state)).toBe(1);
+    expect(computeStudyStreak(partial)).toBe(0);
+
+    const completedQueue = {
+      ...partial,
+      habitLog: { [today]: { [STUDY_DAY_COMPLETE_KEY]: true } },
+    };
+    expect(computeStudyStreak(completedQueue)).toBe(1);
   });
 
-  test("uses the same study-day predicate for today's and past-dated lessons", () => {
+  test("requires strict queue markers instead of completed lesson dates", () => {
     const today = todayISO();
     const yesterday = addDaysISO(today, -1);
-    const state = {
+    const partial = {
       ...createInitialProgressState(false),
       completedLessons: { "lesson-today": today, "lesson-yesterday": yesterday },
     };
 
-    expect(isStudyDay(state, today)).toBe(true);
-    expect(isStudyDay(state, yesterday)).toBe(true);
+    expect(isStudyDay(partial, today)).toBe(false);
+    expect(isStudyDay(partial, yesterday)).toBe(false);
+
+    const completedQueues = {
+      ...partial,
+      habitLog: {
+        [today]: { [STUDY_DAY_COMPLETE_KEY]: true },
+        [yesterday]: { [STUDY_DAY_COMPLETE_KEY]: true },
+      },
+    };
+    expect(isStudyDay(completedQueues, today)).toBe(true);
+    expect(isStudyDay(completedQueues, yesterday)).toBe(true);
   });
 
-  test("keeps historical study-habit evidence after the definition is archived or deleted", () => {
+  test("requires strict queue markers instead of archived or deleted study-habit evidence", () => {
     const dateISO = "2026-07-24";
     const base = createInitialProgressState(false);
     const archivedStudyDefinition = base.habitDefinitions.find((habit) => habit.id === "study");
@@ -197,11 +214,17 @@ describe("progress migration", () => {
     };
     const deleted = { ...archived, habitDefinitions: [] };
 
-    expect(isStudyDay(archived, dateISO)).toBe(true);
-    expect(isStudyDay(deleted, dateISO)).toBe(true);
+    expect(isStudyDay(archived, dateISO)).toBe(false);
+    expect(isStudyDay(deleted, dateISO)).toBe(false);
+
+    const completedQueue = {
+      ...deleted,
+      habitLog: { [dateISO]: { [STUDY_DAY_COMPLETE_KEY]: true } },
+    };
+    expect(isStudyDay(completedQueue, dateISO)).toBe(true);
   });
 
-  test("counts focus-session overlap on both Asia/Ho_Chi_Minh calendar dates", () => {
+  test("requires strict markers even when a focus session crosses local midnight", () => {
     const session = createStudySession({
       id: "cross-midnight",
       lessonId: "lesson-a",
@@ -209,10 +232,20 @@ describe("progress migration", () => {
       durationSeconds: 2 * 60,
       source: "focus-timer",
     });
-    const state = { ...createInitialProgressState(false), studySessions: [session] };
+    const partial = { ...createInitialProgressState(false), studySessions: [session] };
 
-    expect(isStudyDay(state, "2026-07-24")).toBe(true);
-    expect(isStudyDay(state, "2026-07-25")).toBe(true);
+    expect(isStudyDay(partial, "2026-07-24")).toBe(false);
+    expect(isStudyDay(partial, "2026-07-25")).toBe(false);
+
+    const completedQueues = {
+      ...partial,
+      habitLog: {
+        "2026-07-24": { [STUDY_DAY_COMPLETE_KEY]: true },
+        "2026-07-25": { [STUDY_DAY_COMPLETE_KEY]: true },
+      },
+    };
+    expect(isStudyDay(completedQueues, "2026-07-24")).toBe(true);
+    expect(isStudyDay(completedQueues, "2026-07-25")).toBe(true);
   });
 
   test("rejects undated, empty, non-focus, and zero-duration activity as study evidence", () => {
