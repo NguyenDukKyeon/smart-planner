@@ -16,6 +16,12 @@ describe("useProgress schedule persistence boundary", () => {
       "applyPlannerSettingsToProgressState(stateRef.current, plannerSettings)",
     );
     expect(source).toContain("applyPersistedPlannerSettings,");
+
+    const applyBlock = source.slice(
+      source.indexOf("const applyPersistedPlannerSettings = useCallback("),
+      source.indexOf("const toggleLesson = useCallback("),
+    );
+    expect(applyBlock).not.toContain("saveProgressStorage(");
   });
 
   test("keeps persistence disabled and reports the error after a failed persist-only write", () => {
