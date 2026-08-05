@@ -5,6 +5,7 @@ import { persistScheduleCandidate } from "./schedule-persistence";
 import {
   appendScheduleUndoEntry,
   createScheduleMutationEntry,
+  scheduleSnapshotsEqual,
   type ScheduleCandidate,
   type ScheduleMutationEntry,
   type ScheduleMutationKind,
@@ -54,13 +55,6 @@ export type UndoScheduleMutationResult =
       rollbackError?: string;
       history: ScheduleMutationEntry[];
     };
-
-export function scheduleSnapshotsEqual(
-  left: ScheduleSnapshot | ScheduleCandidate,
-  right: ScheduleSnapshot | ScheduleCandidate,
-): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
 
 function subjectsChanged(current: ScheduleSnapshot, candidate: ScheduleCandidate): boolean {
   return JSON.stringify(current.subjects) !== JSON.stringify(candidate.subjects);
