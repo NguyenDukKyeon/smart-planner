@@ -1,7 +1,9 @@
 import { CheckCircle2, Circle, RefreshCw } from "lucide-react";
 import type { Lesson } from "@/lib/mock-data";
+import type { LessonPlacementReason as PlacementReason } from "@/lib/lesson-placement";
 import { cn } from "@/lib/utils";
 import { LessonActionMenu } from "./LessonActionMenu";
+import { LessonPlacementReason } from "./LessonPlacementReason";
 
 type Props = {
   lesson: Lesson;
@@ -12,6 +14,7 @@ type Props = {
   subjectLabel: string;
   topicLabel?: string;
   reviewAgeDays?: number;
+  placementReason: PlacementReason;
   onToggle: () => void;
   onStart: (minutes?: number) => void;
   onManualEntry: () => void;
@@ -26,6 +29,7 @@ export function TodayLessonCard({
   subjectLabel,
   topicLabel,
   reviewAgeDays,
+  placementReason,
   onToggle,
   onStart,
   onManualEntry,
@@ -91,6 +95,8 @@ export function TodayLessonCard({
                 {review ? "Lượt ôn hôm nay" : `+${lesson.xp} XP`}
               </span>
             </div>
+
+            <LessonPlacementReason reason={placementReason} />
 
             {/* Atomic Habits Progress Bar (50 / 120 phút (41%)) */}
             <div className="mt-2.5 space-y-1">
