@@ -24,7 +24,9 @@ describe("useProgress schedule persistence boundary", () => {
       source.indexOf("const applyPersistedPlannerSettings = useCallback("),
     );
     expect(persistBlock).toContain("persistenceEnabled.current = false");
-    expect(persistBlock).toContain('setStorageStatus({ status: "unavailable", error: saved.error })');
+    expect(persistBlock).toContain(
+      'setStorageStatus({ status: "unavailable", error: saved.error })',
+    );
     expect(persistBlock).toContain("return saved");
   });
 });
