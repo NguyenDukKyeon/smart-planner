@@ -29,9 +29,7 @@ describe("Dashboard schedule catalog persistence boundary", () => {
     );
 
     expect(applyBlock).toContain("setSubjects(nextSubjects)");
-    expect(applyBlock).toContain(
-      'setSubjectStorageStatus({ status: "ok", value: nextSubjects })',
-    );
+    expect(applyBlock).toContain('setSubjectStorageStatus({ status: "ok", value: nextSubjects })');
     expect(applyBlock).not.toContain("saveStoredCustomSubjects(");
   });
 });
