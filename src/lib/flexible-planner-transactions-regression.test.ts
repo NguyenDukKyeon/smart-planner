@@ -32,10 +32,16 @@ describe("Flexible Planner shared schedule transactions", () => {
     expect(plannerSource).toContain("function DayCapacityInput(");
     expect(plannerSource).toContain("onBlur={commitDraft}");
     expect(plannerSource).toContain('event.key === "Enter"');
-    expect(plannerSource).toContain('event.key === "Escape"');
     expect(plannerSource).not.toContain(
       "onSetDayHours(day.dateISO, normalizeDailyStudyHours(value))",
     );
+  });
+
+  test("Escape cancels the draft without letting the following blur commit it", () => {
+    expect(plannerSource).toContain("cancelNextBlurCommitRef");
+    expect(plannerSource).toContain("cancelNextBlurCommitRef.current = true");
+    expect(plannerSource).toContain("cancelNextBlurCommitRef.current = false");
+    expect(plannerSource).toContain('event.key === "Escape"');
   });
 
   test("Dashboard separates persistence from publishing for both stores", () => {
