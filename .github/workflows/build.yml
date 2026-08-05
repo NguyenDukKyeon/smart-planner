@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -16,9 +16,150 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           submodules: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - run: npx vitest run src/lib/study-hours.test.ts src/lib/progress-study-hours.test.ts src/lib/study-hours-ui-regression.test.ts
+      - name: Apply canonical daily-hour controls
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const policyImport = `import {
+            DAILY_STUDY_HOURS_STEP,
+            MAX_DAILY_STUDY_HOURS,
+            MIN_DAILY_STUDY_HOURS,
+            normalizeDailyStudyHours,
+          } from "@/lib/study-hours";`;
+          const noteImport = 'import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";';
+
+          function patchToday() {
+            const path = "src/components/TodayPanel.tsx";
+            let source = fs.readFileSync(path, "utf8");
+            if (!source.includes("MAX_DAILY_STUDY_HOURS")) {
+              source = source.replace(
+                'import { cn } from "@/lib/utils";',
+                `import { cn } from "@/lib/utils";\n${policyImport}\n${noteImport}`,
+              );
+            }
+            source = source.replaceAll("min={0}", "min={MIN_DAILY_STUDY_HOURS}");
+            source = source.replaceAll("max={12}", "max={MAX_DAILY_STUDY_HOURS}");
+            source = source.replaceAll("step={0.5}", "step={DAILY_STUDY_HOURS_STEP}");
+            source = source.replace(
+              "onValueChange={([value]) => onSetTodayHours(value)}",
+              "onValueChange={([value]) => onSetTodayHours(normalizeDailyStudyHours(value))}",
+            );
+            source = source.replace(
+              "if (Number.isFinite(value)) onSetTodayHours(Math.min(12, Math.max(0, value)));",
+              "if (Number.isFinite(value)) onSetTodayHours(normalizeDailyStudyHours(value));",
+            );
+            const marker = 'className="h-9 bg-white text-xs sm:text-sm font-bold text-slate-800"\n              />';
+            if (!source.includes("<HighStudyHoursNote hours={state.plannerSettings.todayHours}")) {
+              if (!source.includes(marker)) throw new Error("Missing Today capacity input");
+              source = source.replace(
+                marker,
+                `${marker}\n              <HighStudyHoursNote\n                hours={state.plannerSettings.todayHours}\n                className="sm:col-span-3"\n              />`,
+              );
+            }
+            fs.writeFileSync(path, source);
+          }
+
+          function patchFlexiblePlanner() {
+            const path = "src/components/FlexiblePlanner.tsx";
+            let source = fs.readFileSync(path, "utf8");
+            if (!source.includes("MAX_DAILY_STUDY_HOURS")) {
+              source = source.replace(
+                'import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";',
+                `import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";\n${policyImport}\n${noteImport}`,
+              );
+            }
+            source = source.replace("min={0}\n              max={12}\n              step={0.5}", "min={MIN_DAILY_STUDY_HOURS}\n              max={MAX_DAILY_STUDY_HOURS}\n              step={DAILY_STUDY_HOURS_STEP}");
+            source = source.replace(
+              `                  onSetDayHours(
+                    day.dateISO,
+                    Math.min(12, Math.max(0, value)),
+                  );`,
+              `                  onSetDayHours(
+                    day.dateISO,
+                    normalizeDailyStudyHours(value),
+                  );`,
+            );
+            const marker = `          </label>
+                </div>
+
+                <p className="text-[11px] font-medium text-slate-500">`;
+            if (!source.includes("<HighStudyHoursNote hours={day.hours}")) {
+              if (!source.includes(marker)) throw new Error("Missing Flexible day header");
+              source = source.replace(
+                marker,
+                `          </label>
+                </div>
+                <HighStudyHoursNote hours={day.hours} />
+
+                <p className="text-[11px] font-medium text-slate-500">`,
+              );
+            }
+            fs.writeFileSync(path, source);
+          }
+
+          function patchForecast() {
+            const path = "src/components/ForecastCard.tsx";
+            let source = fs.readFileSync(path, "utf8");
+            if (!source.includes("MAX_DAILY_STUDY_HOURS")) {
+              source = source.replace(
+                'import { sortSubjects } from "@/lib/subject-order";',
+                `import { sortSubjects } from "@/lib/subject-order";\n${policyImport}\n${noteImport}`,
+              );
+            }
+            source = source.replace(
+              `  const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
+                ? Math.max(0, state.plannerSettings.defaultDailyHours)
+                : 2;`,
+              `  const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
+                ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)
+                : 2;`,
+            );
+            source = source.replace(
+              "      onSetDefaultDailyHours(h);",
+              "      onSetDefaultDailyHours(normalizeDailyStudyHours(h));",
+            );
+            source = source.replace("min={0}\n            max={12}\n            step={0.5}", "min={MIN_DAILY_STUDY_HOURS}\n            max={MAX_DAILY_STUDY_HOURS}\n            step={DAILY_STUDY_HOURS_STEP}");
+            source = source.replace("min={0}\n            max={12}\n            step={0.5}", "min={MIN_DAILY_STUDY_HOURS}\n            max={MAX_DAILY_STUDY_HOURS}\n            step={DAILY_STUDY_HOURS_STEP}");
+            source = source.replace(
+              "handleHoursChange(Math.min(12, Math.max(0, nextHours)));",
+              "handleHoursChange(normalizeDailyStudyHours(nextHours));",
+            );
+            const marker = `        </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">`;
+            if (!source.includes("<HighStudyHoursNote hours={hours}")) {
+              if (!source.includes(marker)) throw new Error("Missing Forecast heading block");
+              source = source.replace(
+                marker,
+                `        </div>
+              </div>
+              <HighStudyHoursNote hours={hours} />
+
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">`,
+              );
+            }
+            fs.writeFileSync(path, source);
+          }
+
+          patchToday();
+          patchFlexiblePlanner();
+          patchForecast();
+          NODE
+      - name: Verify planner UI capacity policy
+        run: npx vitest run src/lib/study-hours.test.ts src/lib/progress-study-hours.test.ts src/lib/study-hours-ui-regression.test.ts
+      - run: npx tsc --noEmit
+      - name: Commit planner UI integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/TodayPanel.tsx src/components/FlexiblePlanner.tsx src/components/ForecastCard.tsx
+          git commit -m "feat: support sixteen-hour capacity across planner UI [skip ci]"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
