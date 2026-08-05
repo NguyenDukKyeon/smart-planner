@@ -21,4 +21,5 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: npx vitest run src/lib/build-purity-regression.test.ts
       - run: npm run build
