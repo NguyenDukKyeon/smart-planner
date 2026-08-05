@@ -22,6 +22,7 @@ describe("useProgress schedule persistence boundary", () => {
       source.indexOf("const toggleLesson = useCallback("),
     );
     expect(applyBlock).not.toContain("saveProgressStorage(");
+    expect(applyBlock).toContain("setState(next)");
   });
 
   test("keeps persistence disabled and reports the error after a failed persist-only write", () => {
