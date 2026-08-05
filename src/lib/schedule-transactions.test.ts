@@ -112,9 +112,9 @@ describe("schedule transaction primitives", () => {
     const observed = createScheduleSnapshot(SUBJECTS, DEFAULT_PLANNER_SETTINGS);
     const current = createScheduleSnapshot(SUBJECTS, DEFAULT_PLANNER_SETTINGS);
 
-    expect(
-      shouldInvalidateScheduleHistory({ observed, current, expectedPublished: null }),
-    ).toBe(false);
+    expect(shouldInvalidateScheduleHistory({ observed, current, expectedPublished: null })).toBe(
+      false,
+    );
   });
 
   test("keeps history when the new props equal the transaction snapshot just published", () => {
@@ -138,8 +138,8 @@ describe("schedule transaction primitives", () => {
       defaultDailyHours: 5,
     });
 
-    expect(
-      shouldInvalidateScheduleHistory({ observed, current, expectedPublished: null }),
-    ).toBe(true);
+    expect(shouldInvalidateScheduleHistory({ observed, current, expectedPublished: null })).toBe(
+      true,
+    );
   });
 });
