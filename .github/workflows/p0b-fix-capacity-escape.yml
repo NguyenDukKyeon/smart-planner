@@ -1,0 +1,61 @@
+name: Fix P0B capacity Escape handling
+
+"on":
+  push:
+    branches:
+      - improve/p0b-schedule-transactions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: "${{ github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[p0b-capacity-escape]') }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: improve/p0b-schedule-transactions
+          fetch-depth: 0
+      - name: Prevent Escape blur from committing a stale draft
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path("src/components/FlexiblePlanner.tsx")
+          source = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  'import { useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";',
+                  'import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";',
+              ),
+              (
+                  '  const [draft, setDraft] = useState(String(day.hours));\n',
+                  '  const [draft, setDraft] = useState(String(day.hours));\n  const cancelNextBlurCommitRef = useRef(false);\n',
+              ),
+              (
+                  '  const commitDraft = () => {\n    if (draft.trim() === "") {',
+                  '  const commitDraft = () => {\n    if (cancelNextBlurCommitRef.current) {\n      cancelNextBlurCommitRef.current = false;\n      setDraft(String(day.hours));\n      return;\n    }\n    if (draft.trim() === "") {',
+              ),
+              (
+                  '          if (event.key === "Escape") {\n            setDraft(String(day.hours));',
+                  '          if (event.key === "Escape") {\n            cancelNextBlurCommitRef.current = true;\n            setDraft(String(day.hours));',
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in source:
+                  raise SystemExit(f"Expected marker not found: {old[:80]}")
+              source = source.replace(old, new, 1)
+
+          path.write_text(source, encoding="utf-8")
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/p0b-fix-capacity-escape.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/FlexiblePlanner.tsx .github/workflows/p0b-fix-capacity-escape.yml
+          git commit -m "fix: cancel capacity draft without blur commit [p0b-capacity-escape]"
+          git push origin HEAD:improve/p0b-schedule-transactions
