@@ -62,7 +62,11 @@ export function useScheduleTransactions({
   );
 
   const executeMutation = useCallback(
-    ({ candidate, kind, description }: ExecuteScheduleMutationParams): CommitScheduleMutationResult => {
+    ({
+      candidate,
+      kind,
+      description,
+    }: ExecuteScheduleMutationParams): CommitScheduleMutationResult => {
       const result = commitScheduleMutation({
         current: createScheduleSnapshot(subjects, plannerSettings),
         candidate,
