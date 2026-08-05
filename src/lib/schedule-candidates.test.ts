@@ -251,7 +251,7 @@ describe("buildChangeScheduleModeCandidate", () => {
         scheduleMode: "fixed",
         scheduledDate: "2030-01-08",
       }),
-    ).toEqual({ ok: false, error: "Không thể đổi chế độ cho nhiệm vụ ôn tập." });
+    ).toEqual({ ok: false, error: "Không thể đổi chế độ của nhiệm vụ ôn tập." });
   });
 });
 
@@ -319,7 +319,7 @@ describe("buildReorderLessonCandidate", () => {
           beforeLessonId: "lesson-3",
         },
       }),
-    ).toEqual({ ok: false, error: "Không tìm thấy vị trí đích để sắp xếp bài học." });
+    ).toEqual({ ok: false, error: "Không tìm thấy vị trí chèn trong chủ đề đích." });
   });
 
   test("does not reorder review task IDs as ordinary lessons", () => {
