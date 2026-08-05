@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -584,12 +584,17 @@ function DayCapacityInput({
   onCommit: (dateISO: string, hours: number) => boolean;
 }) {
   const [draft, setDraft] = useState(String(day.hours));
+  const cancelNextBlurCommitRef = useRef(false);
 
   useEffect(() => {
     setDraft(String(day.hours));
   }, [day.hours]);
 
   const commitDraft = () => {
+    if (cancelNextBlurCommitRef.current) {
+      cancelNextBlurCommitRef.current = false;
+      return;
+    }
     if (draft.trim() === "") {
       setDraft(String(day.hours));
       return;
@@ -618,6 +623,7 @@ function DayCapacityInput({
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur();
           if (event.key === "Escape") {
+            cancelNextBlurCommitRef.current = true;
             setDraft(String(day.hours));
             event.currentTarget.blur();
           }
