@@ -6,6 +6,7 @@ import {
   createScheduleMutationEntry,
   createScheduleSnapshot,
   isEditableUndoTarget,
+  shouldInvalidateScheduleHistory,
   type ScheduleMutationEntry,
 } from "./schedule-transactions";
 
@@ -105,5 +106,40 @@ describe("schedule transaction primitives", () => {
     [{ tagName: "SPAN", isContentEditable: false }, false],
   ])("detects whether an undo target is editable", (target, expected) => {
     expect(isEditableUndoTarget(target as EventTarget | null)).toBe(expected);
+  });
+
+  test("keeps history when a rerender is structurally unchanged", () => {
+    const observed = createScheduleSnapshot(SUBJECTS, DEFAULT_PLANNER_SETTINGS);
+    const current = createScheduleSnapshot(SUBJECTS, DEFAULT_PLANNER_SETTINGS);
+
+    expect(
+      shouldInvalidateScheduleHistory({ observed, current, expectedPublished: null }),
+    ).toBe(false);
+  });
+
+  test("keeps history when the new props equal the transaction snapshot just published", () => {
+    const observed = createScheduleSnapshot(SUBJECTS, DEFAULT_PLANNER_SETTINGS);
+    const expectedPublished = createScheduleSnapshot(SUBJECTS, {
+      ...DEFAULT_PLANNER_SETTINGS,
+      defaultDailyHours: 4,
+    });
+    const current = createScheduleSnapshot(
+      expectedPublished.subjects,
+      expectedPublished.plannerSettings,
+    );
+
+    expect(shouldInvalidateScheduleHistory({ observed, current, expectedPublished })).toBe(false);
+  });
+
+  test("invalidates history when an external catalog or settings change diverges", () => {
+    const observed = createScheduleSnapshot(SUBJECTS, DEFAULT_PLANNER_SETTINGS);
+    const current = createScheduleSnapshot(SUBJECTS, {
+      ...DEFAULT_PLANNER_SETTINGS,
+      defaultDailyHours: 5,
+    });
+
+    expect(
+      shouldInvalidateScheduleHistory({ observed, current, expectedPublished: null }),
+    ).toBe(true);
   });
 });
