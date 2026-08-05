@@ -23,68 +23,8 @@ jobs:
       - name: Apply reviewed study-day fix
         if: "${{ github.event_name == 'push' && github.ref == 'refs/heads/improve/p0a-hours-build-purity' }}"
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("src/routes/index.tsx")
-          source = path.read_text()
-          old_import = 'import { buildShiftedSchedule, pickTodayQueue } from "@/lib/planner";'
-          new_import = 'import { buildShiftedSchedule } from "@/lib/planner";\nimport { isStudyDayQueueComplete } from "@/lib/study-day-completion";'
-          if old_import in source:
-              source = source.replace(old_import, new_import, 1)
-
-          old_block = '''  const todayStudyDayComplete = useMemo<boolean | null>(() => {
-            if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
-            const queue = pickTodayQueue({
-              subjects,
-              completed: state.completedLessons,
-              reviewCompletions: state.reviewCompletions,
-              meta: state.studyMeta,
-              settings: state.plannerSettings,
-            });
-            const completedNew = queue.newLessons.filter((lesson) =>
-              Boolean(state.completedLessons[lesson.id]),
-            ).length;
-            const completedReviews = queue.reviewLessons.filter((review) => review.completed).length;
-            const total = queue.newLessons.length + queue.reviewLessons.length;
-            return total > 0 && completedNew + completedReviews === total;
-          }, [
-            hydrated,
-            state.completedLessons,
-            state.plannerSettings,
-            state.reviewCompletions,
-            state.studyMeta,
-            subjects,
-            workspaceStorageLoaded,
-          ]);
-'''
-          new_block = '''  const todayStudyDayComplete = useMemo<boolean | null>(() => {
-            if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
-            return isStudyDayQueueComplete({
-              subjects,
-              completed: state.completedLessons,
-              reviewCompletions: state.reviewCompletions,
-              meta: state.studyMeta,
-              settings: state.plannerSettings,
-              dateISO: todayISO(),
-            });
-          }, [
-            hydrated,
-            state.completedLessons,
-            state.plannerSettings,
-            state.reviewCompletions,
-            state.studyMeta,
-            subjects,
-            workspaceStorageLoaded,
-          ]);
-'''
-          if old_block in source:
-              source = source.replace(old_block, new_block, 1)
-          elif "isStudyDayQueueComplete({" not in source:
-              raise SystemExit("Expected study-day block not found")
-
-          path.write_text(source)
-          PY
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpwYXRoID0gUGF0aCgnc3JjL3JvdXRlcy9pbmRleC50c3gnKQpzb3VyY2UgPSBwYXRoLnJlYWRfdGV4dCgpCm9sZF9pbXBvcnQgPSAnaW1wb3J0IHsgYnVpbGRTaGlmdGVkU2NoZWR1bGUsIHBpY2tUb2RheVF1ZXVlIH0gZnJvbSAiQC9saWIvcGxhbm5lciI7JwpuZXdfaW1wb3J0ID0gJ2ltcG9ydCB7IGJ1aWxkU2hpZnRlZFNjaGVkdWxlIH0gZnJvbSAiQC9saWIvcGxhbm5lciI7XG5pbXBvcnQgeyBpc1N0dWR5RGF5UXVldWVDb21wbGV0ZSB9IGZyb20gIkAvbGliL3N0dWR5LWRheS1jb21wbGV0aW9uIjsnCmlmIG9sZF9pbXBvcnQgaW4gc291cmNlOgogICAgc291cmNlID0gc291cmNlLnJlcGxhY2Uob2xkX2ltcG9ydCwgbmV3X2ltcG9ydCwgMSkKCnN0YXJ0X21hcmtlciA9ICcgIGNvbnN0IHRvZGF5U3R1ZHlEYXlDb21wbGV0ZSA9IHVzZU1lbW88Ym9vbGVhbiB8IG51bGw+KCgpID0+IHsnCmVuZF9tYXJrZXIgPSAnICBjb25zdCB0b2RheVN0dWR5RGF5UmVjb3JkZWQgPSBzdGF0ZS5oYWJpdExvZ1t0b2RheUlTTygpXT8uX19zdHVkeV9kYXlfY29tcGxldGVfXyA9PT0gdHJ1ZTsnCnN0YXJ0ID0gc291cmNlLmluZGV4KHN0YXJ0X21hcmtlcikKZW5kID0gc291cmNlLmluZGV4KGVuZF9tYXJrZXIpCm5ld19ibG9jayA9ICcnJyAgY29uc3QgdG9kYXlTdHVkeURheUNvbXBsZXRlID0gdXNlTWVtbzxib29sZWFuIHwgbnVsbD4oKCkgPT4gewogICAgaWYgKCFoeWRyYXRlZCB8fCAhd29ya3NwYWNlU3RvcmFnZUxvYWRlZCB8fCBzdWJqZWN0cy5sZW5ndGggPT09IDApIHJldHVybiBudWxsOwogICAgcmV0dXJuIGlzU3R1ZHlEYXlRdWV1ZUNvbXBsZXRlKHsKICAgICAgc3ViamVjdHMsCiAgICAgIGNvbXBsZXRlZDogc3RhdGUuY29tcGxldGVkTGVzc29ucywKICAgICAgcmV2aWV3Q29tcGxldGlvbnM6IHN0YXRlLnJldmlld0NvbXBsZXRpb25zLAogICAgICBtZXRhOiBzdGF0ZS5zdHVkeU1ldGEsCiAgICAgIHNldHRpbmdzOiBzdGF0ZS5wbGFubmVyU2V0dGluZ3MsCiAgICAgIGRhdGVJU086IHRvZGF5SVNPKCksCiAgICB9KTsKICB9LCBbCiAgICBoeWRyYXRlZCwKICAgIHN0YXRlLmNvbXBsZXRlZExlc3NvbnMsCiAgICBzdGF0ZS5wbGFubmVyU2V0dGluZ3MsCiAgICBzdGF0ZS5yZXZpZXdDb21wbGV0aW9ucywKICAgIHN0YXRlLnN0dWR5TWV0YSwKICAgIHN1YmplY3RzLAogICAgd29ya3NwYWNlU3RvcmFnZUxvYWRlZCwKICBdKTsKCicnJwpzb3VyY2UgPSBzb3VyY2VbOnN0YXJ0XSArIG5ld19ibG9jayArIHNvdXJjZVtlbmQ6XQpwYXRoLndyaXRlX3RleHQoc291cmNlKQo=' | base64 -d > /tmp/patch-index.py
+          python /tmp/patch-index.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/routes/index.tsx
