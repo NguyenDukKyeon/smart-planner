@@ -8,12 +8,20 @@ import {
 
 class MemoryStorage {
   private values = new Map<string, string>();
-  getItem(key: string) { return this.values.get(key) ?? null; }
-  setItem(key: string, value: string) { this.values.set(key, value); }
-  removeItem(key: string) { this.values.delete(key); }
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+  setItem(key: string, value: string) {
+    this.values.set(key, value);
+  }
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
 }
 
-afterEach(() => { Reflect.deleteProperty(globalThis, "localStorage"); });
+afterEach(() => {
+  Reflect.deleteProperty(globalThis, "localStorage");
+});
 
 describe("Pomodoro preferences", () => {
   test("saves preferences independently from active timer state", () => {

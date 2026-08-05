@@ -136,9 +136,12 @@ export function HabitSidebar({
                       title={`${dayLabel} (${dateISO}): ${score}/${available.length} thói quen hoàn thành`}
                       className={cn(
                         "flex h-8 w-full max-w-[36px] items-center justify-center rounded-xl text-[11px] font-bold transition-all mx-auto",
-                        isAllDone && "bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2xs",
+                        isAllDone &&
+                          "bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2xs",
                         isPartial && "bg-amber-100 border border-amber-300 text-amber-800",
-                        !isAllDone && !isPartial && "bg-slate-100/90 text-slate-400 border border-slate-200/60",
+                        !isAllDone &&
+                          !isPartial &&
+                          "bg-slate-100/90 text-slate-400 border border-slate-200/60",
                         isToday && "ring-2 ring-orange-400 ring-offset-1",
                       )}
                     >

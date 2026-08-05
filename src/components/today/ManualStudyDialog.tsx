@@ -64,13 +64,8 @@ export function ManualStudyDialog({
               toast.error("Không thể lưu thời gian học. Dữ liệu hiện tại được giữ nguyên.");
               return;
             }
-            if (
-              request.reviewTaskId &&
-              onReviewComplete?.(request.reviewTaskId) === false
-            ) {
-              toast.error(
-                `Đã lưu ${value} phút nhưng chưa thể đánh dấu lượt ôn hoàn thành.`,
-              );
+            if (request.reviewTaskId && onReviewComplete?.(request.reviewTaskId) === false) {
+              toast.error(`Đã lưu ${value} phút nhưng chưa thể đánh dấu lượt ôn hoàn thành.`);
               onClose();
               return;
             }

@@ -144,28 +144,30 @@ describe("flexible planning capacity", () => {
 });
 
 describe("review task state", () => {
-  test.each([1, 3, 7, 14, 30])("keeps a %i-day review separate from lesson completion", (ageDays) => {
-    const refISO = "2026-08-01";
-    const completedISO = addDaysISO(refISO, -ageDays);
-    const taskId = reviewTaskId("english-1", refISO);
-    const queue = pickDayQueue({
-      subjects,
-      completed: { "english-1": completedISO },
-      reviewCompletions: { [taskId]: refISO },
-      meta: DEFAULT_STUDY_META,
-      settings: { ...DEFAULT_PLANNER_SETTINGS, reviewShareMax: 1, reviewCapMinutes: 60 },
-      dateISO: refISO,
-      hoursOverride: 1,
-    });
+  test.each([1, 3, 7, 14, 30])(
+    "keeps a %i-day review separate from lesson completion",
+    (ageDays) => {
+      const refISO = "2026-08-01";
+      const completedISO = addDaysISO(refISO, -ageDays);
+      const taskId = reviewTaskId("english-1", refISO);
+      const queue = pickDayQueue({
+        subjects,
+        completed: { "english-1": completedISO },
+        reviewCompletions: { [taskId]: refISO },
+        meta: DEFAULT_STUDY_META,
+        settings: { ...DEFAULT_PLANNER_SETTINGS, reviewShareMax: 1, reviewCapMinutes: 60 },
+        dateISO: refISO,
+        hoursOverride: 1,
+      });
 
-    expect(queue.reviewLessons).toContainEqual({
-      lessonId: "english-1",
-      ageDays,
-      minutes: 15,
-      taskId,
-      completed: true,
-    });
-    expect(queue.newLessons).toEqual([]);
-  });
+      expect(queue.reviewLessons).toContainEqual({
+        lessonId: "english-1",
+        ageDays,
+        minutes: 15,
+        taskId,
+        completed: true,
+      });
+      expect(queue.newLessons).toEqual([]);
+    },
+  );
 });
-

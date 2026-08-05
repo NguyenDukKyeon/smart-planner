@@ -21,4 +21,9 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
+      - name: Verify commands did not modify tracked source
+        run: git diff --exit-code

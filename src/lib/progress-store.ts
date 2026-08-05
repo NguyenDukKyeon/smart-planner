@@ -16,6 +16,7 @@ import {
   reviewTaskId,
 } from "./planner";
 import { addDaysISO, isDateISO, todayISO } from "./date-utils";
+import { normalizeDailyStudyHours } from "./study-hours";
 import {
   createStableId,
   isValidStudySession,
@@ -216,19 +217,17 @@ export function migrateProgressState(raw: string | null): ProgressMigrationResul
   };
 
   const psIn = (parsed.plannerSettings as Partial<PlannerSettings>) ?? {};
+  const storedDefaultDailyHours = normalizeStoredDailyHours(
+    psIn.defaultDailyHours,
+    DEFAULT_PLANNER_SETTINGS.defaultDailyHours,
+  );
   const plannerSettings: PlannerSettings = {
-    todayHours:
-      typeof psIn.todayHours === "number"
-        ? clamp(psIn.todayHours, 0, 12)
-        : DEFAULT_PLANNER_SETTINGS.todayHours,
+    todayHours: normalizeStoredDailyHours(psIn.todayHours, storedDefaultDailyHours),
     dailyHours:
       psIn.dailyHours && typeof psIn.dailyHours === "object"
         ? sanitizeDailyHours(psIn.dailyHours)
         : {},
-    defaultDailyHours:
-      typeof psIn.defaultDailyHours === "number"
-        ? clamp(psIn.defaultDailyHours, 0, 12)
-        : DEFAULT_PLANNER_SETTINGS.defaultDailyHours,
+    defaultDailyHours: storedDefaultDailyHours,
     reviewShareMax:
       typeof psIn.reviewShareMax === "number"
         ? clamp(psIn.reviewShareMax, 0, 1)
@@ -474,10 +473,18 @@ function sanitizeHabitLog(value: unknown): Record<string, HabitEntry> {
 function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n));
 }
+function normalizeStoredDailyHours(value: unknown, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return normalizeDailyStudyHours(fallback);
+  }
+  return normalizeDailyStudyHours(value);
+}
+
 function sanitizeDailyHours(raw: Record<string, unknown>): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (typeof v === "number" && v >= 0 && v <= 12) out[k] = v;
+  for (const [dateISO, value] of Object.entries(raw)) {
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    out[dateISO] = normalizeDailyStudyHours(value);
   }
   return out;
 }
@@ -530,6 +537,57 @@ export function toggleLessonCompletionState(
     lessonXp: nextXpByLesson,
     xp: Math.max(0, state.xp + (done ? -rewardDelta.xp : rewardDelta.xp)),
     coins: Math.max(0, state.coins + (done ? -rewardDelta.coins : rewardDelta.coins)),
+  };
+}
+
+export function setTodayHoursState(
+  state: ProgressState,
+  hours: number,
+  dateISO = todayISO(),
+): ProgressState {
+  const normalized = normalizeDailyStudyHours(hours);
+  return {
+    ...state,
+    plannerSettings: {
+      ...state.plannerSettings,
+      todayHours: normalized,
+      dailyHours: { ...state.plannerSettings.dailyHours, [dateISO]: normalized },
+    },
+  };
+}
+
+export function setDayHoursState(
+  state: ProgressState,
+  dateISO: string,
+  hours: number | null,
+  todayDateISO = todayISO(),
+): ProgressState {
+  const dailyHours = { ...state.plannerSettings.dailyHours };
+  if (hours == null) delete dailyHours[dateISO];
+  else dailyHours[dateISO] = normalizeDailyStudyHours(hours);
+
+  return {
+    ...state,
+    plannerSettings: {
+      ...state.plannerSettings,
+      todayHours:
+        dateISO === todayDateISO
+          ? hours == null
+            ? state.plannerSettings.defaultDailyHours
+            : normalizeDailyStudyHours(hours)
+          : state.plannerSettings.todayHours,
+      dailyHours,
+    },
+  };
+}
+
+export function setDefaultDailyHoursState(state: ProgressState, hours: number): ProgressState {
+  return {
+    ...state,
+    plannerSettings: {
+      ...state.plannerSettings,
+      defaultDailyHours: normalizeDailyStudyHours(hours),
+    },
   };
 }
 
@@ -795,56 +853,18 @@ export function useProgress() {
   );
 
   const setTodayHours = useCallback(
-    (hours: number) => {
-      const clamped = clamp(hours, 0, 12);
-      const today = todayISO();
-      return commit((s) => ({
-        ...s,
-        plannerSettings: {
-          ...s.plannerSettings,
-          todayHours: clamped,
-          dailyHours: { ...s.plannerSettings.dailyHours, [today]: clamped },
-        },
-      }));
-    },
+    (hours: number) => commit((state) => setTodayHoursState(state, hours)),
     [commit],
   );
 
   const setDayHours = useCallback(
-    (dateISO: string, hours: number | null) => {
-      const today = todayISO();
-      return commit((s) => {
-        const next = { ...s.plannerSettings.dailyHours };
-        if (hours == null) delete next[dateISO];
-        else next[dateISO] = clamp(hours, 0, 12);
-
-        const isToday = dateISO === today;
-        const newTodayHours = isToday
-          ? hours != null
-            ? clamp(hours, 0, 12)
-            : s.plannerSettings.defaultDailyHours
-          : s.plannerSettings.todayHours;
-
-        return {
-          ...s,
-          plannerSettings: {
-            ...s.plannerSettings,
-            todayHours: newTodayHours,
-            dailyHours: next,
-          },
-        };
-      });
-    },
+    (dateISO: string, hours: number | null) =>
+      commit((state) => setDayHoursState(state, dateISO, hours)),
     [commit],
   );
 
   const setDefaultDailyHours = useCallback(
-    (hours: number) => {
-      return commit((s) => ({
-        ...s,
-        plannerSettings: { ...s.plannerSettings, defaultDailyHours: clamp(hours, 0, 12) },
-      }));
-    },
+    (hours: number) => commit((state) => setDefaultDailyHoursState(state, hours)),
     [commit],
   );
 

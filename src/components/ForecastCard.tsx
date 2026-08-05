@@ -6,6 +6,13 @@ import { displayDate } from "@/lib/date-utils";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { sortSubjects } from "@/lib/subject-order";
+import {
+  DAILY_STUDY_HOURS_STEP,
+  MAX_DAILY_STUDY_HOURS,
+  MIN_DAILY_STUDY_HOURS,
+  normalizeDailyStudyHours,
+} from "@/lib/study-hours";
+import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
 
 type Props = {
   state: ProgressState;
@@ -31,12 +38,12 @@ export function ForecastCard({
   shiftedDates,
 }: Props) {
   const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
-    ? Math.max(0, state.plannerSettings.defaultDailyHours)
+    ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)
     : 2;
 
   const handleHoursChange = (h: number) => {
     if (onSetDefaultDailyHours) {
-      onSetDefaultDailyHours(h);
+      onSetDefaultDailyHours(normalizeDailyStudyHours(h));
     }
   };
 
@@ -118,21 +125,21 @@ export function ForecastCard({
           <Slider
             className="w-24 sm:w-32"
             value={[hours]}
-            min={0}
-            max={12}
-            step={0.5}
+            min={MIN_DAILY_STUDY_HOURS}
+            max={MAX_DAILY_STUDY_HOURS}
+            step={DAILY_STUDY_HOURS_STEP}
             onValueChange={(value) => handleHoursChange(value[0])}
           />
           <Input
             type="number"
-            min={0}
-            max={12}
-            step={0.5}
+            min={MIN_DAILY_STUDY_HOURS}
+            max={MAX_DAILY_STUDY_HOURS}
+            step={DAILY_STUDY_HOURS_STEP}
             value={hours}
             onChange={(event) => {
               const nextHours = Number(event.target.value);
               if (Number.isFinite(nextHours)) {
-                handleHoursChange(Math.min(12, Math.max(0, nextHours)));
+                handleHoursChange(normalizeDailyStudyHours(nextHours));
               }
             }}
             className="h-7 w-20 min-w-[80px] rounded-lg border-slate-300 bg-white px-3 text-center text-xs font-bold"
@@ -140,6 +147,8 @@ export function ForecastCard({
           <span className="text-xs font-medium text-slate-500">h/ngày</span>
         </div>
       </div>
+
+      <HighStudyHoursNote hours={hours} />
 
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">
         <div className="flex min-w-0 items-center gap-2">
@@ -157,9 +166,7 @@ export function ForecastCard({
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">📚</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Bài còn lại
-            </div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Bài còn lại</div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
               {fc.remaining} bài
             </div>
@@ -176,7 +183,8 @@ export function ForecastCard({
               {formatHours(totalWorkloadHours)} giờ
             </div>
             <div className="mt-0.5 text-[10px] leading-tight text-slate-500">
-              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ ôn
+              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ
+              ôn
             </div>
           </div>
         </div>
@@ -184,9 +192,7 @@ export function ForecastCard({
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">🟢</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Mức tin cậy
-            </div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Mức tin cậy</div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
               {confidenceLabel}
             </div>
@@ -212,7 +218,9 @@ export function ForecastCard({
                   <span className="shrink-0 font-bold text-sky-700">{percent}%</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-                  <span>{item.done}/{item.total} bài đã xong</span>
+                  <span>
+                    {item.done}/{item.total} bài đã xong
+                  </span>
                   <span className="shrink-0">Còn {item.remaining}</span>
                 </div>
                 <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">

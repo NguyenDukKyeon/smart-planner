@@ -43,7 +43,9 @@ export function XpLevelCard({ xp, completedLessonsCount = 0 }: Props) {
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
               <span className="font-serif text-2xl font-bold text-slate-900">Level {level}</span>
-              <span className="text-xs font-semibold text-indigo-700 truncate">{levelInfo.title}</span>
+              <span className="text-xs font-semibold text-indigo-700 truncate">
+                {levelInfo.title}
+              </span>
             </div>
           </div>
         </div>

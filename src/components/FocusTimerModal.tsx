@@ -312,8 +312,10 @@ export function FocusTimerModal({
       ...(stored?.lessonId === lessonId
         ? { ...stored, lessonTitle, isCompleted }
         : createStoredTimerState(lessonId, lessonTitle, isCompleted)),
-      targetMinutes: targetMinutes ?? (stored?.lessonId === lessonId ? stored.targetMinutes : undefined),
-      reviewTaskId: reviewTaskId ?? (stored?.lessonId === lessonId ? stored.reviewTaskId : undefined),
+      targetMinutes:
+        targetMinutes ?? (stored?.lessonId === lessonId ? stored.targetMinutes : undefined),
+      reviewTaskId:
+        reviewTaskId ?? (stored?.lessonId === lessonId ? stored.reviewTaskId : undefined),
       reviewTargetMinutes:
         reviewTargetMinutes ??
         (stored?.lessonId === lessonId ? stored.reviewTargetMinutes : undefined),
@@ -394,7 +396,9 @@ export function FocusTimerModal({
     // and this tab can reclaim the same session on a later heartbeat.
     if (!lockWarningShownRef.current) {
       lockWarningShownRef.current = true;
-      toast.info("Timer đang được điều khiển ở tab khác; tab này sẽ tự nhận lại khi khóa cũ hết hạn.");
+      toast.info(
+        "Timer đang được điều khiển ở tab khác; tab này sẽ tự nhận lại khi khóa cũ hết hạn.",
+      );
     }
   }, [timerState?.activeTimerSessionId, timerState?.isRunning]);
 
@@ -610,7 +614,9 @@ export function FocusTimerModal({
             ? timerState.completedPomodoros + 1
             : timerState.completedPomodoros;
 
-        const shouldAutoStart = isFocusMode ? preferences.autoStartBreak : preferences.autoStartFocus;
+        const shouldAutoStart = isFocusMode
+          ? preferences.autoStartBreak
+          : preferences.autoStartFocus;
 
         if (isFocusMode) {
           const sessionId = timerState.activeTimerSessionId;
@@ -1083,8 +1089,7 @@ export function FocusTimerModal({
       return false;
     }
     const savedMinutes = Math.round((elapsedSeconds / 60) * 10) / 10;
-    const savedLabel =
-      elapsedSeconds < 60 ? `${elapsedSeconds} giây` : `${savedMinutes} phút`;
+    const savedLabel = elapsedSeconds < 60 ? `${elapsedSeconds} giây` : `${savedMinutes} phút`;
     toast.success(`Đã lưu ${savedLabel} học thực tế.`);
     setCompletionSummary(
       showSummary
@@ -1190,7 +1195,11 @@ export function FocusTimerModal({
   const handleKeepMini = () => {
     if (!setDisplayMode("mini")) return;
     setStopDecisionOpen(false);
-    toast.info(timerState.isRunning ? "Timer vẫn đang chạy ở chế độ thu nhỏ." : "Phiên tạm dừng đã được giữ ở mini timer.");
+    toast.info(
+      timerState.isRunning
+        ? "Timer vẫn đang chạy ở chế độ thu nhỏ."
+        : "Phiên tạm dừng đã được giữ ở mini timer.",
+    );
   };
 
   const handleSaveAndClose = () => {
@@ -1298,7 +1307,8 @@ export function FocusTimerModal({
     const next: StoredTimerState = {
       ...timerState,
       isRunning: false,
-      displayMode: save && isWarmup && timerState.displayMode === "mini" ? "dialog" : timerState.displayMode,
+      displayMode:
+        save && isWarmup && timerState.displayMode === "mini" ? "dialog" : timerState.displayMode,
       isMinimized: save && isWarmup ? false : timerState.displayMode === "mini",
       startTimestamp: null,
       accumulatedSeconds: 0,
@@ -1357,7 +1367,8 @@ export function FocusTimerModal({
         const loaded = loadProgressStorage();
         if (
           loaded.status === "ok" &&
-          getLessonCompletedSeconds(timerState.lessonId, loaded.value) >= lessonTargetMinutes * 60 &&
+          getLessonCompletedSeconds(timerState.lessonId, loaded.value) >=
+            lessonTargetMinutes * 60 &&
           onCompleteLesson(timerState.lessonId) === false
         ) {
           return;
@@ -1421,7 +1432,9 @@ export function FocusTimerModal({
                   calculateElapsedSeconds(timerState) < MIN_SAVABLE_FOCUS_SECONDS
                 }
               >
-                {timerState.timerMode === "pomodoro" ? "Kết thúc, lưu và đóng" : "Kết thúc nghỉ và đóng"}
+                {timerState.timerMode === "pomodoro"
+                  ? "Kết thúc, lưu và đóng"
+                  : "Kết thúc nghỉ và đóng"}
               </Button>
               <Button
                 variant="ghost"
@@ -1920,7 +1933,6 @@ export function FocusTimerModal({
                     onChange={(ambientSound) => updateState({ ambientSound })}
                     optionClassName="flex-1"
                   />
-
                 </div>
               </div>
             </div>

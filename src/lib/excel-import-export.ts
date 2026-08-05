@@ -8,7 +8,9 @@ import { normalizeDateToISO } from "./date-utils";
 
 function isTopicPrefix(value: string) {
   const normalized = value.toLowerCase();
-  return normalized.includes("chương") || normalized.includes("unit") || normalized.includes("chủ đề");
+  return (
+    normalized.includes("chương") || normalized.includes("unit") || normalized.includes("chủ đề")
+  );
 }
 
 /** Loaded lazily only when users read or create an Excel workbook. */
@@ -19,7 +21,11 @@ export function parseExcelBufferWithDiagnostics(buffer: ArrayBuffer): ImportPars
       workbook.SheetNames.find((name: string) => name.toLowerCase() !== "huong_dan") ??
       workbook.SheetNames[0];
     if (!sheetName) {
-      return { items: [], issues: [{ row: 1, message: "Workbook không có sheet dữ liệu." }], totalRows: 0 };
+      return {
+        items: [],
+        issues: [{ row: 1, message: "Workbook không có sheet dữ liệu." }],
+        totalRows: 0,
+      };
     }
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
@@ -31,7 +37,11 @@ export function parseExcelBufferWithDiagnostics(buffer: ArrayBuffer): ImportPars
       };
     }
 
-    const headerRow = rows[0].map((cell) => String(cell || "").toLowerCase().trim());
+    const headerRow = rows[0].map((cell) =>
+      String(cell || "")
+        .toLowerCase()
+        .trim(),
+    );
     const subjectIdIndex = headerRow.findIndex((header) => header === "subject_id");
     const lessonIdIndex = headerRow.findIndex((header) => header === "lesson_id");
     let subjectIndex = headerRow.findIndex(
@@ -52,7 +62,8 @@ export function parseExcelBufferWithDiagnostics(buffer: ArrayBuffer): ImportPars
         ["phút", "thời gian", "minutes"].some((term) => header.includes(term)),
     );
     let dateIndex = headerRow.findIndex(
-      (header) => header === "planned_date" || ["ngày", "date"].some((term) => header.includes(term)),
+      (header) =>
+        header === "planned_date" || ["ngày", "date"].some((term) => header.includes(term)),
     );
     let xpIndex = headerRow.findIndex(
       (header) => header === "xp_reward" || header.includes("xp") || header.includes("điểm"),
@@ -120,7 +131,11 @@ export function parseExcelBufferWithDiagnostics(buffer: ArrayBuffer): ImportPars
     }
     return { items, issues, totalRows };
   } catch {
-    return { items: [], issues: [{ row: 1, message: "Không thể đọc workbook Excel." }], totalRows: 0 };
+    return {
+      items: [],
+      issues: [{ row: 1, message: "Không thể đọc workbook Excel." }],
+      totalRows: 0,
+    };
   }
 }
 
@@ -151,7 +166,11 @@ export function downloadSampleExcel() {
     ["lesson_name", "Có", "Tên bài cần học"],
     ["target_minutes", "Không", "Tổng thời lượng mục tiêu, mặc định 45 phút"],
     ["planned_date", "Không", "Ngày dự kiến theo YYYY-MM-DD"],
-    ["xp_reward", "Không", "Giá trị tương thích dữ liệu cũ; app áp dụng quy tắc gamification chung"],
+    [
+      "xp_reward",
+      "Không",
+      "Giá trị tương thích dữ liệu cũ; app áp dụng quy tắc gamification chung",
+    ],
   ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(dataRows), "Du_lieu");

@@ -12,7 +12,9 @@ export function ConfettiBurst({ trigger }: { trigger: number }) {
   useEffect(() => {
     const readPreference = () => {
       try {
-        const parsed = JSON.parse(localStorage.getItem("hocvien-appearance-preferences-v1") || "{}");
+        const parsed = JSON.parse(
+          localStorage.getItem("hocvien-appearance-preferences-v1") || "{}",
+        );
         setConfettiEnabled(parsed.confetti !== false);
       } catch {
         setConfettiEnabled(true);
@@ -59,12 +61,14 @@ export function ConfettiBurst({ trigger }: { trigger: number }) {
         <span
           key={p.id}
           className="absolute h-2 w-2 rounded-sm animate-confetti"
-          style={{
-            background: p.c,
-            "--tx": `${p.x}px`,
-            "--ty": `${p.y}px`,
-            "--rot": `${p.r}deg`,
-          } as CSSProperties}
+          style={
+            {
+              background: p.c,
+              "--tx": `${p.x}px`,
+              "--ty": `${p.y}px`,
+              "--rot": `${p.r}deg`,
+            } as CSSProperties
+          }
         />
       ))}
     </div>

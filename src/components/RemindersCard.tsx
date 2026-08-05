@@ -67,7 +67,9 @@ export function RemindersCard({
       ? Notification.permission
       : "unsupported",
   );
-  const [pushPreferences, setPushPreferences] = useState<PushPreferences>(() => getPushPreferences());
+  const [pushPreferences, setPushPreferences] = useState<PushPreferences>(() =>
+    getPushPreferences(),
+  );
   const [habitOpen, setHabitOpen] = useState(false);
   const firedRef = useRef<Set<string>>(new Set());
 
@@ -144,7 +146,11 @@ export function RemindersCard({
                 : "bg-amber-100 text-amber-700",
             )}
           >
-            {permission === "granted" ? <ShieldCheck className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+            {permission === "granted" ? (
+              <ShieldCheck className="h-5 w-5" />
+            ) : (
+              <BellOff className="h-5 w-5" />
+            )}
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-slate-900">
@@ -165,7 +171,11 @@ export function RemindersCard({
             </p>
           </div>
           {permission === "default" && (
-            <Button type="button" className="rounded-2xl bg-sky-600 hover:bg-sky-700" onClick={requestPermission}>
+            <Button
+              type="button"
+              className="rounded-2xl bg-sky-600 hover:bg-sky-700"
+              onClick={requestPermission}
+            >
               Bật thông báo trình duyệt
             </Button>
           )}
@@ -227,7 +237,9 @@ export function RemindersCard({
               </span>
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold text-slate-900">Nhắc theo từng thói quen</h3>
-                <p className="text-xs text-slate-500">Đặt giờ riêng cho từng thói quen; không hiển thị trạng thái hoàn thành tại đây.</p>
+                <p className="text-xs text-slate-500">
+                  Đặt giờ riêng cho từng thói quen; không hiển thị trạng thái hoàn thành tại đây.
+                </p>
               </div>
               <ChevronDown className={cn("h-4 w-4 transition", habitOpen && "rotate-180")} />
             </button>
@@ -273,7 +285,9 @@ export function RemindersCard({
             <span className="flex items-center gap-2">
               <ExternalLink className="h-4 w-4" /> Chẩn đoán thông báo
             </span>
-            <span className="text-xs font-normal text-slate-400">HTTPS · Service worker · Push</span>
+            <span className="text-xs font-normal text-slate-400">
+              HTTPS · Service worker · Push
+            </span>
           </Button>
         </section>
       )}
@@ -300,7 +314,9 @@ function ReminderScheduleRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3 py-3 first:pt-1 last:pb-1">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-600">{icon}</span>
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-600">
+        {icon}
+      </span>
       <div className="min-w-[180px] flex-1">
         <p className="text-sm font-semibold text-slate-900">{title}</p>
         <p className="text-xs text-slate-500">{description}</p>

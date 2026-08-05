@@ -13,7 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPushConfigRouteImport } from './routes/api.push.config'
 import { Route as ApiPushDeliverRouteImport } from './routes/api.push.deliver'
 import { Route as ApiPushScheduleRouteImport } from './routes/api.push.schedule'
-import { Route as ApiPushTestRouteImport } from './routes/api.push.test'
+import { Route as ApiPushTestRouteImport } from './routes/api/push/test'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',

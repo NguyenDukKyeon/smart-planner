@@ -90,9 +90,7 @@ describe("flexible subject catalog", () => {
       "subject_id,subject_name,topic,lesson_id,lesson_name,target_minutes,planned_date,xp_reward\n,Toán,Hàm số,bai-1,,0,not-a-date,-2",
     );
     expect(malformed.items).toHaveLength(0);
-    expect(malformed.issues).toEqual(
-      expect.arrayContaining([expect.objectContaining({ row: 2 })]),
-    );
+    expect(malformed.issues).toEqual(expect.arrayContaining([expect.objectContaining({ row: 2 })]));
   });
 
   test("keeps imported planned duration", () => {
@@ -207,27 +205,72 @@ describe("flexible subject catalog", () => {
 
   test("applies bulk lesson updates without creating duplicate IDs", () => {
     const subjects = convertRawToSubjects([
-      { subject: "Môn A", lessonId: "a-1", title: "Bài A1", estimatedMinutes: 30, scheduledDate: "2026-07-25" },
-      { subject: "Môn A", lessonId: "a-2", title: "Bài A2", estimatedMinutes: 45, scheduledDate: "2026-07-26" },
-      { subject: "Môn B", lessonId: "b-1", title: "Bài B1", estimatedMinutes: 60, scheduledDate: "2026-07-27" },
+      {
+        subject: "Môn A",
+        lessonId: "a-1",
+        title: "Bài A1",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-25",
+      },
+      {
+        subject: "Môn A",
+        lessonId: "a-2",
+        title: "Bài A2",
+        estimatedMinutes: 45,
+        scheduledDate: "2026-07-26",
+      },
+      {
+        subject: "Môn B",
+        lessonId: "b-1",
+        title: "Bài B1",
+        estimatedMinutes: 60,
+        scheduledDate: "2026-07-27",
+      },
     ]);
     const selected = new Set(["a-1", "a-2"]);
-    const updated = updateLessonsDetails(subjects, selected, { plannedDurationMinutes: 90, scheduledDate: "2026-08-01" });
-    expect(updated[0].milestones.flatMap((milestone) => milestone.lessons).every((lesson) => lesson.plannedDurationMinutes === 90)).toBe(true);
+    const updated = updateLessonsDetails(subjects, selected, {
+      plannedDurationMinutes: 90,
+      scheduledDate: "2026-08-01",
+    });
+    expect(
+      updated[0].milestones
+        .flatMap((milestone) => milestone.lessons)
+        .every((lesson) => lesson.plannedDurationMinutes === 90),
+    ).toBe(true);
     const moved = moveLessonsToSubject(updated, selected, updated[1].id);
-    const movedIds = moved[1].milestones.flatMap((milestone) => milestone.lessons).map((lesson) => lesson.id);
+    const movedIds = moved[1].milestones
+      .flatMap((milestone) => milestone.lessons)
+      .map((lesson) => lesson.id);
     expect(movedIds).toEqual(expect.arrayContaining(["a-1", "a-2", "b-1"]));
     expect(new Set(movedIds).size).toBe(movedIds.length);
     const topicMoved = moveLessonsToTopic(moved, selected, moved[1].id, moved[1].milestones[0].id);
-    expect(topicMoved[1].milestones[0].lessons.filter((lesson) => selected.has(lesson.id))).toHaveLength(2);
+    expect(
+      topicMoved[1].milestones[0].lessons.filter((lesson) => selected.has(lesson.id)),
+    ).toHaveLength(2);
     const removed = removeLessonsFromSubjects(topicMoved, selected);
-    expect(removed.flatMap((subject) => subject.milestones.flatMap((milestone) => milestone.lessons)).map((lesson) => lesson.id)).toEqual(["b-1"]);
+    expect(
+      removed
+        .flatMap((subject) => subject.milestones.flatMap((milestone) => milestone.lessons))
+        .map((lesson) => lesson.id),
+    ).toEqual(["b-1"]);
   });
 
   test("archives multiple lessons atomically", () => {
     const subjects = convertRawToSubjects([
-      { subject: "Toán", lessonId: "math-1", title: "Bài 1", estimatedMinutes: 30, scheduledDate: "2026-07-25" },
-      { subject: "Toán", lessonId: "math-2", title: "Bài 2", estimatedMinutes: 30, scheduledDate: "2026-07-26" },
+      {
+        subject: "Toán",
+        lessonId: "math-1",
+        title: "Bài 1",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-25",
+      },
+      {
+        subject: "Toán",
+        lessonId: "math-2",
+        title: "Bài 2",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-26",
+      },
     ]);
     const storage = new FaultingStorage();
     storage.values.set(CUSTOM_SUBJECTS_KEY, JSON.stringify(subjects));
@@ -239,20 +282,59 @@ describe("flexible subject catalog", () => {
 
   test("moves a lesson into the edited topic group instead of changing only its label", () => {
     const subjects = convertRawToSubjects([
-      { subject: "Toán", topic: "Chủ đề A", lessonId: "math-a", title: "Bài A", estimatedMinutes: 30, scheduledDate: "2026-07-25" },
-      { subject: "Toán", topic: "Chủ đề B", lessonId: "math-b", title: "Bài B", estimatedMinutes: 30, scheduledDate: "2026-07-26" },
+      {
+        subject: "Toán",
+        topic: "Chủ đề A",
+        lessonId: "math-a",
+        title: "Bài A",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-25",
+      },
+      {
+        subject: "Toán",
+        topic: "Chủ đề B",
+        lessonId: "math-b",
+        title: "Bài B",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-26",
+      },
     ]);
     const updated = updateLessonDetails(subjects, "math-a", { topic: "Chủ đề B" });
     const target = updated[0].milestones.find((milestone) => milestone.title === "Chủ đề B");
-    expect(target?.lessons.map((lesson) => lesson.id)).toEqual(expect.arrayContaining(["math-a", "math-b"]));
-    expect(updated[0].milestones.find((milestone) => milestone.title === "Chủ đề A")?.lessons).toHaveLength(0);
+    expect(target?.lessons.map((lesson) => lesson.id)).toEqual(
+      expect.arrayContaining(["math-a", "math-b"]),
+    );
+    expect(
+      updated[0].milestones.find((milestone) => milestone.title === "Chủ đề A")?.lessons,
+    ).toHaveLength(0);
   });
 
   test("keeps lesson reordering inside the current topic and performs no storage write", () => {
     const source = convertRawToSubjects([
-      { subject: "Toán", topic: "Chủ đề A", lessonId: "a-1", title: "A1", estimatedMinutes: 30, scheduledDate: "2026-07-25" },
-      { subject: "Toán", topic: "Chủ đề A", lessonId: "a-2", title: "A2", estimatedMinutes: 30, scheduledDate: "2026-07-26" },
-      { subject: "Toán", topic: "Chủ đề B", lessonId: "b-1", title: "B1", estimatedMinutes: 30, scheduledDate: "2026-07-27" },
+      {
+        subject: "Toán",
+        topic: "Chủ đề A",
+        lessonId: "a-1",
+        title: "A1",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-25",
+      },
+      {
+        subject: "Toán",
+        topic: "Chủ đề A",
+        lessonId: "a-2",
+        title: "A2",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-26",
+      },
+      {
+        subject: "Toán",
+        topic: "Chủ đề B",
+        lessonId: "b-1",
+        title: "B1",
+        estimatedMinutes: 30,
+        scheduledDate: "2026-07-27",
+      },
     ]);
     const storage = new FaultingStorage();
     Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
@@ -261,8 +343,16 @@ describe("flexible subject catalog", () => {
     const topicB = subject.milestones.find((milestone) => milestone.title === "Chủ đề B")!;
 
     const moved = moveLessonBeforeInTopic(source, subject.id, topicA.id, "a-2", "a-1");
-    expect(moved[0].milestones.find((milestone) => milestone.id === topicA.id)?.lessons.map((lesson) => lesson.id)).toEqual(["a-2", "a-1"]);
-    expect(moved[0].milestones.find((milestone) => milestone.id === topicB.id)?.lessons.map((lesson) => lesson.id)).toEqual(["b-1"]);
+    expect(
+      moved[0].milestones
+        .find((milestone) => milestone.id === topicA.id)
+        ?.lessons.map((lesson) => lesson.id),
+    ).toEqual(["a-2", "a-1"]);
+    expect(
+      moved[0].milestones
+        .find((milestone) => milestone.id === topicB.id)
+        ?.lessons.map((lesson) => lesson.id),
+    ).toEqual(["b-1"]);
     expect(storage.writes).toBe(0);
   });
 

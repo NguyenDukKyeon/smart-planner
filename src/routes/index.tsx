@@ -33,6 +33,7 @@ import {
 } from "@/lib/progress-store";
 import { SUBJECTS, type Subject } from "@/lib/mock-data";
 import { buildShiftedSchedule } from "@/lib/planner";
+import { isStudyDayQueueComplete } from "@/lib/study-day-completion";
 import {
   ARCHIVED_CATALOG_KEY,
   CUSTOM_SUBJECTS_BACKUP_KEY,
@@ -253,11 +254,7 @@ function Dashboard() {
   }, [reloadStorageBoundaries]);
 
   useEffect(() => {
-    if (
-      timerRecoveryAttemptedRef.current ||
-      !workspaceStorageLoaded ||
-      subjects.length === 0
-    ) {
+    if (timerRecoveryAttemptedRef.current || !workspaceStorageLoaded || subjects.length === 0) {
       return;
     }
     timerRecoveryAttemptedRef.current = true;
@@ -275,9 +272,7 @@ function Dashboard() {
       id: stored.lessonId,
       title: stored.lessonTitle,
       xp: lesson?.xp ?? 0,
-      isCompleted: stored.reviewTaskId
-        ? false
-        : Boolean(state.completedLessons[stored.lessonId]),
+      isCompleted: stored.reviewTaskId ? false : Boolean(state.completedLessons[stored.lessonId]),
       targetMinutes: stored.targetMinutes ?? lesson?.plannedDurationMinutes,
       reviewTaskId: stored.reviewTaskId,
       reviewTargetMinutes: stored.reviewTargetMinutes,
@@ -372,6 +367,33 @@ function Dashboard() {
     [subjects, state.completedLessons, state.studyMeta, state.plannerSettings],
   );
 
+  const todayStudyDayComplete = useMemo<boolean | null>(() => {
+    if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
+    return isStudyDayQueueComplete({
+      subjects,
+      completed: state.completedLessons,
+      reviewCompletions: state.reviewCompletions,
+      meta: state.studyMeta,
+      settings: state.plannerSettings,
+      dateISO: todayISO(),
+    });
+  }, [
+    hydrated,
+    state.completedLessons,
+    state.plannerSettings,
+    state.reviewCompletions,
+    state.studyMeta,
+    subjects,
+    workspaceStorageLoaded,
+  ]);
+
+  const todayStudyDayRecorded = state.habitLog[todayISO()]?.__study_day_complete__ === true;
+
+  useEffect(() => {
+    if (todayStudyDayComplete == null || todayStudyDayRecorded === todayStudyDayComplete) return;
+    updateHabit({ __study_day_complete__: todayStudyDayComplete });
+  }, [todayStudyDayComplete, todayStudyDayRecorded, updateHabit]);
+
   const realStudyStreak = useMemo(() => computeStudyStreak(state), [state]);
   const weeklyMetrics = useMemo(
     () =>
@@ -428,10 +450,7 @@ function Dashboard() {
   }, [hydrated, state, storageBlocked, subjects, workspaceStorageLoaded]);
 
   const updateSubjectsSafely = useCallback(
-    (
-      nextSubjects: Subject[],
-      options: CatalogUpdateOptions = {},
-    ): CatalogUpdateResult => {
+    (nextSubjects: Subject[], options: CatalogUpdateOptions = {}): CatalogUpdateResult => {
       if (storageBlocked) {
         const error = "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.";
         toast.error(error);
@@ -468,11 +487,11 @@ function Dashboard() {
       const stored = getStoredTimerState();
       const hasUnfinishedTimer = Boolean(
         stored &&
-          (stored.isRunning ||
-            stored.accumulatedSeconds > 0 ||
-            ["paused", "expired", "warmup_completed", "breaking", "session_waiting"].includes(
-              stored.status,
-            )),
+        (stored.isRunning ||
+          stored.accumulatedSeconds > 0 ||
+          ["paused", "expired", "warmup_completed", "breaking", "session_waiting"].includes(
+            stored.status,
+          )),
       );
       if (stored && hasUnfinishedTimer) {
         const storedLesson = findLessonById(stored.lessonId, subjects);
@@ -863,8 +882,12 @@ function Dashboard() {
           <TabsContent value="plan" className="mt-4 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-serif text-xl font-semibold text-slate-900">Kế hoạch học tập</h2>
-                <p className="text-sm text-slate-500">Phân bổ thời gian tại đây; nội dung môn và bài được quản lý riêng.</p>
+                <h2 className="font-serif text-xl font-semibold text-slate-900">
+                  Kế hoạch học tập
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Phân bổ thời gian tại đây; nội dung môn và bài được quản lý riêng.
+                </p>
               </div>
               <CourseManagerModal
                 currentSubjects={subjects}
@@ -893,7 +916,7 @@ function Dashboard() {
                   value="flex"
                   className="rounded-lg px-4 py-1.5 text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all"
                 >
-                  Lịch điều chỉnh
+                  Lịch linh hoạt
                 </TabsTrigger>
                 <TabsTrigger
                   value="original"
@@ -907,6 +930,7 @@ function Dashboard() {
                   state={state}
                   subjects={subjects}
                   onSetDayHours={setDayHours}
+                  onSubjectsUpdated={updateSubjectsSafely}
                 />
               </TabsContent>
               <TabsContent value="original" className="mt-4 space-y-4">
@@ -969,7 +993,11 @@ function Dashboard() {
                 onBuyStreakFreeze={buyStreakFreeze}
                 onClaimReward={claimReward}
                 onAddCustomReward={addCustomReward}
-                activeTimerLesson={activeTimerLesson ? { id: activeTimerLesson.id, title: activeTimerLesson.title } : null}
+                activeTimerLesson={
+                  activeTimerLesson
+                    ? { id: activeTimerLesson.id, title: activeTimerLesson.title }
+                    : null
+                }
               />
             </Suspense>
           </LazyModuleBoundary>

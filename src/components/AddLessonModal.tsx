@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import type { Subject } from "@/lib/mock-data";
+import type { LessonScheduleMode, Subject } from "@/lib/mock-data";
 import { addCustomLessonToSubjects, moveLessonsToTopic } from "@/lib/custom-subjects";
 import { todayISO } from "@/lib/date-utils";
 import { validateLessonForm, type FormErrors } from "@/lib/form-validation";
@@ -54,6 +54,7 @@ export function AddLessonModal({
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState(45);
   const [date, setDate] = useState(todayISO());
+  const [scheduleMode, setScheduleMode] = useState<LessonScheduleMode>("flexible");
   const xp = 30;
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -75,18 +76,20 @@ export function AddLessonModal({
     setTitle("");
     setMinutes(45);
     setDate(todayISO());
+    setScheduleMode("flexible");
     setErrors({});
   }, [open, defaultSubjectName, currentSubjects]);
 
   const subjectName =
-    subjectChoice === NEW_SUBJECT ? customSubjectName.trim() : selectedSubject?.name ?? "";
+    subjectChoice === NEW_SUBJECT ? customSubjectName.trim() : (selectedSubject?.name ?? "");
 
   const topicName =
     topicChoice === NO_TOPIC
       ? ""
       : topicChoice === NEW_TOPIC
         ? customTopic.trim()
-        : selectedSubject?.milestones.find((milestone) => milestone.id === topicChoice)?.title ?? "";
+        : (selectedSubject?.milestones.find((milestone) => milestone.id === topicChoice)?.title ??
+          "");
 
   const handleSubjectChange = (value: string) => {
     setSubjectChoice(value);
@@ -117,6 +120,10 @@ export function AddLessonModal({
       toast.error("Vui lòng chọn hoặc nhập tên môn học!");
       return;
     }
+    if (scheduleMode === "fixed" && !date) {
+      toast.error("Bài cố định cần có ngày học cụ thể.");
+      return;
+    }
     if (topicChoice === NEW_TOPIC && !topicName) {
       toast.error("Vui lòng nhập tên chủ đề mới.");
       return;
@@ -137,6 +144,7 @@ export function AddLessonModal({
       title: title.trim(),
       estimatedMinutes: minutes,
       scheduledDate: date,
+      scheduleMode,
       xp,
     });
 
@@ -145,9 +153,7 @@ export function AddLessonModal({
     // the exact chapter selected by the user.
     if (selectedSubject && topicChoice !== NO_TOPIC && topicChoice !== NEW_TOPIC) {
       const addedLesson = updatedSubjects
-        .flatMap((subject) =>
-          subject.milestones.flatMap((milestone) => milestone.lessons),
-        )
+        .flatMap((subject) => subject.milestones.flatMap((milestone) => milestone.lessons))
         .find((lesson) => !previousLessonIds.has(lesson.id));
       if (addedLesson) {
         updatedSubjects = moveLessonsToTopic(
@@ -283,11 +289,13 @@ export function AddLessonModal({
                 autoFocus
               />
             )}
-            {selectedSubject && selectedSubject.milestones.length === 0 && topicChoice !== NEW_TOPIC && (
-              <p className="text-[11px] text-amber-700">
-                Môn này chưa có chủ đề. Chọn “Tạo chủ đề mới” để tạo chủ đề đầu tiên.
-              </p>
-            )}
+            {selectedSubject &&
+              selectedSubject.milestones.length === 0 &&
+              topicChoice !== NEW_TOPIC && (
+                <p className="text-[11px] text-amber-700">
+                  Môn này chưa có chủ đề. Chọn “Tạo chủ đề mới” để tạo chủ đề đầu tiên.
+                </p>
+              )}
           </div>
 
           <div className="space-y-1.5">
@@ -343,10 +351,42 @@ export function AddLessonModal({
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700">Cách xếp lịch</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={scheduleMode === "flexible" ? "default" : "outline"}
+                className="h-auto rounded-xl px-3 py-2 text-left"
+                onClick={() => setScheduleMode("flexible")}
+              >
+                <span>
+                  <span className="block text-xs font-bold">Linh hoạt</span>
+                  <span className="block text-[10px] font-normal opacity-80">
+                    Có thể dời sang ngày sau
+                  </span>
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant={scheduleMode === "fixed" ? "default" : "outline"}
+                className="h-auto rounded-xl px-3 py-2 text-left"
+                onClick={() => setScheduleMode("fixed")}
+              >
+                <span>
+                  <span className="block text-xs font-bold">Cố định</span>
+                  <span className="block text-[10px] font-normal opacity-80">
+                    Chỉ học đúng ngày này
+                  </span>
+                </span>
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5 text-purple-600" />
-              Ngày học dự kiến
+              {scheduleMode === "fixed" ? "Ngày học cố định" : "Có thể học từ ngày"}
             </Label>
             <Input
               type="date"
@@ -363,7 +403,7 @@ export function AddLessonModal({
                 onClick={() => setDate("")}
                 className="text-[11px] text-muted-foreground underline"
               >
-                Bỏ ngày cố định
+                Bỏ ngày
               </button>
             )}
           </div>

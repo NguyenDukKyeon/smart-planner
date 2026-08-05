@@ -53,11 +53,7 @@ describe("catalog order in the study plan", () => {
       hoursOverride: 6,
     });
 
-    expect(queue.newLessons.map((lesson) => lesson.id)).toEqual([
-      "unit-13",
-      "unit-4",
-      "unit-10",
-    ]);
+    expect(queue.newLessons.map((lesson) => lesson.id)).toEqual(["unit-13", "unit-4", "unit-10"]);
   });
 
   test("supports inserting before a lesson and after the final lesson", () => {

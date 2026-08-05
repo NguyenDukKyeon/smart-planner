@@ -67,7 +67,8 @@ function flattenSubjects(subjects: Subject[]): ImportedRawLesson[] {
         subjectId: subject.id,
         lessonId: lesson.id,
         subject: subject.name,
-        topic: lesson.topic || (milestone.title !== "Toàn bộ bài học" ? milestone.title : undefined),
+        topic:
+          lesson.topic || (milestone.title !== "Toàn bộ bài học" ? milestone.title : undefined),
         title: lesson.title,
         estimatedMinutes: lesson.plannedDurationMinutes,
         scheduledDate: lesson.scheduledDate,
@@ -117,7 +118,10 @@ function lessonIds(subjects: Subject[]): Set<string> {
   );
 }
 
-function dedupeIncomingSubjects(subjects: Subject[]): { subjects: Subject[]; duplicateIds: number } {
+function dedupeIncomingSubjects(subjects: Subject[]): {
+  subjects: Subject[];
+  duplicateIds: number;
+} {
   const seen = new Set<string>();
   let duplicateIds = 0;
   const next = subjects.map((subject) => ({
@@ -162,9 +166,12 @@ function mergeSubjects(current: Subject[], incoming: Subject[]): Subject[] {
       const milestoneIndex = subject.milestones.findIndex(
         (milestone) =>
           milestone.id === incomingMilestone.id ||
-          milestone.title.localeCompare(incomingMilestone.title, "vi", { sensitivity: "base" }) === 0,
+          milestone.title.localeCompare(incomingMilestone.title, "vi", { sensitivity: "base" }) ===
+            0,
       );
-      const freshLessons = incomingMilestone.lessons.filter((lesson) => !allExistingIds.has(lesson.id));
+      const freshLessons = incomingMilestone.lessons.filter(
+        (lesson) => !allExistingIds.has(lesson.id),
+      );
       if (freshLessons.length === 0) continue;
       if (milestoneIndex === -1) {
         subject.milestones.push({ ...incomingMilestone, lessons: freshLessons });
@@ -194,7 +201,10 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
   const [backupRaw, setBackupRaw] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const incomingCatalog = useMemo(() => dedupeIncomingSubjects(convertRawToSubjects(preview)), [preview]);
+  const incomingCatalog = useMemo(
+    () => dedupeIncomingSubjects(convertRawToSubjects(preview)),
+    [preview],
+  );
   const incomingSubjects = incomingCatalog.subjects;
   const previewStats = useMemo<PreviewStats>(() => {
     const currentIds = lessonIds(currentSubjects);
@@ -202,10 +212,13 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
       subject.milestones.flatMap((milestone) => milestone.lessons),
     );
     return {
-      subjects: incomingSubjects.filter((subject) => subject.milestones.some((milestone) => milestone.lessons.length > 0)).length,
+      subjects: incomingSubjects.filter((subject) =>
+        subject.milestones.some((milestone) => milestone.lessons.length > 0),
+      ).length,
       lessons: incomingLessons.length,
       duplicates:
-        incomingCatalog.duplicateIds + incomingLessons.filter((lesson) => currentIds.has(lesson.id)).length,
+        incomingCatalog.duplicateIds +
+        incomingLessons.filter((lesson) => currentIds.has(lesson.id)).length,
       invalid: importIssues.length,
     };
   }, [currentSubjects, importIssues.length, incomingCatalog.duplicateIds, incomingSubjects]);
@@ -214,11 +227,14 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
     setBusy(true);
     try {
       const lower = file.name.toLowerCase();
-      const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls")
-        ? (await import("@/lib/excel-import-export")).parseExcelBufferWithDiagnostics(await file.arrayBuffer())
-        : lower.endsWith(".json")
-          ? parseJSONInputWithDiagnostics(await file.text())
-          : parseCSVInputWithDiagnostics(await file.text());
+      const parsed =
+        lower.endsWith(".xlsx") || lower.endsWith(".xls")
+          ? (await import("@/lib/excel-import-export")).parseExcelBufferWithDiagnostics(
+              await file.arrayBuffer(),
+            )
+          : lower.endsWith(".json")
+            ? parseJSONInputWithDiagnostics(await file.text())
+            : parseCSVInputWithDiagnostics(await file.text());
       if (parsed.items.length === 0) {
         const firstIssue = parsed.issues[0]?.message;
         toast.error(firstIssue || "Không tìm thấy bài học hợp lệ. Hãy kiểm tra cấu trúc file mẫu.");
@@ -243,12 +259,17 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
 
   const executeImport = () => {
     if (incomingSubjects.length === 0) return;
-    const next = importMode === "merge" ? mergeSubjects(currentSubjects, incomingSubjects) : incomingSubjects;
+    const next =
+      importMode === "merge" ? mergeSubjects(currentSubjects, incomingSubjects) : incomingSubjects;
     const transaction = replaceRawValuesSafely(CUSTOM_SUBJECTS_BACKUP_KEY, [
       { key: CUSTOM_SUBJECTS_KEY, raw: JSON.stringify(next) },
     ]);
     if (!transaction.ok) {
-      toast.error(transaction.rollbackError ? `${transaction.error} ${transaction.rollbackError}` : transaction.error);
+      toast.error(
+        transaction.rollbackError
+          ? `${transaction.error} ${transaction.rollbackError}`
+          : transaction.error,
+      );
       return;
     }
     onSubjectsUpdated(next);
@@ -266,8 +287,12 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
 
   const applyGrade11 = (mode: ImportMode) => {
     if (currentSubjects.length > 0) {
-      const action = mode === "merge" ? "gộp lộ trình lớp 11 vào dữ liệu hiện tại" : "thay thế toàn bộ lộ trình hiện tại bằng lộ trình lớp 11";
-      if (!window.confirm(`Bạn có chắc muốn ${action}? Một snapshot hoàn tác sẽ được tạo trước.`)) return;
+      const action =
+        mode === "merge"
+          ? "gộp lộ trình lớp 11 vào dữ liệu hiện tại"
+          : "thay thế toàn bộ lộ trình hiện tại bằng lộ trình lớp 11";
+      if (!window.confirm(`Bạn có chắc muốn ${action}? Một snapshot hoàn tác sẽ được tạo trước.`))
+        return;
     }
     const next = mode === "merge" ? mergeSubjects(currentSubjects, SUBJECTS) : SUBJECTS;
     const transaction = replaceRawValuesSafely(CUSTOM_SUBJECTS_BACKUP_KEY, [
@@ -289,7 +314,11 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
     } else if (format === "csv") {
       downloadFile("lo_trinh_mau_lop_11_KNTT.csv", toCsv(items), "text/csv;charset=utf-8");
     } else {
-      downloadFile("lo_trinh_mau_lop_11_KNTT.json", JSON.stringify(toPortableRows(items), null, 2), "application/json");
+      downloadFile(
+        "lo_trinh_mau_lop_11_KNTT.json",
+        JSON.stringify(toPortableRows(items), null, 2),
+        "application/json",
+      );
     }
   };
 
@@ -298,7 +327,11 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
       const { downloadSampleExcel } = await import("@/lib/excel-import-export");
       downloadSampleExcel();
     } else if (format === "csv") {
-      downloadFile("mau_import_lo_trinh_don_gian.csv", SAMPLE_CSV_CONTENT, "text/csv;charset=utf-8");
+      downloadFile(
+        "mau_import_lo_trinh_don_gian.csv",
+        SAMPLE_CSV_CONTENT,
+        "text/csv;charset=utf-8",
+      );
     } else {
       downloadFile("mau_import_lo_trinh_don_gian.json", SAMPLE_JSON_CONTENT, "application/json");
     }
@@ -306,14 +339,24 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
 
   const exportCurrent = (format: "csv" | "json") => {
     const items = flattenSubjects(currentSubjects);
-    if (format === "csv") downloadFile("lo_trinh_hien_tai.csv", toCsv(items), "text/csv;charset=utf-8");
-    else downloadFile("lo_trinh_hien_tai.json", JSON.stringify(toPortableRows(items), null, 2), "application/json");
+    if (format === "csv")
+      downloadFile("lo_trinh_hien_tai.csv", toCsv(items), "text/csv;charset=utf-8");
+    else
+      downloadFile(
+        "lo_trinh_hien_tai.json",
+        JSON.stringify(toPortableRows(items), null, 2),
+        "application/json",
+      );
   };
 
   const exportWholeApp = () => {
     const backup = createAppBackup(progress, currentSubjects, getStoredTimerState());
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadFile(`smart-planner-backup-${stamp}.json`, JSON.stringify(backup, null, 2), "application/json");
+    downloadFile(
+      `smart-planner-backup-${stamp}.json`,
+      JSON.stringify(backup, null, 2),
+      "application/json",
+    );
   };
 
   const restoreWholeApp = () => {
@@ -355,36 +398,59 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
             <Database className="h-5 w-5 text-sky-700" /> Lộ trình & dữ liệu
           </DialogTitle>
           <DialogDescription>
-            Dùng lộ trình có sẵn, nhập lộ trình riêng hoặc quản lý sao lưu. File mẫu import được tách khỏi lộ trình lớp 11.
+            Dùng lộ trình có sẵn, nhập lộ trình riêng hoặc quản lý sao lưu. File mẫu import được
+            tách khỏi lộ trình lớp 11.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
           <TabsList className="mx-4 mt-3 grid grid-cols-3 rounded-2xl bg-slate-100 p-1">
-            <TabsTrigger value="available" className="rounded-xl text-xs">Lộ trình có sẵn</TabsTrigger>
-            <TabsTrigger value="import" className="rounded-xl text-xs">Nhập lộ trình</TabsTrigger>
-            <TabsTrigger value="backup" className="rounded-xl text-xs">Xuất & sao lưu</TabsTrigger>
+            <TabsTrigger value="available" className="rounded-xl text-xs">
+              Lộ trình có sẵn
+            </TabsTrigger>
+            <TabsTrigger value="import" className="rounded-xl text-xs">
+              Nhập lộ trình
+            </TabsTrigger>
+            <TabsTrigger value="backup" className="rounded-xl text-xs">
+              Xuất & sao lưu
+            </TabsTrigger>
           </TabsList>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
             <TabsContent value="available" className="m-0 space-y-4">
               <section className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/70 p-5 shadow-xs">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-2xl">📚</span>
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-2xl">
+                    📚
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-serif text-xl font-semibold text-slate-900">Lộ trình mẫu lớp 11 KNTT</h2>
-                      <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-800">Khuyên dùng</span>
+                      <h2 className="font-serif text-xl font-semibold text-slate-900">
+                        Lộ trình mẫu lớp 11 KNTT
+                      </h2>
+                      <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-800">
+                        Khuyên dùng
+                      </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-600">
-                      Toán 11 · Vật lý 11 · Hóa học 11, đầy đủ chương/chủ đề và bài học. Có thể chỉnh sửa sau khi áp dụng.
+                      Toán 11 · Vật lý 11 · Hóa học 11, đầy đủ chương/chủ đề và bài học. Có thể
+                      chỉnh sửa sau khi áp dụng.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Button type="button" className="rounded-2xl bg-emerald-600 hover:bg-emerald-700" onClick={() => applyGrade11(currentSubjects.length ? "merge" : "replace")}>
+                      <Button
+                        type="button"
+                        className="rounded-2xl bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => applyGrade11(currentSubjects.length ? "merge" : "replace")}
+                      >
                         <BookOpenCheck className="h-4 w-4" /> Dùng lộ trình mẫu lớp 11
                       </Button>
                       {currentSubjects.length > 0 && (
-                        <Button type="button" variant="outline" className="rounded-2xl" onClick={() => applyGrade11("replace")}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-2xl"
+                          onClick={() => applyGrade11("replace")}
+                        >
                           Thay thế lộ trình hiện tại
                         </Button>
                       )}
@@ -392,11 +458,25 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                   </div>
                 </div>
                 <div className="mt-5 border-t border-emerald-100 pt-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Tải toàn bộ lộ trình</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Tải toàn bộ lộ trình
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    <FormatButton icon={FileSpreadsheet} label="Excel" onClick={() => void downloadGrade11("xlsx")} />
-                    <FormatButton icon={FileText} label="CSV" onClick={() => void downloadGrade11("csv")} />
-                    <FormatButton icon={FileJson} label="JSON" onClick={() => void downloadGrade11("json")} />
+                    <FormatButton
+                      icon={FileSpreadsheet}
+                      label="Excel"
+                      onClick={() => void downloadGrade11("xlsx")}
+                    />
+                    <FormatButton
+                      icon={FileText}
+                      label="CSV"
+                      onClick={() => void downloadGrade11("csv")}
+                    />
+                    <FormatButton
+                      icon={FileJson}
+                      label="JSON"
+                      onClick={() => void downloadGrade11("json")}
+                    />
                   </div>
                 </div>
               </section>
@@ -405,11 +485,18 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                 <h3 className="font-semibold text-slate-900">Xem trước nội dung</h3>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {SUBJECTS.map((subject) => {
-                    const count = subject.milestones.reduce((sum, milestone) => sum + milestone.lessons.length, 0);
+                    const count = subject.milestones.reduce(
+                      (sum, milestone) => sum + milestone.lessons.length,
+                      0,
+                    );
                     return (
                       <div key={subject.id} className="rounded-2xl border bg-slate-50 p-3">
-                        <p className="font-semibold text-slate-900">{subject.emoji} {subject.name}</p>
-                        <p className="text-xs text-slate-500">{subject.milestones.length} chủ đề · {count} bài</p>
+                        <p className="font-semibold text-slate-900">
+                          {subject.emoji} {subject.name}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {subject.milestones.length} chủ đề · {count} bài
+                        </p>
                       </div>
                     );
                   })}
@@ -421,7 +508,9 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
               <section
                 className={cn(
                   "rounded-3xl border-2 border-dashed p-7 text-center transition",
-                  busy ? "border-slate-200 bg-slate-50" : "border-sky-200 bg-sky-50/50 hover:border-sky-400",
+                  busy
+                    ? "border-slate-200 bg-slate-50"
+                    : "border-sky-200 bg-sky-50/50 hover:border-sky-400",
                 )}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
@@ -431,8 +520,12 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                 }}
               >
                 <UploadCloud className="mx-auto h-10 w-10 text-sky-600" />
-                <h2 className="mt-3 font-serif text-xl font-semibold text-slate-900">Nhập lộ trình của bạn</h2>
-                <p className="mt-1 text-sm text-slate-500">Kéo file vào đây hoặc chọn file từ máy.</p>
+                <h2 className="mt-3 font-serif text-xl font-semibold text-slate-900">
+                  Nhập lộ trình của bạn
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Kéo file vào đây hoặc chọn file từ máy.
+                </p>
                 <p className="mt-1 text-xs font-medium text-sky-700">Hỗ trợ .xlsx, .csv và .json</p>
                 <input
                   ref={fileInputRef}
@@ -445,7 +538,12 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                     event.currentTarget.value = "";
                   }}
                 />
-                <Button type="button" className="mt-4 rounded-2xl" disabled={busy} onClick={() => fileInputRef.current?.click()}>
+                <Button
+                  type="button"
+                  className="mt-4 rounded-2xl"
+                  disabled={busy}
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <FolderInput className="h-4 w-4" /> {busy ? "Đang đọc file…" : "Chọn file từ máy"}
                 </Button>
               </section>
@@ -453,12 +551,25 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
               <section className="rounded-3xl border bg-white p-5 shadow-xs">
                 <h3 className="font-semibold text-slate-900">Chưa có file?</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Tải file mẫu import đơn giản. Excel có cùng dữ liệu minh họa như CSV và JSON, không chứa toàn bộ chương trình lớp 11.
+                  Tải file mẫu import đơn giản. Excel có cùng dữ liệu minh họa như CSV và JSON,
+                  không chứa toàn bộ chương trình lớp 11.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <FormatButton icon={FileSpreadsheet} label="Mẫu Excel" onClick={() => void downloadSimpleTemplate("xlsx")} />
-                  <FormatButton icon={FileText} label="Mẫu CSV" onClick={() => void downloadSimpleTemplate("csv")} />
-                  <FormatButton icon={FileJson} label="Mẫu JSON" onClick={() => void downloadSimpleTemplate("json")} />
+                  <FormatButton
+                    icon={FileSpreadsheet}
+                    label="Mẫu Excel"
+                    onClick={() => void downloadSimpleTemplate("xlsx")}
+                  />
+                  <FormatButton
+                    icon={FileText}
+                    label="Mẫu CSV"
+                    onClick={() => void downloadSimpleTemplate("csv")}
+                  />
+                  <FormatButton
+                    icon={FileJson}
+                    label="Mẫu JSON"
+                    onClick={() => void downloadSimpleTemplate("json")}
+                  />
                 </div>
               </section>
 
@@ -480,14 +591,26 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                   <div className="mt-4 overflow-hidden rounded-2xl border bg-white">
                     <div className="max-h-64 overflow-auto">
                       {preview.slice(0, 10).map((item, index) => (
-                        <div key={`${item.subject}-${item.title}-${index}`} className="grid gap-1 border-b px-3 py-2 text-xs last:border-b-0 sm:grid-cols-[120px_1fr_90px]">
+                        <div
+                          key={`${item.subject}-${item.title}-${index}`}
+                          className="grid gap-1 border-b px-3 py-2 text-xs last:border-b-0 sm:grid-cols-[120px_1fr_90px]"
+                        >
                           <span className="font-semibold text-slate-700">{item.subject}</span>
-                          <span className="min-w-0"><strong>{item.title}</strong>{item.topic ? <span className="block text-slate-500">{item.topic}</span> : null}</span>
+                          <span className="min-w-0">
+                            <strong>{item.title}</strong>
+                            {item.topic ? (
+                              <span className="block text-slate-500">{item.topic}</span>
+                            ) : null}
+                          </span>
                           <span className="text-slate-500">{item.estimatedMinutes ?? 45} phút</span>
                         </div>
                       ))}
                     </div>
-                    {preview.length > 10 && <p className="border-t px-3 py-2 text-xs text-slate-500">Còn {preview.length - 10} bài khác.</p>}
+                    {preview.length > 10 && (
+                      <p className="border-t px-3 py-2 text-xs text-slate-500">
+                        Còn {preview.length - 10} bài khác.
+                      </p>
+                    )}
                   </div>
 
                   {importIssues.length > 0 && (
@@ -495,19 +618,41 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                       <p className="text-xs font-semibold text-amber-950">Các dòng cần kiểm tra</p>
                       <ul className="mt-2 max-h-36 space-y-1 overflow-y-auto text-xs text-amber-900">
                         {importIssues.slice(0, 20).map((issue, index) => (
-                          <li key={`${issue.row}-${index}`}>Dòng {issue.row}: {issue.message}</li>
+                          <li key={`${issue.row}-${index}`}>
+                            Dòng {issue.row}: {issue.message}
+                          </li>
                         ))}
                       </ul>
-                      {importIssues.length > 20 && <p className="mt-2 text-xs text-amber-800">Còn {importIssues.length - 20} lỗi khác.</p>}
+                      {importIssues.length > 20 && (
+                        <p className="mt-2 text-xs text-amber-800">
+                          Còn {importIssues.length - 20} lỗi khác.
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  <RadioGroup value={importMode} onValueChange={(value) => setImportMode(value as ImportMode)} className="mt-4 grid gap-2 sm:grid-cols-2">
-                    <ImportModeCard value="merge" title="Gộp với lộ trình hiện tại" description="Giữ dữ liệu hiện có, bỏ qua bài trùng ID. Khuyến nghị." />
-                    <ImportModeCard value="replace" title="Thay thế lộ trình hiện tại" description="Tạo snapshot rồi thay toàn bộ danh mục môn và bài." />
+                  <RadioGroup
+                    value={importMode}
+                    onValueChange={(value) => setImportMode(value as ImportMode)}
+                    className="mt-4 grid gap-2 sm:grid-cols-2"
+                  >
+                    <ImportModeCard
+                      value="merge"
+                      title="Gộp với lộ trình hiện tại"
+                      description="Giữ dữ liệu hiện có, bỏ qua bài trùng ID. Khuyến nghị."
+                    />
+                    <ImportModeCard
+                      value="replace"
+                      title="Thay thế lộ trình hiện tại"
+                      description="Tạo snapshot rồi thay toàn bộ danh mục môn và bài."
+                    />
                   </RadioGroup>
 
-                  <Button type="button" className="mt-4 w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700" onClick={() => setConfirmOpen(true)}>
+                  <Button
+                    type="button"
+                    className="mt-4 w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => setConfirmOpen(true)}
+                  >
                     <CheckCircle2 className="h-4 w-4" />
                     {importMode === "merge"
                       ? `Gộp ${Math.max(0, previewStats.lessons - previewStats.duplicates)} bài vào lộ trình`
@@ -523,10 +668,20 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                   <Download className="mt-1 h-5 w-5 text-sky-700" />
                   <div className="min-w-0 flex-1">
                     <h2 className="font-semibold text-slate-900">Xuất lộ trình hiện tại</h2>
-                    <p className="mt-1 text-sm text-slate-500">Chỉ xuất môn, chủ đề và bài học; không gồm tiến độ hoặc Timer.</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Chỉ xuất môn, chủ đề và bài học; không gồm tiến độ hoặc Timer.
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <FormatButton icon={FileText} label="Xuất CSV" onClick={() => exportCurrent("csv")} />
-                      <FormatButton icon={FileJson} label="Xuất JSON" onClick={() => exportCurrent("json")} />
+                      <FormatButton
+                        icon={FileText}
+                        label="Xuất CSV"
+                        onClick={() => exportCurrent("csv")}
+                      />
+                      <FormatButton
+                        icon={FileJson}
+                        label="Xuất JSON"
+                        onClick={() => exportCurrent("json")}
+                      />
                     </div>
                   </div>
                 </div>
@@ -537,8 +692,15 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                   <ShieldCheck className="mt-1 h-5 w-5 text-emerald-700" />
                   <div className="min-w-0 flex-1">
                     <h2 className="font-semibold text-slate-900">Sao lưu toàn bộ ứng dụng</h2>
-                    <p className="mt-1 text-sm text-slate-500">Bao gồm tiến độ, lộ trình, lịch sử, kho lưu trữ, trạng thái Timer và cài đặt Pomodoro.</p>
-                    <Button type="button" className="mt-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700" onClick={exportWholeApp}>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Bao gồm tiến độ, lộ trình, lịch sử, kho lưu trữ, trạng thái Timer và cài đặt
+                      Pomodoro.
+                    </p>
+                    <Button
+                      type="button"
+                      className="mt-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700"
+                      onClick={exportWholeApp}
+                    >
                       <Download className="h-4 w-4" /> Tải bản sao lưu
                     </Button>
                   </div>
@@ -550,7 +712,9 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                   <ArchiveRestore className="mt-1 h-5 w-5 text-amber-700" />
                   <div className="min-w-0 flex-1">
                     <h2 className="font-semibold text-amber-950">Khôi phục từ bản sao lưu</h2>
-                    <p className="mt-1 text-sm text-amber-800">Ứng dụng tạo snapshot trước khi ghi đè dữ liệu.</p>
+                    <p className="mt-1 text-sm text-amber-800">
+                      Ứng dụng tạo snapshot trước khi ghi đè dữ liệu.
+                    </p>
                     <input
                       type="file"
                       accept="application/json,.json"
@@ -560,7 +724,12 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
                         if (file) setBackupRaw(await file.text());
                       }}
                     />
-                    <Button type="button" className="mt-3 rounded-2xl" disabled={!backupRaw} onClick={restoreWholeApp}>
+                    <Button
+                      type="button"
+                      className="mt-3 rounded-2xl"
+                      disabled={!backupRaw}
+                      onClick={restoreWholeApp}
+                    >
                       Khôi phục bản sao lưu
                     </Button>
                   </div>
@@ -569,9 +738,16 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
 
               <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                 <h2 className="font-semibold text-slate-900">Hoàn tác an toàn</h2>
-                <p className="mt-1 text-sm text-slate-500">Thử khôi phục trạng thái trước lần import hoặc thay lộ trình gần nhất.</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Thử khôi phục trạng thái trước lần import hoặc thay lộ trình gần nhất.
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" className="rounded-xl" onClick={undoLastChange}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={undoLastChange}
+                  >
                     <RotateCcw className="h-4 w-4" /> Hoàn tác lộ trình
                   </Button>
                   <Button
@@ -596,7 +772,9 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle>{importMode === "merge" ? "Gộp lộ trình?" : "Thay thế lộ trình?"}</DialogTitle>
+            <DialogTitle>
+              {importMode === "merge" ? "Gộp lộ trình?" : "Thay thế lộ trình?"}
+            </DialogTitle>
             <DialogDescription>
               {importMode === "merge"
                 ? `${Math.max(0, previewStats.lessons - previewStats.duplicates)} bài mới sẽ được thêm; ${previewStats.duplicates} bài trùng ID được bỏ qua.`
@@ -604,7 +782,9 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>Hủy</Button>
+            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
+              Hủy
+            </Button>
             <Button type="button" className="rounded-xl" onClick={executeImport}>
               {importMode === "merge" ? "Gộp vào lộ trình" : "Thay thế lộ trình"}
             </Button>
@@ -615,7 +795,15 @@ export function CourseImportExportModal({ currentSubjects, onSubjectsUpdated, pr
   );
 }
 
-function FormatButton({ icon: Icon, label, onClick }: { icon: typeof FileText; label: string; onClick: () => void }) {
+function FormatButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof FileText;
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={onClick}>
       <Icon className="h-4 w-4" /> {label}
@@ -624,12 +812,27 @@ function FormatButton({ icon: Icon, label, onClick }: { icon: typeof FileText; l
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
-  return <span className="rounded-full border bg-white px-2.5 py-1 font-semibold text-slate-700">{label}: {value}</span>;
+  return (
+    <span className="rounded-full border bg-white px-2.5 py-1 font-semibold text-slate-700">
+      {label}: {value}
+    </span>
+  );
 }
 
-function ImportModeCard({ value, title, description }: { value: ImportMode; title: string; description: string }) {
+function ImportModeCard({
+  value,
+  title,
+  description,
+}: {
+  value: ImportMode;
+  title: string;
+  description: string;
+}) {
   return (
-    <Label htmlFor={`import-${value}`} className="flex cursor-pointer items-start gap-3 rounded-2xl border bg-white p-3">
+    <Label
+      htmlFor={`import-${value}`}
+      className="flex cursor-pointer items-start gap-3 rounded-2xl border bg-white p-3"
+    >
       <RadioGroupItem id={`import-${value}`} value={value} className="mt-0.5" />
       <span>
         <span className="block text-sm font-semibold text-slate-900">{title}</span>
