@@ -33,6 +33,19 @@ function callWriter(write: () => StorageWriteResult): StorageWriteResult {
   }
 }
 
+function failureWithRollbackErrors(
+  failure: Extract<StorageWriteResult, { ok: false }>,
+  rollbackErrors: string[],
+): PersistScheduleCandidateResult {
+  return rollbackErrors.length === 0
+    ? failure
+    : {
+        ok: false,
+        error: failure.error,
+        rollbackError: rollbackErrors.join(" "),
+      };
+}
+
 export function persistScheduleCandidate(
   params: PersistScheduleCandidateParams,
 ): PersistScheduleCandidateResult {
@@ -46,7 +59,13 @@ export function persistScheduleCandidate(
 
   if (subjectsChanged) {
     const subjectsResult = callWriter(() => params.saveSubjects(params.candidate.subjects));
-    if (!subjectsResult.ok) return subjectsResult;
+    if (!subjectsResult.ok) {
+      const rollbackResult = callWriter(() => params.saveSubjects(params.previous.subjects));
+      return failureWithRollbackErrors(
+        subjectsResult,
+        rollbackResult.ok ? [] : [rollbackResult.error],
+      );
+    }
   }
 
   if (!settingsChanged) return { ok: true };
@@ -55,14 +74,17 @@ export function persistScheduleCandidate(
     params.savePlannerSettings(params.candidate.plannerSettings),
   );
   if (settingsResult.ok) return { ok: true };
-  if (!subjectsChanged) return settingsResult;
 
-  const rollbackResult = callWriter(() => params.saveSubjects(params.previous.subjects));
-  return rollbackResult.ok
-    ? settingsResult
-    : {
-        ok: false,
-        error: settingsResult.error,
-        rollbackError: rollbackResult.error,
-      };
+  const rollbackErrors: string[] = [];
+  const settingsRollback = callWriter(() =>
+    params.savePlannerSettings(params.previous.plannerSettings),
+  );
+  if (!settingsRollback.ok) rollbackErrors.push(settingsRollback.error);
+
+  if (subjectsChanged) {
+    const subjectsRollback = callWriter(() => params.saveSubjects(params.previous.subjects));
+    if (!subjectsRollback.ok) rollbackErrors.push(subjectsRollback.error);
+  }
+
+  return failureWithRollbackErrors(settingsResult, rollbackErrors);
 }
