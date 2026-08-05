@@ -7,19 +7,17 @@ import {
   type ScheduleSnapshot,
 } from "./schedule-transactions";
 
-export type MoveLessonDateCandidateResult =
-  | { ok: true; candidate: ScheduleCandidate }
-  | { ok: false; error: string };
+export type MoveLessonDateCandidateResult = { ok: true; candidate: ScheduleCandidate } | {
+  ok: false;
+  error: string;
+};
 
 export function buildMoveLessonDateCandidate(params: {
   current: ScheduleSnapshot;
   lessonId: string;
   targetDateISO: string;
 }): MoveLessonDateCandidateResult {
-  const current = createScheduleSnapshot(
-    params.current.subjects,
-    params.current.plannerSettings,
-  );
+  const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
   const lesson = findLessonById(params.lessonId, current.subjects);
   if (!lesson) {
     return { ok: false, error: "Không tìm thấy bài học để di chuyển." };
@@ -51,10 +49,7 @@ export function buildChangeDayCapacityCandidate(params: {
   hours: number;
   todayDateISO: string;
 }): { candidate: ScheduleCandidate } {
-  const current = createScheduleSnapshot(
-    params.current.subjects,
-    params.current.plannerSettings,
-  );
+  const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
   const normalized = normalizeDailyStudyHours(params.hours);
   const dailyHours = { ...current.plannerSettings.dailyHours };
 
@@ -71,9 +66,7 @@ export function buildChangeDayCapacityCandidate(params: {
         ...current.plannerSettings,
         dailyHours,
         todayHours:
-          params.dateISO === params.todayDateISO
-            ? normalized
-            : current.plannerSettings.todayHours,
+          params.dateISO === params.todayDateISO ? normalized : current.plannerSettings.todayHours,
       },
     },
   };
