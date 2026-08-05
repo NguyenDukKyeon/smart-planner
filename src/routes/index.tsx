@@ -32,7 +32,8 @@ import {
   type HabitEntry,
 } from "@/lib/progress-store";
 import { SUBJECTS, type Subject } from "@/lib/mock-data";
-import { buildShiftedSchedule, pickTodayQueue } from "@/lib/planner";
+import { buildShiftedSchedule } from "@/lib/planner";
+import { isStudyDayQueueComplete } from "@/lib/study-day-completion";
 import {
   ARCHIVED_CATALOG_KEY,
   CUSTOM_SUBJECTS_BACKUP_KEY,
@@ -368,19 +369,14 @@ function Dashboard() {
 
   const todayStudyDayComplete = useMemo<boolean | null>(() => {
     if (!hydrated || !workspaceStorageLoaded || subjects.length === 0) return null;
-    const queue = pickTodayQueue({
+    return isStudyDayQueueComplete({
       subjects,
       completed: state.completedLessons,
       reviewCompletions: state.reviewCompletions,
       meta: state.studyMeta,
       settings: state.plannerSettings,
+      dateISO: todayISO(),
     });
-    const completedNew = queue.newLessons.filter((lesson) =>
-      Boolean(state.completedLessons[lesson.id]),
-    ).length;
-    const completedReviews = queue.reviewLessons.filter((review) => review.completed).length;
-    const total = queue.newLessons.length + queue.reviewLessons.length;
-    return total > 0 && completedNew + completedReviews === total;
   }, [
     hydrated,
     state.completedLessons,
