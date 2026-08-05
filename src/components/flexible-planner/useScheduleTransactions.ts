@@ -11,9 +11,11 @@ import {
 import {
   createScheduleSnapshot,
   isEditableUndoTarget,
+  shouldInvalidateScheduleHistory,
   type ScheduleCandidate,
   type ScheduleMutationEntry,
   type ScheduleMutationKind,
+  type ScheduleSnapshot,
 } from "@/lib/schedule-transactions";
 
 export type ScheduleTransactionAdapters = {
@@ -47,14 +49,35 @@ export function useScheduleTransactions({
 }: UseScheduleTransactionsParams) {
   const [history, setHistoryState] = useState<ScheduleMutationEntry[]>([]);
   const historyRef = useRef<ScheduleMutationEntry[]>([]);
+  const observedSnapshotRef = useRef<ScheduleSnapshot>(
+    createScheduleSnapshot(subjects, plannerSettings),
+  );
+  const expectedPublishedSnapshotRef = useRef<ScheduleSnapshot | null>(null);
 
   const replaceHistory = useCallback((next: ScheduleMutationEntry[]) => {
     historyRef.current = next;
     setHistoryState(next);
   }, []);
 
+  useEffect(() => {
+    const current = createScheduleSnapshot(subjects, plannerSettings);
+    const invalidate = shouldInvalidateScheduleHistory({
+      observed: observedSnapshotRef.current,
+      current,
+      expectedPublished: expectedPublishedSnapshotRef.current,
+    });
+
+    observedSnapshotRef.current = current;
+    expectedPublishedSnapshotRef.current = null;
+    if (invalidate && historyRef.current.length > 0) replaceHistory([]);
+  }, [plannerSettings, replaceHistory, subjects]);
+
   const applyCandidate = useCallback(
     (candidate: ScheduleCandidate) => {
+      expectedPublishedSnapshotRef.current = createScheduleSnapshot(
+        candidate.subjects,
+        candidate.plannerSettings,
+      );
       adapters.applySubjects(candidate.subjects);
       adapters.applyPlannerSettings(candidate.plannerSettings);
     },
