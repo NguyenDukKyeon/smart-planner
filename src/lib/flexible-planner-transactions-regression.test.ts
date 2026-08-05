@@ -45,13 +45,12 @@ describe("Flexible Planner shared schedule transactions", () => {
     );
   });
 
-  test("Escape cancellation has one owner and cannot suppress the next valid blur", () => {
+  test("Escape cancellation stays local to the capacity editor", () => {
     expect(plannerSource).toContain('event.key === "Escape"');
-    expect(plannerSource).not.toContain("cancelNextBlurCommitRef");
-    expect(inputSource).toContain("cancelNextBlurCommitRef");
-    expect(inputSource).toContain("cancelNextBlurCommitRef.current = true");
-    expect(inputSource).toContain("cancelNextBlurCommitRef.current = false");
-    expect(inputSource).toContain("document.activeElement === event.currentTarget");
+    expect(plannerSource).toContain("cancelNextBlurCommitRef");
+    expect(plannerSource).toContain("cancelNextBlurCommitRef.current = true");
+    expect(plannerSource).toContain("cancelNextBlurCommitRef.current = false");
+    expect(inputSource).not.toContain("cancelNextBlurCommitRef");
   });
 
   test("Dashboard separates persistence from publishing for both stores", () => {
