@@ -17,7 +17,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
-          ref: ${{ github.event_name == 'push' && github.ref_name || '' }}
       - name: Apply reviewed study-day fix
         if: github.event_name == 'push' && github.ref == 'refs/heads/improve/p0a-hours-build-purity'
         run: |
