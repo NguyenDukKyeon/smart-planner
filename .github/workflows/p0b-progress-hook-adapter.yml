@@ -18,7 +18,73 @@ jobs:
           ref: improve/p0b-schedule-transactions
           fetch-depth: 0
       - name: Patch useProgress schedule boundary
-        run: python -c "import base64;exec(base64.b64decode('CmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAoKcGF0aCA9IFBhdGgoInNyYy9saWIvcHJvZ3Jlc3Mtc3RvcmUudHMiKQpzb3VyY2UgPSBwYXRoLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQoKY2FsbGJhY2tzID0gJycnICBjb25zdCBwZXJzaXN0UGxhbm5lclNldHRpbmdzID0gdXNlQ2FsbGJhY2soCiAgICAocGxhbm5lclNldHRpbmdzOiBQbGFubmVyU2V0dGluZ3MpOiBTdG9yYWdlV3JpdGVSZXN1bHQgPT4gewogICAgICBpZiAoIXBlcnNpc3RlbmNlRW5hYmxlZC5jdXJyZW50KSB7CiAgICAgICAgY29uc3QgZXJyb3IgPSAiQuG7mSBuaOG7myB0csOsbmggZHV54buHdCBjaMawYSBz4bq1biBzw6BuZzsgdGhheSDEkeG7lWkgY2jGsGEgxJHGsOG7o2Mgw6FwIGThu6VuZy4iOwogICAgICAgIHNldFN0b3JhZ2VFcnJvcihlcnJvcik7CiAgICAgICAgcmV0dXJuIHsgb2s6IGZhbHNlLCBlcnJvciB9OwogICAgICB9CgogICAgICBjb25zdCBzYXZlZCA9IHNhdmVQbGFubmVyU2V0dGluZ3NTdG9yYWdlKHN0YXRlUmVmLmN1cnJlbnQsIHBsYW5uZXJTZXR0aW5ncyk7CiAgICAgIGlmICghc2F2ZWQub2spIHsKICAgICAgICBwZXJzaXN0ZW5jZUVuYWJsZWQuY3VycmVudCA9IGZhbHNlOwogICAgICAgIHNldFN0b3JhZ2VTdGF0dXMoeyBzdGF0dXM6ICJ1bmF2YWlsYWJsZSIsIGVycm9yOiBzYXZlZC5lcnJvciB9KTsKICAgICAgICBzZXRTdG9yYWdlRXJyb3Ioc2F2ZWQuZXJyb3IpOwogICAgICB9CiAgICAgIHJldHVybiBzYXZlZDsKICAgIH0sCiAgICBbXSwKICApOwoKICBjb25zdCBhcHBseVBlcnNpc3RlZFBsYW5uZXJTZXR0aW5ncyA9IHVzZUNhbGxiYWNrKAogICAgKHBsYW5uZXJTZXR0aW5nczogUGxhbm5lclNldHRpbmdzKTogYm9vbGVhbiA9PiB7CiAgICAgIGNvbnN0IG5leHQgPSBhcHBseVBsYW5uZXJTZXR0aW5nc1RvUHJvZ3Jlc3NTdGF0ZShzdGF0ZVJlZi5jdXJyZW50LCBwbGFubmVyU2V0dGluZ3MpOwogICAgICBzdGF0ZVJlZi5jdXJyZW50ID0gbmV4dDsKICAgICAgc2V0U3RhdGUobmV4dCk7CiAgICAgIHNldFN0b3JhZ2VTdGF0dXMoeyBzdGF0dXM6ICJvayIsIHZhbHVlOiBuZXh0IH0pOwogICAgICBzZXRTdG9yYWdlRXJyb3IobnVsbCk7CiAgICAgIHJldHVybiB0cnVlOwogICAgfSwKICAgIFtdLAogICk7CgonJwoKbWFya2VyID0gJyAgY29uc3QgdG9nZ2xlTGVzc29uID0gdXNlQ2FsbGJhY2soJwppZiAiY29uc3QgcGVyc2lzdFBsYW5uZXJTZXR0aW5ncyA9IHVzZUNhbGxiYWNrKCIgbm90IGluIHNvdXJjZToKICAgIGlmIG1hcmtlciBub3QgaW4gc291cmNlOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoInVzZVByb2dyZXNzIGNhbGxiYWNrIG1hcmtlciBub3QgZm91bmQiKQogICAgc291cmNlID0gc291cmNlLnJlcGxhY2UobWFya2VyLCBjYWxsYmFja3MgKyBtYXJrZXIsIDEpCgpyZXR1cm5fb2xkID0gJycnICAgIHNldFRvZGF5SG91cnMsCiAgICBzZXREYXlIb3VycywKICAgIHNldERlZmF1bHREYWlseUhvdXJzLAonJwpyZXR1cm5fbmV3ID0gJycnICAgIHNldFRvZGF5SG91cnMsCiAgICBzZXREYXlIb3VycywKICAgIHNldERlZmF1bHREYWlseUhvdXJzLAogICAgcGVyc2lzdFBsYW5uZXJTZXR0aW5ncywKICAgIGFwcGx5UGVyc2lzdGVkUGxhbm5lclNldHRpbmdzLAonJwppZiAicGVyc2lzdFBsYW5uZXJTZXR0aW5ncywiIG5vdCBpbiBzb3VyY2U6CiAgICBpZiByZXR1cm5fb2xkIG5vdCBpbiBzb3VyY2U6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgidXNlUHJvZ3Jlc3MgcmV0dXJuIG1hcmtlciBub3QgZm91bmQiKQogICAgc291cmNlID0gc291cmNlLnJlcGxhY2UocmV0dXJuX29sZCwgcmV0dXJuX25ldywgMSkKCnBhdGgud3JpdGVfdGV4dChzb3VyY2UsIGVuY29kaW5nPSJ1dGYtOCIpCgp3b3JrZmxvdyA9IFBhdGgoIi5naXRodWIvd29ya2Zsb3dzL3AwYi1wcm9ncmVzcy1ob29rLWFkYXB0ZXIueW1sIikKaWYgd29ya2Zsb3cuZXhpc3RzKCk6CiAgICB3b3JrZmxvdy51bmxpbmsoKQo='))"
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path("src/lib/progress-store.ts")
+          source = path.read_text(encoding="utf-8")
+
+          callbacks = '''  const persistPlannerSettings = useCallback(
+            (plannerSettings: PlannerSettings): StorageWriteResult => {
+              if (!persistenceEnabled.current) {
+                const error = "Bộ nhớ trình duyệt chưa sẵn sàng; thay đổi chưa được áp dụng.";
+                setStorageError(error);
+                return { ok: false, error };
+              }
+
+              const saved = savePlannerSettingsStorage(stateRef.current, plannerSettings);
+              if (!saved.ok) {
+                persistenceEnabled.current = false;
+                setStorageStatus({ status: "unavailable", error: saved.error });
+                setStorageError(saved.error);
+              }
+              return saved;
+            },
+            [],
+          );
+
+          const applyPersistedPlannerSettings = useCallback(
+            (plannerSettings: PlannerSettings): boolean => {
+              const next = applyPlannerSettingsToProgressState(stateRef.current, plannerSettings);
+              stateRef.current = next;
+              setState(next);
+              setStorageStatus({ status: "ok", value: next });
+              setStorageError(null);
+              return true;
+            },
+            [],
+          );
+
+          '''
+
+          callback_marker = "  const toggleLesson = useCallback("
+          if "const persistPlannerSettings = useCallback(" not in source:
+              if callback_marker not in source:
+                  raise SystemExit("useProgress callback marker not found")
+              source = source.replace(callback_marker, callbacks + callback_marker, 1)
+
+          return_old = '''    setTodayHours,
+            setDayHours,
+            setDefaultDailyHours,
+          '''
+          return_new = '''    setTodayHours,
+            setDayHours,
+            setDefaultDailyHours,
+            persistPlannerSettings,
+            applyPersistedPlannerSettings,
+          '''
+          if "    persistPlannerSettings," not in source:
+              if return_old not in source:
+                  raise SystemExit("useProgress return marker not found")
+              source = source.replace(return_old, return_new, 1)
+
+          path.write_text(source, encoding="utf-8")
+
+          workflow = Path(".github/workflows/p0b-progress-hook-adapter.yml")
+          if workflow.exists():
+              workflow.unlink()
+          PY
       - name: Commit patch
         run: |
           git config user.name "github-actions[bot]"
