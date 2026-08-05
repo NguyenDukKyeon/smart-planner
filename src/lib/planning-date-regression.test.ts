@@ -155,13 +155,14 @@ describe("scheduled lesson dates", () => {
     expect(queue.overloadMinutes).toBe(0);
   });
 
-  test("the original roadmap groups by the date entered by the user", async () => {
+  test("roadmap exposes final fixed and flexible placement semantics", async () => {
     const source = await fs.readFile(
       new URL("../components/LearningRoadmap.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(source).toContain("effectiveDate: lesson.scheduledDate");
-    expect(source).not.toContain("shiftedDates[l.id]");
+    expect(source).toContain('const mode = lesson.scheduleMode ?? "flexible"');
+    expect(source).toContain('shiftedDates[lesson.id] ?? "unplaced-fixed"');
+    expect(source).toContain("shiftedDates[lesson.id] ?? lesson.scheduledDate");
   });
 });
