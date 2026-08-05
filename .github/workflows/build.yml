@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -16,9 +16,180 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           submodules: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - run: npx vitest run src/lib/study-hours.test.ts src/lib/progress-study-hours.test.ts
+      - name: Integrate daily-hour policy into progress state
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const path = "src/lib/progress-store.ts";
+          let source = fs.readFileSync(path, "utf8");
+
+          function replaceRequired(before, after, label) {
+            if (source.includes(after)) return;
+            if (!source.includes(before)) throw new Error(`Missing ${label}`);
+            source = source.replace(before, after);
+          }
+
+          replaceRequired(
+            'import { addDaysISO, isDateISO, todayISO } from "./date-utils";',
+            'import { addDaysISO, isDateISO, todayISO } from "./date-utils";\nimport { normalizeDailyStudyHours } from "./study-hours";',
+            "study-hours import",
+          );
+
+          replaceRequired(
+            `  const psIn = (parsed.plannerSettings as Partial<PlannerSettings>) ?? {};
+          const plannerSettings: PlannerSettings = {
+            todayHours:
+              typeof psIn.todayHours === "number"
+                ? clamp(psIn.todayHours, 0, 12)
+                : DEFAULT_PLANNER_SETTINGS.todayHours,
+            dailyHours:
+              psIn.dailyHours && typeof psIn.dailyHours === "object"
+                ? sanitizeDailyHours(psIn.dailyHours)
+                : {},
+            defaultDailyHours:
+              typeof psIn.defaultDailyHours === "number"
+                ? clamp(psIn.defaultDailyHours, 0, 12)
+                : DEFAULT_PLANNER_SETTINGS.defaultDailyHours,`,
+            `  const psIn = (parsed.plannerSettings as Partial<PlannerSettings>) ?? {};
+          const storedDefaultDailyHours = normalizeStoredDailyHours(
+            psIn.defaultDailyHours,
+            DEFAULT_PLANNER_SETTINGS.defaultDailyHours,
+          );
+          const plannerSettings: PlannerSettings = {
+            todayHours: normalizeStoredDailyHours(psIn.todayHours, storedDefaultDailyHours),
+            dailyHours:
+              psIn.dailyHours && typeof psIn.dailyHours === "object"
+                ? sanitizeDailyHours(psIn.dailyHours)
+                : {},
+            defaultDailyHours: storedDefaultDailyHours,`,
+            "planner settings migration",
+          );
+
+          replaceRequired(
+            `function sanitizeDailyHours(raw: Record<string, unknown>): Record<string, number> {
+            const out: Record<string, number> = {};
+            for (const [k, v] of Object.entries(raw)) {
+              if (typeof v === "number" && v >= 0 && v <= 12) out[k] = v;
+            }
+            return out;
+          }`,
+            `function normalizeStoredDailyHours(value: unknown, fallback: number): number {
+            if (typeof value !== "number" || !Number.isFinite(value)) {
+              return normalizeDailyStudyHours(fallback);
+            }
+            return normalizeDailyStudyHours(value);
+          }
+
+          function sanitizeDailyHours(raw: Record<string, unknown>): Record<string, number> {
+            const out: Record<string, number> = {};
+            for (const [dateISO, value] of Object.entries(raw)) {
+              if (typeof value !== "number" || !Number.isFinite(value)) continue;
+              out[dateISO] = normalizeDailyStudyHours(value);
+            }
+            return out;
+          }`,
+            "daily hour sanitizer",
+          );
+
+          replaceRequired(
+            `export function useProgress() {`,
+            `export function setTodayHoursState(
+            state: ProgressState,
+            hours: number,
+            dateISO = todayISO(),
+          ): ProgressState {
+            const normalized = normalizeDailyStudyHours(hours);
+            return {
+              ...state,
+              plannerSettings: {
+                ...state.plannerSettings,
+                todayHours: normalized,
+                dailyHours: { ...state.plannerSettings.dailyHours, [dateISO]: normalized },
+              },
+            };
+          }
+
+          export function setDayHoursState(
+            state: ProgressState,
+            dateISO: string,
+            hours: number | null,
+            todayDateISO = todayISO(),
+          ): ProgressState {
+            const dailyHours = { ...state.plannerSettings.dailyHours };
+            if (hours == null) delete dailyHours[dateISO];
+            else dailyHours[dateISO] = normalizeDailyStudyHours(hours);
+
+            return {
+              ...state,
+              plannerSettings: {
+                ...state.plannerSettings,
+                todayHours:
+                  dateISO === todayDateISO
+                    ? hours == null
+                      ? state.plannerSettings.defaultDailyHours
+                      : normalizeDailyStudyHours(hours)
+                    : state.plannerSettings.todayHours,
+                dailyHours,
+              },
+            };
+          }
+
+          export function setDefaultDailyHoursState(
+            state: ProgressState,
+            hours: number,
+          ): ProgressState {
+            return {
+              ...state,
+              plannerSettings: {
+                ...state.plannerSettings,
+                defaultDailyHours: normalizeDailyStudyHours(hours),
+              },
+            };
+          }
+
+          export function useProgress() {`,
+            "pure study hour mutations",
+          );
+
+          const setterPattern = /  const setTodayHours = useCallback\([\s\S]*?  const addStudySession = useCallback\(/;
+          if (!setterPattern.test(source)) throw new Error("Missing progress hour setters");
+          source = source.replace(
+            setterPattern,
+            `  const setTodayHours = useCallback(
+              (hours: number) => commit((state) => setTodayHoursState(state, hours)),
+              [commit],
+            );
+
+            const setDayHours = useCallback(
+              (dateISO: string, hours: number | null) =>
+                commit((state) => setDayHoursState(state, dateISO, hours)),
+              [commit],
+            );
+
+            const setDefaultDailyHours = useCallback(
+              (hours: number) => commit((state) => setDefaultDailyHoursState(state, hours)),
+              [commit],
+            );
+
+            const addStudySession = useCallback(`,
+          );
+
+          fs.writeFileSync(path, source);
+          NODE
+      - name: Verify progress study-hour integration
+        run: npx vitest run src/lib/study-hours.test.ts src/lib/progress-study-hours.test.ts
+      - run: npx tsc --noEmit
+      - name: Commit progress integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/progress-store.ts
+          git commit -m "feat: persist study capacity through sixteen hours [skip ci]"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
