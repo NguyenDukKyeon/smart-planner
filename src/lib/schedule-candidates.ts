@@ -188,7 +188,9 @@ export function buildReorderLessonCandidate(params: {
     .flatMap((subject) =>
       subject.milestones.map((milestone) => ({ subjectId: subject.id, milestone })),
     )
-    .find(({ milestone }) => milestone.lessons.some((candidate) => candidate.id === params.lessonId));
+    .find(({ milestone }) =>
+      milestone.lessons.some((candidate) => candidate.id === params.lessonId),
+    );
 
   if (params.target.beforeLessonId === params.lessonId) {
     if (
