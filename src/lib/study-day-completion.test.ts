@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
 import type { Lesson, Subject } from "./mock-data";
 import { DEFAULT_PLANNER_SETTINGS, DEFAULT_STUDY_META, reviewTaskId } from "./planner";
@@ -125,5 +126,13 @@ describe("strict study-day queue completion", () => {
         dateISO,
       }),
     ).toBe(false);
+  });
+
+  test("Dashboard delegates the marker decision to the reviewed helper", async () => {
+    const source = await readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('import { isStudyDayQueueComplete } from "@/lib/study-day-completion";');
+    expect(source).toContain("isStudyDayQueueComplete({");
+    expect(source).not.toContain("const completedNew = queue.newLessons.filter");
   });
 });
