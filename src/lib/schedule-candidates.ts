@@ -116,7 +116,7 @@ export function buildChangeScheduleModeCandidate(params: {
 }): ScheduleCandidateBuildResult {
   const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
   if (isReviewTaskId(params.lessonId)) {
-    return { ok: false, error: "Không thể đổi chế độ cho nhiệm vụ ôn tập." };
+    return { ok: false, error: "Không thể đổi chế độ của nhiệm vụ ôn tập." };
   }
 
   const lesson = findLessonById(params.lessonId, current.subjects);
@@ -181,7 +181,7 @@ export function buildReorderLessonCandidate(params: {
     params.target.beforeLessonId &&
     !targetTopic.lessons.some((candidate) => candidate.id === params.target.beforeLessonId)
   ) {
-    return { ok: false, error: "Không tìm thấy vị trí đích để sắp xếp bài học." };
+    return { ok: false, error: "Không tìm thấy vị trí chèn trong chủ đề đích." };
   }
 
   const sourceTopic = current.subjects
@@ -199,7 +199,7 @@ export function buildReorderLessonCandidate(params: {
     ) {
       return { ok: true, candidate: current };
     }
-    return { ok: false, error: "Không tìm thấy vị trí đích để sắp xếp bài học." };
+    return { ok: false, error: "Không tìm thấy vị trí chèn trong chủ đề đích." };
   }
 
   let subjects = moveLessonsToTopic(
