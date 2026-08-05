@@ -23,6 +23,7 @@ describe("Dashboard schedule catalog persistence boundary", () => {
   });
 
   test("keeps publishing separate from persistence", () => {
+    // Persistence owns storage status; publishing owns React catalog state.
     const applyBlock = source.slice(
       source.indexOf("const applyPersistedScheduleSubjects = useCallback("),
       source.indexOf("const updateSubjectsSafely = useCallback("),
