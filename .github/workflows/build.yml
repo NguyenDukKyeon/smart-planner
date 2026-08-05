@@ -21,5 +21,22 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Materialize accepted generated source
+        run: npm run build
+      - name: Capture generated source
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0a-generated-source
+          path: |
+            src/lib/planner.ts
+            src/lib/mock-data.ts
+            src/lib/custom-subjects.ts
+            src/routes/index.tsx
+            src/components/LearningRoadmap.tsx
+            src/components/TodayPanel.tsx
+            src/components/StudyStreakCard.tsx
+            src/components/AddLessonModal.tsx
+            src/components/CourseManagerModal.tsx
+            src/components/FlexiblePlanner.tsx
+          if-no-files-found: error
       - run: npx vitest run src/lib/build-purity-regression.test.ts
-      - run: npm run build
