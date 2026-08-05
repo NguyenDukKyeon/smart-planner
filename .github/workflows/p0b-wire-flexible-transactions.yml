@@ -1,0 +1,641 @@
+name: Wire P0B Flexible Planner transactions
+
+"on":
+  push:
+    branches:
+      - improve/p0b-schedule-transactions
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: "${{ github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[p0b-wire-flex]') }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: improve/p0b-schedule-transactions
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch Dashboard and Flexible Planner
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_required(source: str, before: str, after: str, label: str) -> str:
+              if after in source:
+                  return source
+              if before not in source:
+                  raise SystemExit(f"Missing patch marker: {label}")
+              return source.replace(before, after, 1)
+
+          route_path = Path("src/routes/index.tsx")
+          route = route_path.read_text(encoding="utf-8")
+
+          route = replace_required(
+              route,
+              '''  restoreSnapshotFromKey,
+            type StorageLoadResult,
+          } from "@/lib/app-storage";''',
+              '''  restoreSnapshotFromKey,
+            type StorageLoadResult,
+            type StorageWriteResult,
+          } from "@/lib/app-storage";''',
+              "Dashboard storage result import",
+          )
+
+          route = replace_required(
+              route,
+              '''    setTodayHours,
+            setDayHours,
+            setDefaultDailyHours,
+            addStudySession,''',
+              '''    setTodayHours,
+            setDayHours,
+            setDefaultDailyHours,
+            persistPlannerSettings,
+            applyPersistedPlannerSettings,
+            addStudySession,''',
+              "useProgress schedule callbacks",
+          )
+
+          old_subject_update = '''  const updateSubjectsSafely = useCallback(
+            (nextSubjects: Subject[], options: CatalogUpdateOptions = {}): CatalogUpdateResult => {
+              if (storageBlocked) {
+                const error = "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.";
+                toast.error(error);
+                return { ok: false, error };
+              }
+
+              if (!options.alreadyPersisted) {
+                if (options.createBackup) {
+                  const backedUp = saveCatalogBackup(subjects);
+                  if (!backedUp.ok) {
+                    toast.error(backedUp.error);
+                    return backedUp;
+                  }
+                }
+                const saved = saveStoredCustomSubjects(nextSubjects);
+                if (!saved.ok) {
+                  toast.error(saved.error);
+                  return saved;
+                }
+              }
+
+              setSubjects(nextSubjects);
+              return { ok: true };
+            },
+            [storageBlocked, subjects],
+          );'''
+
+          new_subject_update = '''  const persistScheduleSubjects = useCallback(
+            (nextSubjects: Subject[]): StorageWriteResult => {
+              if (storageBlocked) {
+                return {
+                  ok: false,
+                  error: "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.",
+                };
+              }
+              return saveStoredCustomSubjects(nextSubjects);
+            },
+            [storageBlocked],
+          );
+
+          const backupScheduleSubjects = useCallback(
+            (currentSubjects: Subject[]): StorageWriteResult => {
+              if (storageBlocked) {
+                return {
+                  ok: false,
+                  error: "Không thể sao lưu danh mục khi bộ nhớ cần được khôi phục.",
+                };
+              }
+              return saveCatalogBackup(currentSubjects);
+            },
+            [storageBlocked],
+          );
+
+          const applyPersistedScheduleSubjects = useCallback((nextSubjects: Subject[]) => {
+            setSubjects(nextSubjects);
+            setSubjectStorageStatus({ status: "ok", value: nextSubjects });
+          }, []);
+
+          const updateSubjectsSafely = useCallback(
+            (nextSubjects: Subject[], options: CatalogUpdateOptions = {}): CatalogUpdateResult => {
+              if (!options.alreadyPersisted) {
+                if (options.createBackup) {
+                  const backedUp = backupScheduleSubjects(subjects);
+                  if (!backedUp.ok) {
+                    toast.error(backedUp.error);
+                    return backedUp;
+                  }
+                }
+                const saved = persistScheduleSubjects(nextSubjects);
+                if (!saved.ok) {
+                  toast.error(saved.error);
+                  return saved;
+                }
+              }
+
+              applyPersistedScheduleSubjects(nextSubjects);
+              return { ok: true };
+            },
+            [
+              applyPersistedScheduleSubjects,
+              backupScheduleSubjects,
+              persistScheduleSubjects,
+              subjects,
+            ],
+          );
+
+          const scheduleTransactionAdapters = useMemo(
+            () => ({
+              saveSubjects: persistScheduleSubjects,
+              savePlannerSettings: persistPlannerSettings,
+              backupSubjects: backupScheduleSubjects,
+              applySubjects: applyPersistedScheduleSubjects,
+              applyPlannerSettings: applyPersistedPlannerSettings,
+            }),
+            [
+              applyPersistedPlannerSettings,
+              applyPersistedScheduleSubjects,
+              backupScheduleSubjects,
+              persistPlannerSettings,
+              persistScheduleSubjects,
+            ],
+          );'''
+
+          route = replace_required(
+              route,
+              old_subject_update,
+              new_subject_update,
+              "Dashboard catalog transaction adapters",
+          )
+
+          route = replace_required(
+              route,
+              '''                <FlexiblePlanner
+                          state={state}
+                          subjects={subjects}
+                          onSetDayHours={setDayHours}
+                          onSubjectsUpdated={updateSubjectsSafely}
+                        />''',
+              '''                <FlexiblePlanner
+                          state={state}
+                          subjects={subjects}
+                          transactionAdapters={scheduleTransactionAdapters}
+                        />''',
+              "Flexible Planner transaction adapter prop",
+          )
+
+          route_path.write_text(route, encoding="utf-8")
+
+          planner_path = Path("src/components/FlexiblePlanner.tsx")
+          planner = planner_path.read_text(encoding="utf-8")
+
+          planner = replace_required(
+              planner,
+              'import { useCallback, useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";',
+              'import { useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";',
+              "React imports",
+          )
+
+          planner = replace_required(
+              planner,
+              '''import {
+            updateLessonDetails,
+            type CatalogUpdateOptions,
+            type CatalogUpdateResult,
+          } from "@/lib/custom-subjects";
+          ''',
+              '''import {
+            buildChangeDayCapacityCandidate,
+            buildMoveLessonDateCandidate,
+          } from "@/lib/schedule-candidates";
+          import { createScheduleSnapshot } from "@/lib/schedule-transactions";
+          import {
+            useScheduleTransactions,
+            type ScheduleTransactionAdapters,
+          } from "@/components/flexible-planner/useScheduleTransactions";
+          ''',
+              "Flexible Planner transaction imports",
+          )
+
+          planner = replace_required(
+              planner,
+              '''type Props = {
+            state: ProgressState;
+            subjects?: Subject[];
+            onSetDayHours: (dateISO: string, hours: number | null) => void;
+            onSetDefaultDailyHours?: (hours: number) => void;
+            onSubjectsUpdated: (
+              subjects: Subject[],
+              options?: CatalogUpdateOptions,
+            ) => CatalogUpdateResult | boolean | void;
+          };''',
+              '''type Props = {
+            state: ProgressState;
+            subjects?: Subject[];
+            transactionAdapters: ScheduleTransactionAdapters;
+          };''',
+              "Flexible Planner props",
+          )
+
+          planner = replace_required(
+              planner,
+              '''type UndoEntry = {
+            subjects: Subject[];
+            lessonTitle: string;
+            fromDateISO?: string;
+            toDateISO: string;
+          };
+
+          function catalogUpdateSucceeded(result: CatalogUpdateResult | boolean | void): boolean {
+            return result == null ? true : typeof result === "boolean" ? result : result.ok;
+          }
+
+          function isTextEditingTarget(target: EventTarget | null): boolean {
+            if (!(target instanceof HTMLElement)) return false;
+            return (
+              target.isContentEditable ||
+              target.tagName === "INPUT" ||
+              target.tagName === "TEXTAREA" ||
+              target.tagName === "SELECT"
+            );
+          }
+
+          ''',
+              '',
+              "legacy move-only undo helpers",
+          )
+
+          planner = replace_required(
+              planner,
+              '''export function FlexiblePlanner({
+            state,
+            subjects = SUBJECTS,
+            onSetDayHours,
+            onSubjectsUpdated,
+          }: Props) {''',
+              '''export function FlexiblePlanner({
+            state,
+            subjects = SUBJECTS,
+            transactionAdapters,
+          }: Props) {''',
+              "Flexible Planner parameters",
+          )
+
+          planner = replace_required(
+              planner,
+              '  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);\n',
+              '',
+              "legacy undo state",
+          )
+
+          old_undo_block = '''  const undoLastMove = useCallback(() => {
+            const entry = undoStack.at(-1);
+            if (!entry) return false;
+
+            const result = onSubjectsUpdated(entry.subjects, { createBackup: false });
+            if (!catalogUpdateSucceeded(result)) return false;
+
+            setUndoStack((current) => current.slice(0, -1));
+            setRecentlyMovedLessonId(null);
+            toast.success(`Đã hoàn tác “${entry.lessonTitle}”.`, {
+              description: entry.fromDateISO
+                ? `Khôi phục từ ${displayDate(entry.toDateISO)} về ${displayDate(entry.fromDateISO)}.`
+                : `Đã trả lại trạng thái trước khi chuyển sang ${displayDate(entry.toDateISO)}.`,
+            });
+            return true;
+          }, [onSubjectsUpdated, undoStack]);
+
+          useEffect(() => {
+            const handleUndoShortcut = (event: KeyboardEvent) => {
+              if (
+                !(event.ctrlKey || event.metaKey) ||
+                event.shiftKey ||
+                event.key.toLowerCase() !== "z" ||
+                isTextEditingTarget(event.target) ||
+                undoStack.length === 0
+              ) {
+                return;
+              }
+
+              event.preventDefault();
+              undoLastMove();
+            };
+
+            window.addEventListener("keydown", handleUndoShortcut);
+            return () => window.removeEventListener("keydown", handleUndoShortcut);
+          }, [undoLastMove, undoStack.length]);
+
+          '''
+
+          new_undo_block = '''  const { history, canUndo, executeMutation, undoLastMutation } = useScheduleTransactions({
+            subjects,
+            plannerSettings: state.plannerSettings,
+            adapters: transactionAdapters,
+            onUndoSuccess: (entry) => {
+              setRecentlyMovedLessonId(null);
+              toast.success("Đã hoàn tác thay đổi lịch.", { description: entry.description });
+            },
+            onUndoError: (error, rollbackError) => {
+              toast.error(rollbackError ? `${error} ${rollbackError}` : error);
+            },
+          });
+
+          '''
+
+          planner = replace_required(
+              planner,
+              old_undo_block,
+              new_undo_block,
+              "shared undo hook",
+          )
+
+          old_move_block = '''  const moveLessonToDate = (lessonId: string, targetDateISO: string) => {
+            const lesson = findLessonById(lessonId, subjects);
+            if (!lesson) {
+              toast.error("Không tìm thấy bài học để di chuyển.");
+              return false;
+            }
+
+            if (lesson.scheduledDate === targetDateISO) {
+              setRecentlyMovedLessonId(lessonId);
+              window.setTimeout(() => setRecentlyMovedLessonId(null), 700);
+              return true;
+            }
+
+            const nextSubjects = updateLessonDetails(subjects, lessonId, {
+              scheduledDate: targetDateISO,
+            });
+            if (nextSubjects === subjects) {
+              toast.error("Không thể cập nhật ngày của bài học.");
+              return false;
+            }
+
+            const result = onSubjectsUpdated(nextSubjects, { createBackup: true });
+            if (!catalogUpdateSucceeded(result)) return false;
+
+            setUndoStack((current) =>
+              [
+                ...current,
+                {
+                  subjects,
+                  lessonTitle: lesson.title,
+                  fromDateISO: lesson.scheduledDate || undefined,
+                  toDateISO: targetDateISO,
+                },
+              ].slice(-20),
+            );
+
+            const mode = getLessonMode(lesson);
+            toast.success(
+              mode === "fixed"
+                ? `Đã chuyển “${lesson.title}” sang ${displayDate(targetDateISO)}.`
+                : `Đã đặt “${lesson.title}” có thể học từ ${displayDate(targetDateISO)}.`,
+              {
+                description:
+                  mode === "fixed"
+                    ? "Bài cố định sẽ chỉ xuất hiện đúng ngày này. Nhấn Ctrl+Z để hoàn tác."
+                    : "Nếu ngày đó quá tải, lịch linh hoạt có thể dời bài sang ngày sau. Nhấn Ctrl+Z để hoàn tác.",
+              },
+            );
+
+            setRecentlyMovedLessonId(lessonId);
+            window.setTimeout(() => setRecentlyMovedLessonId(null), 850);
+            return true;
+          };
+
+          '''
+
+          new_move_block = '''  const moveLessonToDate = (lessonId: string, targetDateISO: string) => {
+            const lesson = findLessonById(lessonId, subjects);
+            const built = buildMoveLessonDateCandidate({
+              current: createScheduleSnapshot(subjects, state.plannerSettings),
+              lessonId,
+              targetDateISO,
+            });
+            if (!built.ok || !lesson) {
+              toast.error(built.ok ? "Không tìm thấy bài học để di chuyển." : built.error);
+              return false;
+            }
+
+            const fromLabel = lesson.scheduledDate ? displayDate(lesson.scheduledDate) : "chưa đặt ngày";
+            const result = executeMutation({
+              candidate: built.candidate,
+              kind: "move-lesson-date",
+              description: `Chuyển “${lesson.title}” từ ${fromLabel} sang ${displayDate(targetDateISO)}.`,
+            });
+            if (!result.ok) {
+              toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
+              return false;
+            }
+
+            setRecentlyMovedLessonId(lessonId);
+            window.setTimeout(() => setRecentlyMovedLessonId(null), result.status === "noop" ? 700 : 850);
+            if (result.status === "noop") return true;
+
+            const mode = getLessonMode(lesson);
+            toast.success(
+              mode === "fixed"
+                ? `Đã chuyển “${lesson.title}” sang ${displayDate(targetDateISO)}.`
+                : `Đã đặt “${lesson.title}” có thể học từ ${displayDate(targetDateISO)}.`,
+              {
+                description:
+                  mode === "fixed"
+                    ? "Bài cố định sẽ chỉ xuất hiện đúng ngày này. Nhấn Ctrl+Z để hoàn tác."
+                    : "Nếu ngày đó quá tải, lịch linh hoạt có thể dời bài sang ngày sau. Nhấn Ctrl+Z để hoàn tác.",
+              },
+            );
+            return true;
+          };
+
+          const commitDayCapacity = (dateISO: string, hours: number) => {
+            const { candidate } = buildChangeDayCapacityCandidate({
+              current: createScheduleSnapshot(subjects, state.plannerSettings),
+              dateISO,
+              hours,
+              todayDateISO: today,
+            });
+            const result = executeMutation({
+              candidate,
+              kind: "change-day-capacity",
+              description: `Đổi công suất ngày ${displayDate(dateISO)} thành ${hours} giờ.`,
+            });
+            if (!result.ok) {
+              toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
+              return false;
+            }
+            if (result.status === "committed") {
+              toast.success(`Đã đặt ${hours} giờ cho ${displayDate(dateISO)}.`, {
+                description: "Nhấn Ctrl+Z để hoàn tác.",
+              });
+            }
+            return true;
+          };
+
+          '''
+
+          planner = replace_required(
+              planner,
+              old_move_block,
+              new_move_block,
+              "shared lesson and capacity transactions",
+          )
+
+          planner = replace_required(
+              planner,
+              '''            disabled={undoStack.length === 0}
+                    onClick={undoLastMove}''',
+              '''            disabled={!canUndo}
+                    onClick={undoLastMutation}''',
+              "Undo button behavior",
+          )
+
+          planner = replace_required(
+              planner,
+              '''            {undoStack.length > 0 && (
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                        {undoStack.length}
+                      </span>
+                    )}''',
+              '''            {history.length > 0 && (
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                        {history.length}
+                      </span>
+                    )}''',
+              "Undo history count",
+          )
+
+          planner = replace_required(
+              planner,
+              '                        onSetDayHours={onSetDayHours}',
+              '                        onCommitDayHours={commitDayCapacity}',
+              "Plan day capacity callback",
+          )
+
+          planner = replace_required(
+              planner,
+              '''  onSetDayHours,
+            onDragStart,''',
+              '''  onCommitDayHours,
+            onDragStart,''',
+              "PlanDayCard parameter",
+          )
+
+          planner = replace_required(
+              planner,
+              '  onSetDayHours: (dateISO: string, hours: number | null) => void;',
+              '  onCommitDayHours: (dateISO: string, hours: number) => boolean;',
+              "PlanDayCard capacity type",
+          )
+
+          old_capacity_input = '''          <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
+                    <Input
+                      type="number"
+                      aria-label={`Giờ học ngày ${displayDate(day.dateISO)}`}
+                      min={MIN_DAILY_STUDY_HOURS}
+                      max={MAX_DAILY_STUDY_HOURS}
+                      step={DAILY_STUDY_HOURS_STEP}
+                      value={day.hours}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        if (Number.isFinite(value)) {
+                          onSetDayHours(day.dateISO, normalizeDailyStudyHours(value));
+                        }
+                      }}
+                      className="h-7 w-16 rounded-lg border-slate-200 bg-white px-1 text-center text-xs font-bold"
+                    />
+                    <span>giờ</span>
+                  </label>'''
+
+          planner = replace_required(
+              planner,
+              old_capacity_input,
+              '          <DayCapacityInput day={day} onCommit={onCommitDayHours} />',
+              "commit-boundary day capacity input",
+          )
+
+          day_capacity_component = '''function DayCapacityInput({
+            day,
+            onCommit,
+          }: {
+            day: PlanDay;
+            onCommit: (dateISO: string, hours: number) => boolean;
+          }) {
+            const [draft, setDraft] = useState(String(day.hours));
+
+            useEffect(() => {
+              setDraft(String(day.hours));
+            }, [day.hours]);
+
+            const commitDraft = () => {
+              if (draft.trim() === "") {
+                setDraft(String(day.hours));
+                return;
+              }
+              const value = Number(draft);
+              if (!Number.isFinite(value)) {
+                setDraft(String(day.hours));
+                return;
+              }
+              const normalized = normalizeDailyStudyHours(value);
+              const committed = onCommit(day.dateISO, normalized);
+              setDraft(String(committed ? normalized : day.hours));
+            };
+
+            return (
+              <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
+                <Input
+                  type="number"
+                  aria-label={`Giờ học ngày ${displayDate(day.dateISO)}`}
+                  min={MIN_DAILY_STUDY_HOURS}
+                  max={MAX_DAILY_STUDY_HOURS}
+                  step={DAILY_STUDY_HOURS_STEP}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onBlur={commitDraft}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") {
+                      setDraft(String(day.hours));
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  className="h-7 w-16 rounded-lg border-slate-200 bg-white px-1 text-center text-xs font-bold"
+                />
+                <span>giờ</span>
+              </label>
+            );
+          }
+
+          '''
+
+          planner = replace_required(
+              planner,
+              'function PlanDayCard({\n',
+              day_capacity_component + 'function PlanDayCard({\n',
+              "DayCapacityInput component",
+          )
+
+          planner_path.write_text(planner, encoding="utf-8")
+          PY
+      - name: Format patched source without creating a lockfile
+        run: |
+          npm install --no-package-lock --ignore-scripts
+          npx prettier --write \
+            src/routes/index.tsx \
+            src/components/FlexiblePlanner.tsx \
+            src/components/flexible-planner/useScheduleTransactions.ts
+          rm -f package-lock.json
+          rm .github/workflows/p0b-wire-flexible-transactions.yml
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor: route Flexible Planner through schedule transactions [p0b-wire-flex]"
+          git push origin HEAD:improve/p0b-schedule-transactions
