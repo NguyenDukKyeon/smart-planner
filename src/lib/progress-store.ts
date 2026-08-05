@@ -618,6 +618,7 @@ export function useProgress() {
   });
   const stateRef = useRef(state);
   const persistenceEnabled = useRef(false);
+  const plannerSettingsRollbackPendingRef = useRef(false);
 
   useEffect(() => {
     // Keep all reads and migration backups behind app-storage.  In particular,
@@ -718,7 +719,8 @@ export function useProgress() {
 
   const persistPlannerSettings = useCallback(
     (plannerSettings: PlannerSettings): StorageWriteResult => {
-      if (!persistenceEnabled.current) {
+      const isRollbackAttempt = plannerSettingsRollbackPendingRef.current;
+      if (!persistenceEnabled.current && !isRollbackAttempt) {
         const error = "Bộ nhớ trình duyệt chưa sẵn sàng; thay đổi chưa được áp dụng.";
         setStorageError(error);
         return { ok: false, error };
@@ -726,10 +728,17 @@ export function useProgress() {
 
       const saved = savePlannerSettingsStorage(stateRef.current, plannerSettings);
       if (!saved.ok) {
+        plannerSettingsRollbackPendingRef.current = !isRollbackAttempt;
         persistenceEnabled.current = false;
         setStorageStatus({ status: "unavailable", error: saved.error });
         setStorageError(saved.error);
+        return saved;
       }
+
+      plannerSettingsRollbackPendingRef.current = false;
+      persistenceEnabled.current = true;
+      setStorageStatus({ status: "ok", value: stateRef.current });
+      setStorageError(null);
       return saved;
     },
     [],
