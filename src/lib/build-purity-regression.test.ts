@@ -24,9 +24,10 @@ describe("build purity", () => {
     }
 
     expect(packageJson.scripts.dev).toBe("vite dev --host 0.0.0.0 --port 3000");
+    expect(packageJson.scripts.build).toBe("npm test && vite build");
     expect(packageJson.scripts["build:dev"]).toBe("vite build --mode development");
     expect(packageJson.scripts.typecheck).toBe("tsc --noEmit");
-    expect(packageJson.scripts.test).toBe("vitest run");
+    expect(packageJson.scripts.test).toBe("vitest run src/lib src/routes/__root.test.tsx");
     expect(packageJson.scripts.lint).toBe("eslint .");
   });
 
