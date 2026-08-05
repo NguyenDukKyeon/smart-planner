@@ -64,20 +64,17 @@ jobs:
                   raise SystemExit("useProgress callback marker not found")
               source = source.replace(callback_marker, callbacks + callback_marker, 1)
 
-          return_old = '''    setTodayHours,
-            setDayHours,
-            setDefaultDailyHours,
-          '''
-          return_new = '''    setTodayHours,
-            setDayHours,
-            setDefaultDailyHours,
-            persistPlannerSettings,
-            applyPersistedPlannerSettings,
-          '''
+          return_marker = "    setDefaultDailyHours,\n"
           if "    persistPlannerSettings," not in source:
-              if return_old not in source:
+              if return_marker not in source:
                   raise SystemExit("useProgress return marker not found")
-              source = source.replace(return_old, return_new, 1)
+              source = source.replace(
+                  return_marker,
+                  return_marker
+                  + "    persistPlannerSettings,\n"
+                  + "    applyPersistedPlannerSettings,\n",
+                  1,
+              )
 
           path.write_text(source, encoding="utf-8")
 
