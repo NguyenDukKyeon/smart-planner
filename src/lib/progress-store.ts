@@ -386,10 +386,7 @@ export function savePlannerSettingsStorage(
   plannerSettings: PlannerSettings,
   storage?: StorageAdapter | null,
 ): StorageWriteResult {
-  return saveProgressStorage(
-    applyPlannerSettingsToProgressState(state, plannerSettings),
-    storage,
-  );
+  return saveProgressStorage(applyPlannerSettingsToProgressState(state, plannerSettings), storage);
 }
 
 /** Pure candidate builder shared by the timer transaction and React store. */
