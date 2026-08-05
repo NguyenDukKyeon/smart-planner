@@ -1,10 +1,13 @@
 name: Build diagnostics
 
-on:
+"on":
   push:
-    branches: [main, improve/p0a-hours-build-purity]
+    branches:
+      - main
+      - improve/p0a-hours-build-purity
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -18,7 +21,7 @@ jobs:
         with:
           submodules: false
       - name: Apply reviewed study-day fix
-        if: github.event_name == 'push' && github.ref == 'refs/heads/improve/p0a-hours-build-purity'
+        if: "${{ github.event_name == 'push' && github.ref == 'refs/heads/improve/p0a-hours-build-purity' }}"
         run: |
           python - <<'PY'
           from pathlib import Path
