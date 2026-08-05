@@ -35,15 +35,18 @@ jobs:
           } from "@/lib/study-hours";`;
           const noteImport = 'import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";';
 
+          function addImports(source, anchor) {
+            if (source.includes("MAX_DAILY_STUDY_HOURS")) return source;
+            if (!source.includes(anchor)) throw new Error(`Missing import anchor: ${anchor}`);
+            return source.replace(anchor, `${anchor}\n${policyImport}\n${noteImport}`);
+          }
+
           function patchToday() {
             const path = "src/components/TodayPanel.tsx";
-            let source = fs.readFileSync(path, "utf8");
-            if (!source.includes("MAX_DAILY_STUDY_HOURS")) {
-              source = source.replace(
-                'import { cn } from "@/lib/utils";',
-                `import { cn } from "@/lib/utils";\n${policyImport}\n${noteImport}`,
-              );
-            }
+            let source = addImports(
+              fs.readFileSync(path, "utf8"),
+              'import { cn } from "@/lib/utils";',
+            );
             source = source.replaceAll("min={0}", "min={MIN_DAILY_STUDY_HOURS}");
             source = source.replaceAll("max={12}", "max={MAX_DAILY_STUDY_HOURS}");
             source = source.replaceAll("step={0.5}", "step={DAILY_STUDY_HOURS_STEP}");
@@ -55,12 +58,12 @@ jobs:
               "if (Number.isFinite(value)) onSetTodayHours(Math.min(12, Math.max(0, value)));",
               "if (Number.isFinite(value)) onSetTodayHours(normalizeDailyStudyHours(value));",
             );
-            const marker = 'className="h-9 bg-white text-xs sm:text-sm font-bold text-slate-800"\n              />';
             if (!source.includes("<HighStudyHoursNote hours={state.plannerSettings.todayHours}")) {
-              if (!source.includes(marker)) throw new Error("Missing Today capacity input");
+              const inputPattern = /(<Input[\s\S]*?aria-label="Số giờ học hôm nay"[\s\S]*?className="h-9 bg-white text-xs sm:text-sm font-bold text-slate-800"\s*\/>)/;
+              if (!inputPattern.test(source)) throw new Error("Missing Today capacity input");
               source = source.replace(
-                marker,
-                `${marker}\n              <HighStudyHoursNote\n                hours={state.plannerSettings.todayHours}\n                className="sm:col-span-3"\n              />`,
+                inputPattern,
+                `$1\n              <HighStudyHoursNote\n                hours={state.plannerSettings.todayHours}\n                className="sm:col-span-3"\n              />`,
               );
             }
             fs.writeFileSync(path, source);
@@ -68,37 +71,24 @@ jobs:
 
           function patchFlexiblePlanner() {
             const path = "src/components/FlexiblePlanner.tsx";
-            let source = fs.readFileSync(path, "utf8");
-            if (!source.includes("MAX_DAILY_STUDY_HOURS")) {
-              source = source.replace(
-                'import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";',
-                `import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";\n${policyImport}\n${noteImport}`,
-              );
-            }
-            source = source.replace("min={0}\n              max={12}\n              step={0.5}", "min={MIN_DAILY_STUDY_HOURS}\n              max={MAX_DAILY_STUDY_HOURS}\n              step={DAILY_STUDY_HOURS_STEP}");
-            source = source.replace(
-              `                  onSetDayHours(
-                    day.dateISO,
-                    Math.min(12, Math.max(0, value)),
-                  );`,
-              `                  onSetDayHours(
-                    day.dateISO,
-                    normalizeDailyStudyHours(value),
-                  );`,
+            let source = addImports(
+              fs.readFileSync(path, "utf8"),
+              'import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";',
             );
-            const marker = `          </label>
-                </div>
-
-                <p className="text-[11px] font-medium text-slate-500">`;
+            source = source.replace(
+              /min=\{0\}\s*max=\{12\}\s*step=\{0\.5\}/,
+              "min={MIN_DAILY_STUDY_HOURS}\n              max={MAX_DAILY_STUDY_HOURS}\n              step={DAILY_STUDY_HOURS_STEP}",
+            );
+            source = source.replace(
+              /onSetDayHours\(\s*day\.dateISO,\s*Math\.min\(12, Math\.max\(0, value\)\),\s*\);/,
+              "onSetDayHours(\n                    day.dateISO,\n                    normalizeDailyStudyHours(value),\n                  );",
+            );
             if (!source.includes("<HighStudyHoursNote hours={day.hours}")) {
-              if (!source.includes(marker)) throw new Error("Missing Flexible day header");
+              const headerPattern = /(<\/label>\s*<\/div>)\s*(<p className="text-\[11px\] font-medium text-slate-500">)/;
+              if (!headerPattern.test(source)) throw new Error("Missing Flexible day header");
               source = source.replace(
-                marker,
-                `          </label>
-                </div>
-                <HighStudyHoursNote hours={day.hours} />
-
-                <p className="text-[11px] font-medium text-slate-500">`,
+                headerPattern,
+                `$1\n        <HighStudyHoursNote hours={day.hours} />\n\n        $2`,
               );
             }
             fs.writeFileSync(path, source);
@@ -106,44 +96,31 @@ jobs:
 
           function patchForecast() {
             const path = "src/components/ForecastCard.tsx";
-            let source = fs.readFileSync(path, "utf8");
-            if (!source.includes("MAX_DAILY_STUDY_HOURS")) {
-              source = source.replace(
-                'import { sortSubjects } from "@/lib/subject-order";',
-                `import { sortSubjects } from "@/lib/subject-order";\n${policyImport}\n${noteImport}`,
-              );
-            }
-            source = source.replace(
-              `  const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
-                ? Math.max(0, state.plannerSettings.defaultDailyHours)
-                : 2;`,
-              `  const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
-                ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)
-                : 2;`,
+            let source = addImports(
+              fs.readFileSync(path, "utf8"),
+              'import { sortSubjects } from "@/lib/subject-order";',
             );
             source = source.replace(
-              "      onSetDefaultDailyHours(h);",
-              "      onSetDefaultDailyHours(normalizeDailyStudyHours(h));",
+              /const hours = Number\.isFinite\(state\.plannerSettings\.defaultDailyHours\)\s*\? Math\.max\(0, state\.plannerSettings\.defaultDailyHours\)\s*: 2;/,
+              "const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)\n    ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)\n    : 2;",
             );
-            source = source.replace("min={0}\n            max={12}\n            step={0.5}", "min={MIN_DAILY_STUDY_HOURS}\n            max={MAX_DAILY_STUDY_HOURS}\n            step={DAILY_STUDY_HOURS_STEP}");
-            source = source.replace("min={0}\n            max={12}\n            step={0.5}", "min={MIN_DAILY_STUDY_HOURS}\n            max={MAX_DAILY_STUDY_HOURS}\n            step={DAILY_STUDY_HOURS_STEP}");
+            source = source.replace(
+              "onSetDefaultDailyHours(h);",
+              "onSetDefaultDailyHours(normalizeDailyStudyHours(h));",
+            );
+            source = source.replaceAll("min={0}", "min={MIN_DAILY_STUDY_HOURS}");
+            source = source.replaceAll("max={12}", "max={MAX_DAILY_STUDY_HOURS}");
+            source = source.replaceAll("step={0.5}", "step={DAILY_STUDY_HOURS_STEP}");
             source = source.replace(
               "handleHoursChange(Math.min(12, Math.max(0, nextHours)));",
               "handleHoursChange(normalizeDailyStudyHours(nextHours));",
             );
-            const marker = `        </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">`;
             if (!source.includes("<HighStudyHoursNote hours={hours}")) {
-              if (!source.includes(marker)) throw new Error("Missing Forecast heading block");
+              const gridPattern = /(<div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200\/60 bg-slate-50\/60 p-2\.5 lg:grid-cols-4">)/;
+              if (!gridPattern.test(source)) throw new Error("Missing Forecast metrics grid");
               source = source.replace(
-                marker,
-                `        </div>
-              </div>
-              <HighStudyHoursNote hours={hours} />
-
-              <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 lg:grid-cols-4">`,
+                gridPattern,
+                `<HighStudyHoursNote hours={hours} />\n\n      $1`,
               );
             }
             fs.writeFileSync(path, source);
