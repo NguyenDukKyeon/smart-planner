@@ -15,7 +15,9 @@ describe("Dashboard schedule catalog persistence boundary", () => {
     expect(persistBlock).toContain(
       'setSubjectStorageStatus({ status: "unavailable", error: saved.error })',
     );
-    expect(persistBlock).toContain('setSubjectStorageStatus({ status: "ok", value: nextSubjects })');
+    expect(persistBlock).toContain(
+      'setSubjectStorageStatus({ status: "ok", value: nextSubjects })',
+    );
     expect(persistBlock).toContain("return saved");
     expect(persistBlock).not.toContain("setSubjects(");
   });
