@@ -99,37 +99,80 @@ describe("persistScheduleCandidate", () => {
     expect(calls).toEqual(["subjects", "settings"]);
   });
 
-  test("stops immediately when the first catalog write fails", () => {
+  test("rolls back a potentially partial first catalog write and never writes settings", () => {
     const previous = createPrevious();
     const candidate = cloneCandidate(previous);
     changeCatalog(candidate);
     changeSettings(candidate);
-    const saveSubjects = vi.fn(() => failure("catalog failed"));
+    const saveSubjects = vi
+      .fn()
+      .mockReturnValueOnce(failure("catalog verification failed"))
+      .mockReturnValueOnce(success());
     const savePlannerSettings = vi.fn(success);
 
     expect(
       persistScheduleCandidate({ previous, candidate, saveSubjects, savePlannerSettings }),
-    ).toEqual({ ok: false, error: "catalog failed" });
-    expect(saveSubjects).toHaveBeenCalledOnce();
+    ).toEqual({ ok: false, error: "catalog verification failed" });
+    expect(saveSubjects).toHaveBeenNthCalledWith(1, candidate.subjects);
+    expect(saveSubjects).toHaveBeenNthCalledWith(2, previous.subjects);
     expect(savePlannerSettings).not.toHaveBeenCalled();
   });
 
-  test("rolls the catalog back when the later planner-settings write fails", () => {
+  test("rolls back a potentially partial settings-only write", () => {
+    const previous = createPrevious();
+    const candidate = cloneCandidate(previous);
+    changeSettings(candidate);
+    const saveSubjects = vi.fn(success);
+    const savePlannerSettings = vi
+      .fn()
+      .mockReturnValueOnce(failure("settings verification failed"))
+      .mockReturnValueOnce(success());
+
+    expect(
+      persistScheduleCandidate({ previous, candidate, saveSubjects, savePlannerSettings }),
+    ).toEqual({ ok: false, error: "settings verification failed" });
+    expect(saveSubjects).not.toHaveBeenCalled();
+    expect(savePlannerSettings).toHaveBeenNthCalledWith(1, candidate.plannerSettings);
+    expect(savePlannerSettings).toHaveBeenNthCalledWith(2, previous.plannerSettings);
+  });
+
+  test("rolls both stores back when the later settings write may have partially persisted", () => {
     const previous = createPrevious();
     const candidate = cloneCandidate(previous);
     changeCatalog(candidate);
     changeSettings(candidate);
-    const saveSubjects = vi.fn().mockReturnValueOnce(success()).mockReturnValueOnce(success());
-    const savePlannerSettings = vi.fn(() => failure("settings failed"));
+    let storedSubjects = structuredClone(previous.subjects);
+    let storedSettings = structuredClone(previous.plannerSettings);
+    const calls: string[] = [];
+    const saveSubjects = vi.fn((subjects: Subject[]) => {
+      storedSubjects = structuredClone(subjects);
+      calls.push(subjects === candidate.subjects ? "subjects:candidate" : "subjects:previous");
+      return success();
+    });
+    const savePlannerSettings = vi.fn((settings: PlannerSettings) => {
+      storedSettings = structuredClone(settings);
+      calls.push(
+        settings === candidate.plannerSettings ? "settings:candidate" : "settings:previous",
+      );
+      return settings === candidate.plannerSettings
+        ? failure("settings verification failed")
+        : success();
+    });
 
     expect(
       persistScheduleCandidate({ previous, candidate, saveSubjects, savePlannerSettings }),
-    ).toEqual({ ok: false, error: "settings failed" });
-    expect(saveSubjects).toHaveBeenNthCalledWith(1, candidate.subjects);
-    expect(saveSubjects).toHaveBeenNthCalledWith(2, previous.subjects);
+    ).toEqual({ ok: false, error: "settings verification failed" });
+    expect(calls).toEqual([
+      "subjects:candidate",
+      "settings:candidate",
+      "settings:previous",
+      "subjects:previous",
+    ]);
+    expect(storedSubjects).toEqual(previous.subjects);
+    expect(storedSettings).toEqual(previous.plannerSettings);
   });
 
-  test("surfaces both the write error and a failed rollback", () => {
+  test("surfaces rollback failures for every store that could have been partially written", () => {
     const previous = createPrevious();
     const candidate = cloneCandidate(previous);
     changeCatalog(candidate);
@@ -137,15 +180,24 @@ describe("persistScheduleCandidate", () => {
     const saveSubjects = vi
       .fn()
       .mockReturnValueOnce(success())
-      .mockReturnValueOnce(failure("rollback failed"));
-    const savePlannerSettings = vi.fn(() => failure("settings failed"));
+      .mockReturnValueOnce(failure("catalog rollback failed"));
+    const savePlannerSettings = vi
+      .fn()
+      .mockReturnValueOnce(failure("settings failed"))
+      .mockReturnValueOnce(failure("settings rollback failed"));
 
-    expect(
-      persistScheduleCandidate({ previous, candidate, saveSubjects, savePlannerSettings }),
-    ).toEqual({
-      ok: false,
-      error: "settings failed",
-      rollbackError: "rollback failed",
+    const result = persistScheduleCandidate({
+      previous,
+      candidate,
+      saveSubjects,
+      savePlannerSettings,
     });
+
+    expect(result).toMatchObject({ ok: false, error: "settings failed" });
+    if (result.ok) throw new Error("Expected persistence failure");
+    expect(result.rollbackError).toContain("settings rollback failed");
+    expect(result.rollbackError).toContain("catalog rollback failed");
+    expect(savePlannerSettings).toHaveBeenNthCalledWith(2, previous.plannerSettings);
+    expect(saveSubjects).toHaveBeenNthCalledWith(2, previous.subjects);
   });
 });
