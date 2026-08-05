@@ -39,6 +39,7 @@ describe("schedule progress adapter", () => {
     expect(next).not.toBe(state);
     expect(next.plannerSettings).toEqual(plannerSettings);
     expect(next.plannerSettings).not.toBe(plannerSettings);
+    expect(next.plannerSettings.dailyHours).not.toBe(plannerSettings.dailyHours);
     expect(state.plannerSettings).not.toEqual(plannerSettings);
     expect(next.completedLessons).toBe(state.completedLessons);
   });
