@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Lesson, Subject } from "./mock-data";
-import {
-  DEFAULT_PLANNER_SETTINGS,
-  DEFAULT_STUDY_META,
-  reviewTaskId,
-} from "./planner";
+import { DEFAULT_PLANNER_SETTINGS, DEFAULT_STUDY_META, reviewTaskId } from "./planner";
 import { isStudyDayQueueComplete } from "./study-day-completion";
 
 const dateISO = "2026-08-05";
