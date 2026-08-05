@@ -22,35 +22,18 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Format committed TypeScript source
+        run: npx prettier --write "src/**/*.{ts,tsx}" eslint.config.js
       - run: npm run typecheck
-      - name: Capture non-format lint diagnostics
-        run: |
-          set +e
-          npx eslint . -f json > lint-report-full.json
-          node --input-type=module <<'NODE'
-          import fs from "node:fs";
-          const report = JSON.parse(fs.readFileSync("lint-report-full.json", "utf8"));
-          const lines = [];
-          for (const entry of report) {
-            const filePath = entry.filePath.replace(`${process.cwd()}/`, "");
-            for (const message of entry.messages) {
-              if (message.ruleId === "prettier/prettier") continue;
-              const compactMessage = message.message.split("\n")[0];
-              lines.push(
-                `${filePath}:${message.line}:${message.column} | ${message.ruleId ?? "unknown"} | ${compactMessage}`,
-              );
-            }
-          }
-          fs.writeFileSync(
-            "lint-logic-report.txt",
-            lines.length > 0 ? `${lines.join("\n")}\n` : "NO_NON_FORMAT_LINT_ERRORS\n",
-          );
-          NODE
-          rm lint-report-full.json
-      - name: Commit logic lint report
+      - run: npm run lint
+      - name: Commit verified formatting
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lint-logic-report.txt
-          git commit -m "chore: isolate P0A lint logic errors [skip ci]"
-          git push origin HEAD:${{ github.head_ref || github.ref_name }}
+          git add src eslint.config.js
+          if git diff --cached --quiet; then
+            echo "No formatting changes to commit."
+          else
+            git commit -m "style: format committed application source [skip ci]"
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
+          fi
