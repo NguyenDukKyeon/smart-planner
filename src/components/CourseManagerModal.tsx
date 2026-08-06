@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Search, Undo2 } from "lucide-react";
 import { toast } from "sonner";
-import type { Lesson, Subject } from "@/lib/mock-data";
+import type { Lesson, LessonScheduleMode, Subject } from "@/lib/mock-data";
 import type { PlannerSettings } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
 import {
+  archiveLessons,
+  getLastCatalogStorageError,
+  removeLessonsFromSubjects,
   updateLessonDetails,
   type CatalogUpdateOptions,
   type CatalogUpdateResult,
 } from "@/lib/custom-subjects";
 import {
+  buildBulkLessonUpdateCandidate,
   buildEditLessonCandidate,
+  buildMoveLessonsCandidate,
   buildReorderLessonCandidate,
   buildReorderSubjectCandidate,
   buildReorderTopicCandidate,
@@ -31,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { BulkActionsBar } from "./course-manager/BulkActionsBar";
 import { LessonEditorDialog } from "./course-manager/LessonEditorDialog";
 import { LessonRow } from "./course-manager/LessonRow";
 import { TopicSection } from "./course-manager/TopicSection";
@@ -89,6 +95,14 @@ export function CourseManagerModal({
   const [lessonSearch, setLessonSearch] = useState("");
   const [filter, setFilter] = useState<LessonFilter>("all");
   const [sort, setSort] = useState<LessonSort>("roadmap");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(() => new Set());
+  const [bulkTargetSubjectId, setBulkTargetSubjectId] = useState("");
+  const [bulkTargetTopicId, setBulkTargetTopicId] = useState("");
+  const [bulkDate, setBulkDate] = useState("");
+  const [bulkScheduleMode, setBulkScheduleMode] =
+    useState<LessonScheduleMode>("flexible");
+  const [bulkMinutes, setBulkMinutes] = useState(120);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [draft, setDraft] = useState<LessonEditorDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -98,6 +112,13 @@ export function CourseManagerModal({
       setSelectedSubjectId(currentSubjects[0]?.id ?? "");
     }
   }, [currentSubjects, selectedSubjectId]);
+
+  useEffect(() => {
+    setSelectedLessonIds(new Set());
+    setSelectionMode(false);
+    setBulkTargetSubjectId("");
+    setBulkTargetTopicId("");
+  }, [selectedSubjectId]);
 
   const minutesByLesson = useMemo(() => buildMinutesByLesson(progress), [progress]);
   const selectedSubject =
@@ -122,11 +143,36 @@ export function CourseManagerModal({
         : [],
     [filter, lessonSearch, minutesByLesson, progress, selectedSubject, sort],
   );
+  const visibleLessonIds = useMemo(
+    () => visibleMilestones.flatMap((topic) => topic.lessons.map((lesson) => lesson.id)),
+    [visibleMilestones],
+  );
   const stats = selectedSubject
     ? deriveSubjectStats(selectedSubject, minutesByLesson, progress)
     : null;
   const reorderEnabled =
     !subjectSearch.trim() && !lessonSearch.trim() && filter === "all" && sort === "roadmap";
+
+  const clearSelection = () => {
+    setSelectedLessonIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const toggleLessonSelection = (lessonId: string) => {
+    setSelectedLessonIds((current) => {
+      const next = new Set(current);
+      if (next.has(lessonId)) next.delete(lessonId);
+      else next.add(lessonId);
+      return next;
+    });
+  };
+
+  const confirmTimerImpact = (lessonIds: Iterable<string>, action: string) => {
+    if (!activeTimerLessonId || !new Set(lessonIds).has(activeTimerLessonId)) return true;
+    return window.confirm(
+      `Bài học này đang có một phiên Timer. Nhấn OK để ${action} nhưng vẫn tiếp tục phiên hiện tại; nhấn Hủy để quay lại và dừng Timer trước.`,
+    );
+  };
 
   const commitReorder = (
     built: ScheduleCandidateBuildResult,
@@ -149,6 +195,34 @@ export function CourseManagerModal({
       return false;
     }
     if (result.status === "committed") toast.success(successMessage);
+    return true;
+  };
+
+  const commitBulkScheduleMutation = (
+    built: ScheduleCandidateBuildResult,
+    kind: ScheduleMutationKind,
+    description: string,
+    successMessage: string,
+  ) => {
+    if (!built.ok) {
+      toast.error(built.error);
+      return false;
+    }
+
+    const result = scheduleTransactions.executeMutation({
+      candidate: built.candidate,
+      kind,
+      description,
+    });
+    if (!result.ok) {
+      toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
+      return false;
+    }
+
+    if (result.status === "committed") {
+      toast.success(`${successMessage} Nhấn Ctrl+Z để hoàn tác thay đổi lịch.`);
+    }
+    clearSelection();
     return true;
   };
 
@@ -203,6 +277,134 @@ export function CourseManagerModal({
       `Sắp xếp bài học ${lesson.title}`,
       "Đã cập nhật thứ tự bài học.",
     );
+  };
+
+  const moveSelectedToSubject = () => {
+    if (!bulkTargetSubjectId) return;
+    if (
+      !confirmTimerImpact(selectedLessonIds, `chuyển ${selectedLessonIds.size} bài học sang môn khác`)
+    ) {
+      return;
+    }
+    const built = buildMoveLessonsCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonIds: selectedLessonIds,
+      targetSubjectId: bulkTargetSubjectId,
+    });
+    commitBulkScheduleMutation(
+      built,
+      "move-lessons",
+      `Chuyển ${selectedLessonIds.size} bài học sang môn khác`,
+      `Đã chuyển ${selectedLessonIds.size} bài học.`,
+    );
+  };
+
+  const moveSelectedToTopic = () => {
+    if (!selectedSubject || !bulkTargetTopicId) return;
+    if (
+      !confirmTimerImpact(selectedLessonIds, `chuyển ${selectedLessonIds.size} bài học sang chủ đề khác`)
+    ) {
+      return;
+    }
+    const built = buildMoveLessonsCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonIds: selectedLessonIds,
+      targetSubjectId: selectedSubject.id,
+      targetTopicId: bulkTargetTopicId,
+    });
+    commitBulkScheduleMutation(
+      built,
+      "move-lessons",
+      `Chuyển ${selectedLessonIds.size} bài học sang chủ đề khác`,
+      `Đã chuyển ${selectedLessonIds.size} bài sang chủ đề mới.`,
+    );
+  };
+
+  const bulkScheduleMutation = {
+    kind: "bulk-schedule-update" as const,
+  };
+
+  const updateSelectedDate = () => {
+    const built = buildBulkLessonUpdateCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonIds: selectedLessonIds,
+      patch: { scheduledDate: bulkDate },
+    });
+    commitBulkScheduleMutation(
+      built,
+      bulkScheduleMutation.kind,
+      `Cập nhật ngày cho ${selectedLessonIds.size} bài học`,
+      `Đã cập nhật ngày cho ${selectedLessonIds.size} bài.`,
+    );
+  };
+
+  const updateSelectedMode = () => {
+    const built = buildBulkLessonUpdateCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonIds: selectedLessonIds,
+      patch: { scheduleMode: bulkScheduleMode },
+    });
+    commitBulkScheduleMutation(
+      built,
+      bulkScheduleMutation.kind,
+      `Đổi cách xếp lịch cho ${selectedLessonIds.size} bài học`,
+      `Đã đổi cách xếp lịch cho ${selectedLessonIds.size} bài.`,
+    );
+  };
+
+  const updateSelectedDuration = () => {
+    const built = buildBulkLessonUpdateCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonIds: selectedLessonIds,
+      patch: { plannedDurationMinutes: bulkMinutes },
+    });
+    commitBulkScheduleMutation(
+      built,
+      bulkScheduleMutation.kind,
+      `Đổi thời lượng cho ${selectedLessonIds.size} bài học`,
+      `Đã đặt mục tiêu ${bulkMinutes} phút cho ${selectedLessonIds.size} bài.`,
+    );
+  };
+
+  const archiveSelected = () => {
+    if (!confirmTimerImpact(selectedLessonIds, `lưu trữ ${selectedLessonIds.size} bài học`)) {
+      return;
+    }
+    if (
+      !window.confirm(
+        `Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`,
+      )
+    ) {
+      return;
+    }
+
+    const next = archiveLessons(currentSubjects, selectedLessonIds);
+    if (next === currentSubjects) {
+      const error = getLastCatalogStorageError();
+      if (error) toast.error(error);
+      return;
+    }
+    const result = onSubjectsUpdated(next, { alreadyPersisted: true });
+    if (!catalogUpdateSucceeded(result)) return;
+    toast.success(`Đã lưu trữ ${selectedLessonIds.size} bài học.`);
+    clearSelection();
+  };
+
+  const deleteSelected = () => {
+    if (!confirmTimerImpact(selectedLessonIds, `xóa ${selectedLessonIds.size} bài học`)) return;
+    if (
+      !window.confirm(
+        `Xóa ${selectedLessonIds.size} bài học? Các bài sẽ bị xóa khỏi lộ trình và lịch tương lai. Lịch sử phiên học vẫn được giữ.`,
+      )
+    ) {
+      return;
+    }
+
+    const next = removeLessonsFromSubjects(currentSubjects, selectedLessonIds);
+    const result = onSubjectsUpdated(next, { createBackup: true });
+    if (!catalogUpdateSucceeded(result)) return;
+    toast.success(`Đã xóa ${selectedLessonIds.size} bài học.`);
+    clearSelection();
   };
 
   const lessonReorder = useLessonReorder({
@@ -440,7 +642,7 @@ export function CourseManagerModal({
                     </div>
                   </section>
 
-                  <section className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px_180px]">
+                  <section className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
                     <Input
                       value={lessonSearch}
                       onChange={(event) => setLessonSearch(event.target.value)}
@@ -470,7 +672,44 @@ export function CourseManagerModal({
                       <option value="name">Theo tên</option>
                       <option value="remaining">Theo thời gian còn lại</option>
                     </select>
+                    <Button
+                      type="button"
+                      variant={selectionMode ? "default" : "outline"}
+                      className="rounded-xl"
+                      onClick={() => {
+                        if (selectionMode) clearSelection();
+                        else setSelectionMode(true);
+                      }}
+                    >
+                      {selectionMode ? "Hủy chọn" : "Chọn nhiều"}
+                    </Button>
                   </section>
+
+                  {selectionMode ? (
+                    <BulkActionsBar
+                      subjects={currentSubjects}
+                      selectedSubject={selectedSubject}
+                      selectedCount={selectedLessonIds.size}
+                      targetSubjectId={bulkTargetSubjectId}
+                      targetTopicId={bulkTargetTopicId}
+                      date={bulkDate}
+                      scheduleMode={bulkScheduleMode}
+                      durationMinutes={bulkMinutes}
+                      onTargetSubjectIdChange={setBulkTargetSubjectId}
+                      onTargetTopicIdChange={setBulkTargetTopicId}
+                      onDateChange={setBulkDate}
+                      onScheduleModeChange={setBulkScheduleMode}
+                      onDurationMinutesChange={setBulkMinutes}
+                      onSelectVisible={() => setSelectedLessonIds(new Set(visibleLessonIds))}
+                      onMoveToSubject={moveSelectedToSubject}
+                      onMoveToTopic={moveSelectedToTopic}
+                      onUpdateDate={updateSelectedDate}
+                      onUpdateMode={updateSelectedMode}
+                      onUpdateDuration={updateSelectedDuration}
+                      onArchive={archiveSelected}
+                      onDelete={deleteSelected}
+                    />
+                  ) : null}
 
                   {!reorderEnabled ? (
                     <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -499,12 +738,15 @@ export function CourseManagerModal({
                           <LessonRow
                             lesson={lesson}
                             minutes={minutesByLesson.get(lesson.id) ?? 0}
+                            selected={selectedLessonIds.has(lesson.id)}
+                            selectionMode={selectionMode}
                             activeTimer={activeTimerLessonId === lesson.id}
                             reorderEnabled={reorderEnabled}
                             dragArmed={lessonReorder.dragArmedLessonId === lesson.id}
                             dragging={lessonReorder.draggedLessonId === lesson.id}
                             canMoveUp={lessonIndex > 0}
                             canMoveDown={lessonIndex < topic.lessons.length - 1}
+                            onToggleSelected={toggleLessonSelection}
                             onEdit={openLessonEdit}
                             onMove={moveLessonByButton}
                             onArmDrag={lessonReorder.armDrag}
