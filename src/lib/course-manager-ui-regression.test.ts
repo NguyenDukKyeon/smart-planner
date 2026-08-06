@@ -23,8 +23,8 @@ describe("Course Manager UI transaction routing", () => {
     expect(editorSource).toContain("60");
     expect(editorSource).toContain("90");
     expect(editorSource).toContain("120");
-    expect(editorSource).toContain('min={1}');
-    expect(editorSource).toContain('max={1440}');
+    expect(editorSource).toContain("min={1}");
+    expect(editorSource).toContain("max={1440}");
     expect(editorSource).toContain("Linh hoạt");
     expect(editorSource).toContain("Cố định");
     expect(editorSource).toContain('type="date"');
@@ -52,8 +52,8 @@ describe("Course Manager UI transaction routing", () => {
     expect(modalSource).toContain('kind: "edit-lesson"');
     expect(modalSource).toContain("scheduleTransactions.executeMutation");
     expect(modalSource).toContain("Nhấn Ctrl+Z để hoàn tác thay đổi lịch.");
-    expect(modalSource).toContain("if (classification === \"noop\")");
-    expect(modalSource).toContain("if (classification === \"catalog-only\")");
+    expect(modalSource).toContain('if (classification === "noop")');
+    expect(modalSource).toContain('if (classification === "catalog-only")');
     expect(modalSource).toContain("setEditingLesson(null)");
   });
 });
