@@ -154,4 +154,80 @@ describe("Course Manager UI transaction routing", () => {
     expect(modalSource).toContain("alreadyPersisted: true");
     expect(modalSource).toContain("createBackup: true");
   });
+
+  test("completes presentation decomposition while keeping catalog-only boundaries", async () => {
+    const [modalSource, listSource, headerSource, workspaceSource, addLessonSource] =
+      await Promise.all([
+        readFile(new URL("../components/CourseManagerModal.tsx", import.meta.url), "utf8"),
+        readFile(
+          new URL("../components/course-manager/SubjectListPane.tsx", import.meta.url),
+          "utf8",
+        ),
+        readFile(
+          new URL("../components/course-manager/SubjectHeader.tsx", import.meta.url),
+          "utf8",
+        ),
+        readFile(
+          new URL("../components/course-manager/SubjectWorkspace.tsx", import.meta.url),
+          "utf8",
+        ),
+        readFile(new URL("../components/AddLessonModal.tsx", import.meta.url), "utf8"),
+      ]);
+
+    expect(listSource).toContain("export function SubjectListPane");
+    expect(listSource).toContain("Tên môn học mới");
+    expect(listSource).toContain("Đang học");
+    expect(listSource).toContain("Đã lưu trữ");
+    expect(listSource).toContain("Khôi phục");
+    expect(listSource).toContain("Hoàn tác thay đổi danh mục gần nhất");
+
+    expect(headerSource).toContain("export function SubjectHeader");
+    expect(headerSource).toContain("Thêm chủ đề");
+    expect(headerSource).toContain("Thêm bài học");
+    expect(headerSource).toContain("Chỉnh sửa môn");
+    expect(headerSource).toContain("Xuất riêng môn này");
+    expect(headerSource).toContain("Lưu trữ môn");
+    expect(headerSource).toContain("Xóa môn và các bài");
+
+    expect(workspaceSource).toContain("export function SubjectWorkspace");
+    expect(workspaceSource).toContain("Danh sách môn");
+    expect(workspaceSource).toContain("Tìm tên bài hoặc chủ đề");
+    expect(workspaceSource).toContain("Thứ tự lộ trình");
+    expect(workspaceSource).toContain("Chọn nhiều");
+    expect(workspaceSource).toContain("Hoàn tác thay đổi lịch");
+    expect(workspaceSource).toContain("onUndoSchedule");
+
+    for (const source of [listSource, headerSource, workspaceSource]) {
+      for (const forbidden of [
+        "custom-subjects",
+        "schedule-candidates",
+        "useScheduleTransactions",
+        "scheduleTransactions",
+        "executeMutation",
+        "toast",
+        "localStorage",
+        "sessionStorage",
+      ]) {
+        expect(source).not.toContain(forbidden);
+      }
+    }
+
+    expect(modalSource).toContain("<SubjectListPane");
+    expect(modalSource).toContain("<SubjectHeader");
+    expect(modalSource).toContain("<SubjectWorkspace");
+    expect(modalSource).toContain("getArchivedCatalog");
+    expect(modalSource).toContain("restoreArchivedSubject");
+    expect(modalSource).toContain("restoreArchivedLesson");
+    expect(modalSource).toContain("restoreCatalogBackup");
+    expect(modalSource).toContain("<AddLessonModal");
+    expect(modalSource).toContain("confirmTimerImpact");
+    expect(modalSource).toContain("scheduleTransactions.undoLastMutation");
+    expect(modalSource).toContain("setMobileDetail(false)");
+
+    expect(addLessonSource).not.toContain("scheduleTransactions");
+    expect(modalSource).not.toContain('kind: "archive"');
+    expect(modalSource).not.toContain('kind: "restore"');
+    expect(modalSource).not.toContain('kind: "delete"');
+    expect(modalSource).not.toContain('kind: "add-lesson"');
+  });
 });
