@@ -58,7 +58,11 @@ function settings(hours = 1) {
 function commitCandidate(params: {
   current: ScheduleCandidate;
   candidate: ScheduleCandidate;
-  kind: "change-schedule-mode" | "reorder-lesson" | "change-day-capacity";
+  kind:
+    | "move-lesson-date"
+    | "change-schedule-mode"
+    | "reorder-lesson"
+    | "change-day-capacity";
 }) {
   return commitScheduleMutation({
     current: params.current,
@@ -212,6 +216,76 @@ describe("schedule operation transactions", () => {
       horizonDays: 2,
     });
     expect(restoredPlan).toEqual(beforePlan);
+  });
+
+  test("failed move persistence publishes neither the new date nor provenance", () => {
+    const current = createScheduleSnapshot(
+      catalog([lesson("first", "2030-01-01")]),
+      settings(2),
+    );
+    const built = buildMoveLessonDateCandidate({
+      current,
+      lessonId: "first",
+      targetDateISO: "2030-01-03",
+      now: () => new Date("2030-01-02T00:00:00.000Z"),
+    });
+    if (!built.ok) throw new Error(built.error);
+    const applyCandidate = vi.fn();
+    const result = commitScheduleMutation({
+      current,
+      candidate: built.candidate,
+      history: [],
+      kind: "move-lesson-date",
+      description: "Di chuyển kiểm thử",
+      saveSubjects: vi.fn(() => ({ ok: false, error: "write failed" })),
+      savePlannerSettings: vi.fn(success),
+      applyCandidate,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(applyCandidate).not.toHaveBeenCalled();
+    expect(result.history).toEqual([]);
+    expect(current.subjects[0].milestones[0].lessons[0].placementProvenance).toBeUndefined();
+  });
+
+  test("undo restores the previous date and previous provenance", () => {
+    const current = createScheduleSnapshot(
+      catalog([lesson("first", "2030-01-01")]),
+      settings(2),
+    );
+    current.subjects[0].milestones[0].lessons[0].placementProvenance = {
+      kind: "manual-move",
+      movedAt: "2030-01-01T00:00:00.000Z",
+      fromDateISO: "2029-12-31",
+      toDateISO: "2030-01-01",
+    };
+    const built = buildMoveLessonDateCandidate({
+      current,
+      lessonId: "first",
+      targetDateISO: "2030-01-03",
+      now: () => new Date("2030-01-02T00:00:00.000Z"),
+    });
+    if (!built.ok) throw new Error(built.error);
+    const committed = commitCandidate({
+      current,
+      candidate: built.candidate,
+      kind: "move-lesson-date",
+    });
+    if (!committed.ok || committed.status !== "committed") throw new Error("Expected commit");
+
+    let restored: ScheduleCandidate | null = null;
+    const undone = undoLastScheduleMutation({
+      current: built.candidate,
+      history: committed.history,
+      saveSubjects: vi.fn(success),
+      savePlannerSettings: vi.fn(success),
+      applyCandidate: (candidate) => {
+        restored = candidate;
+      },
+    });
+
+    expect(undone.ok).toBe(true);
+    expect(restored).toEqual(current);
   });
 
   test("moving a flexible earliest date later cannot make the lesson appear earlier", () => {
