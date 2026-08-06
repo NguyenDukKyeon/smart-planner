@@ -120,6 +120,17 @@ export function buildEditLessonCandidate(params: {
     return { ok: false, error: "Ngày bắt đầu linh hoạt không hợp lệ." };
   }
 
+  if (
+    title === lesson.title &&
+    plannedDurationMinutes === lesson.plannedDurationMinutes &&
+    params.input.scheduledDate === lesson.scheduledDate &&
+    params.input.scheduleMode === (lesson.scheduleMode ?? "flexible") &&
+    sourcePosition.subjectId === params.input.subjectId &&
+    sourcePosition.topicId === params.input.topicId
+  ) {
+    return { ok: true, candidate: current };
+  }
+
   let subjects = updateLessonDetails(current.subjects, params.lessonId, {
     title,
     plannedDurationMinutes,
