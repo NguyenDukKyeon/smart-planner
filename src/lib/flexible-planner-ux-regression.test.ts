@@ -11,6 +11,10 @@ describe("Flexible schedule UX", () => {
       new URL("../components/flexible-planner/useScheduleTransactions.ts", import.meta.url),
       "utf8",
     );
+    const moveDialogSource = await fs.readFile(
+      new URL("../components/flexible-planner/MoveLessonDateDialog.tsx", import.meta.url),
+      "utf8",
+    );
     const routeSource = await fs.readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
     expect(plannerSource).toContain("Lịch linh hoạt");
@@ -33,5 +37,19 @@ describe("Flexible schedule UX", () => {
     expect(hookSource).toContain("isEditableUndoTarget");
     expect(routeSource).toContain("Lịch linh hoạt");
     expect(routeSource).toContain("transactionAdapters={scheduleTransactionAdapters}");
+
+    expect(moveDialogSource).toContain("DialogTrigger");
+    expect(moveDialogSource).toContain("Chọn ngày");
+    expect(moveDialogSource).toContain('type="date"');
+    expect(moveDialogSource).toContain("isDateISO");
+    expect(moveDialogSource).toContain("Bài cố định sẽ chỉ xuất hiện đúng ngày đã chọn.");
+    expect(moveDialogSource).toContain(
+      "Ngày đã chọn là ngày sớm nhất; lịch có thể xếp bài sang ngày sau nếu thiếu công suất.",
+    );
+    expect(moveDialogSource).toContain("const moved = onMove(");
+    expect(moveDialogSource).toContain("if (moved) setOpen(false)");
+    expect(moveDialogSource).not.toContain("buildMoveLessonDateCandidate");
+    expect(moveDialogSource).not.toContain("executeMutation");
+    expect(moveDialogSource).not.toContain("localStorage");
   });
 });
