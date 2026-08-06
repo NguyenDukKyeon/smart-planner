@@ -81,7 +81,11 @@ function lesson(params: {
   };
 }
 
-function catalogFixture(): { subjects: Subject[]; subject: Subject; lessons: Record<string, Lesson> } {
+function catalogFixture(): {
+  subjects: Subject[];
+  subject: Subject;
+  lessons: Record<string, Lesson>;
+} {
   const lessons = {
     zulu: lesson({ id: "zulu", title: "Zulu", date: "2030-01-03", minutes: 60 }),
     alpha: lesson({ id: "alpha", title: "Alpha", date: "", minutes: 20 }),
