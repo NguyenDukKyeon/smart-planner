@@ -94,10 +94,7 @@ describe("Course Manager drag interaction", () => {
         new URL("../components/course-manager/useLessonReorder.ts", import.meta.url),
         "utf8",
       ),
-      fs.readFile(
-        new URL("../components/course-manager/LessonRow.tsx", import.meta.url),
-        "utf8",
-      ),
+      fs.readFile(new URL("../components/course-manager/LessonRow.tsx", import.meta.url), "utf8"),
       fs.readFile(
         new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
         "utf8",
