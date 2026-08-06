@@ -55,7 +55,8 @@ export function LearningRoadmap({
 
   const activeLessons = useMemo(() => {
     const selectedSubject = sortedSubjects.find((subject) => subject.id === subjectId);
-    const selectedSubjects = subjectId === "all" || !selectedSubject ? sortedSubjects : [selectedSubject];
+    const selectedSubjects =
+      subjectId === "all" || !selectedSubject ? sortedSubjects : [selectedSubject];
     return selectedSubjects.flatMap((subject) =>
       subject.milestones.flatMap((milestone) => milestone.lessons),
     );
