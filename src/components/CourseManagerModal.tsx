@@ -474,8 +474,8 @@ export function CourseManagerModal({
 
                   {!reorderEnabled ? (
                     <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                      Xóa tìm kiếm và chọn “Tất cả / Theo lộ trình” để sắp xếp môn, chủ đề
-                      hoặc bài học.
+                      Xóa tìm kiếm và chọn “Tất cả / Theo lộ trình” để sắp xếp môn, chủ đề hoặc bài
+                      học.
                     </p>
                   ) : null}
 
