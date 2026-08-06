@@ -47,7 +47,7 @@ export type BulkLessonSchedulePatch = {
 };
 
 type SelectedLessonsResult =
-  | { ok: true; ids: string[]; lessons: Map<string, Lesson> }
+  { ok: true; ids: string[]; lessons: Map<string, Lesson> }
   | { ok: false; error: string };
 
 function isReviewTaskId(id: string): boolean {
@@ -315,9 +315,7 @@ export function buildMoveLessonsCandidate(params: {
   const selected = validateSelectedLessons(current.subjects, params.lessonIds);
   if (!selected.ok) return selected;
 
-  const targetSubject = current.subjects.find(
-    (subject) => subject.id === params.targetSubjectId,
-  );
+  const targetSubject = current.subjects.find((subject) => subject.id === params.targetSubjectId);
   if (!targetSubject) {
     return { ok: false, error: "Vui lòng chọn môn học đích hợp lệ." };
   }
