@@ -9,6 +9,10 @@ const hookSource = readFileSync(
   new URL("../components/flexible-planner/useScheduleTransactions.ts", import.meta.url),
   "utf8",
 );
+const moveDialogSource = readFileSync(
+  new URL("../components/flexible-planner/MoveLessonDateDialog.tsx", import.meta.url),
+  "utf8",
+);
 const inputSource = readFileSync(new URL("../components/ui/input.tsx", import.meta.url), "utf8");
 const dashboardSource = readFileSync(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
@@ -42,6 +46,16 @@ describe("Flexible Planner shared schedule transactions", () => {
     expect(plannerSource).toContain('kind: "move-lesson-date"');
     expect(plannerSource).toContain("moveLessonToDate(lessonId, targetDateISO)");
     expect(plannerSource).not.toContain("updateLessonDetails(subjects");
+  });
+
+  test("the direct date dialog delegates to the canonical parent move boundary", () => {
+    expect(plannerSource).toContain("<MoveLessonDateDialog");
+    expect(plannerSource).toContain("onMove={onMoveLesson}");
+    expect(moveDialogSource).toContain("onMove(lesson.id, draftDate)");
+    expect(moveDialogSource).not.toContain("buildMoveLessonDateCandidate");
+    expect(moveDialogSource).not.toContain("commitScheduleMutation");
+    expect(moveDialogSource).not.toContain("persistPlannerSettings");
+    expect(moveDialogSource).not.toContain("persistScheduleSubjects");
   });
 
   test("day capacity commits on an explicit boundary instead of every keystroke", () => {
