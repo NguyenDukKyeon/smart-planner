@@ -65,6 +65,7 @@ import {
   replaceRawValuesSafely,
   restoreSnapshotFromKey,
   type StorageLoadResult,
+  type StorageWriteResult,
 } from "@/lib/app-storage";
 import {
   TIMER_KEY,
@@ -183,6 +184,8 @@ function Dashboard() {
     setTodayHours,
     setDayHours,
     setDefaultDailyHours,
+    persistPlannerSettings,
+    applyPersistedPlannerSettings,
     addStudySession,
     saveHabitDefinition,
     archiveHabit,
@@ -449,33 +452,81 @@ function Dashboard() {
     })();
   }, [hydrated, state, storageBlocked, subjects, workspaceStorageLoaded]);
 
+  const persistScheduleSubjects = useCallback(
+    (nextSubjects: Subject[]): StorageWriteResult => {
+      if (storageBlocked) {
+        return {
+          ok: false,
+          error: "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.",
+        };
+      }
+      const saved = saveStoredCustomSubjects(nextSubjects);
+      if (!saved.ok) {
+        setSubjectStorageStatus({ status: "unavailable", error: saved.error });
+        return saved;
+      }
+      setSubjectStorageStatus({ status: "ok", value: nextSubjects });
+      return saved;
+    },
+    [storageBlocked],
+  );
+
+  const backupScheduleSubjects = useCallback(
+    (currentSubjects: Subject[]): StorageWriteResult => {
+      if (storageBlocked) {
+        return {
+          ok: false,
+          error: "Không thể sao lưu danh mục khi bộ nhớ cần được khôi phục.",
+        };
+      }
+      return saveCatalogBackup(currentSubjects);
+    },
+    [storageBlocked],
+  );
+
+  const applyPersistedScheduleSubjects = useCallback((nextSubjects: Subject[]) => {
+    setSubjects(nextSubjects);
+    setSubjectStorageStatus({ status: "ok", value: nextSubjects });
+  }, []);
+
   const updateSubjectsSafely = useCallback(
     (nextSubjects: Subject[], options: CatalogUpdateOptions = {}): CatalogUpdateResult => {
-      if (storageBlocked) {
-        const error = "Không thể thay đổi danh mục khi bộ nhớ cần được khôi phục.";
-        toast.error(error);
-        return { ok: false, error };
-      }
-
       if (!options.alreadyPersisted) {
         if (options.createBackup) {
-          const backedUp = saveCatalogBackup(subjects);
+          const backedUp = backupScheduleSubjects(subjects);
           if (!backedUp.ok) {
             toast.error(backedUp.error);
             return backedUp;
           }
         }
-        const saved = saveStoredCustomSubjects(nextSubjects);
+        const saved = persistScheduleSubjects(nextSubjects);
         if (!saved.ok) {
           toast.error(saved.error);
           return saved;
         }
       }
 
-      setSubjects(nextSubjects);
+      applyPersistedScheduleSubjects(nextSubjects);
       return { ok: true };
     },
-    [storageBlocked, subjects],
+    [applyPersistedScheduleSubjects, backupScheduleSubjects, persistScheduleSubjects, subjects],
+  );
+
+  const scheduleTransactionAdapters = useMemo(
+    () => ({
+      saveSubjects: persistScheduleSubjects,
+      savePlannerSettings: persistPlannerSettings,
+      backupSubjects: backupScheduleSubjects,
+      applySubjects: applyPersistedScheduleSubjects,
+      applyPlannerSettings: applyPersistedPlannerSettings,
+    }),
+    [
+      applyPersistedPlannerSettings,
+      applyPersistedScheduleSubjects,
+      backupScheduleSubjects,
+      persistPlannerSettings,
+      persistScheduleSubjects,
+    ],
   );
 
   const handleStartFocus = useCallback(
@@ -929,8 +980,7 @@ function Dashboard() {
                 <FlexiblePlanner
                   state={state}
                   subjects={subjects}
-                  onSetDayHours={setDayHours}
-                  onSubjectsUpdated={updateSubjectsSafely}
+                  transactionAdapters={scheduleTransactionAdapters}
                 />
               </TabsContent>
               <TabsContent value="original" className="mt-4 space-y-4">

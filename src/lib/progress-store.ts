@@ -371,6 +371,24 @@ export function saveProgressStorage(
   );
 }
 
+export function applyPlannerSettingsToProgressState(
+  state: ProgressState,
+  plannerSettings: PlannerSettings,
+): ProgressState {
+  return {
+    ...state,
+    plannerSettings: structuredClone(plannerSettings),
+  };
+}
+
+export function savePlannerSettingsStorage(
+  state: ProgressState,
+  plannerSettings: PlannerSettings,
+  storage?: StorageAdapter | null,
+): StorageWriteResult {
+  return saveProgressStorage(applyPlannerSettingsToProgressState(state, plannerSettings), storage);
+}
+
 /** Pure candidate builder shared by the timer transaction and React store. */
 export function appendStudySessionToProgress(
   current: ProgressState,
@@ -600,6 +618,7 @@ export function useProgress() {
   });
   const stateRef = useRef(state);
   const persistenceEnabled = useRef(false);
+  const plannerSettingsRollbackPendingRef = useRef(false);
 
   useEffect(() => {
     // Keep all reads and migration backups behind app-storage.  In particular,
@@ -695,6 +714,42 @@ export function useProgress() {
     }
     stateRef.current = next;
     setState(next);
+    return true;
+  }, []);
+
+  const persistPlannerSettings = useCallback(
+    (plannerSettings: PlannerSettings): StorageWriteResult => {
+      const isRollbackAttempt = plannerSettingsRollbackPendingRef.current;
+      if (!persistenceEnabled.current && !isRollbackAttempt) {
+        const error = "Bộ nhớ trình duyệt chưa sẵn sàng; thay đổi chưa được áp dụng.";
+        setStorageError(error);
+        return { ok: false, error };
+      }
+
+      const saved = savePlannerSettingsStorage(stateRef.current, plannerSettings);
+      if (!saved.ok) {
+        plannerSettingsRollbackPendingRef.current = !isRollbackAttempt;
+        persistenceEnabled.current = false;
+        setStorageStatus({ status: "unavailable", error: saved.error });
+        setStorageError(saved.error);
+        return saved;
+      }
+
+      plannerSettingsRollbackPendingRef.current = false;
+      persistenceEnabled.current = true;
+      setStorageStatus({ status: "ok", value: stateRef.current });
+      setStorageError(null);
+      return saved;
+    },
+    [],
+  );
+
+  const applyPersistedPlannerSettings = useCallback((plannerSettings: PlannerSettings): boolean => {
+    const next = applyPlannerSettingsToProgressState(stateRef.current, plannerSettings);
+    stateRef.current = next;
+    setState(next);
+    setStorageStatus({ status: "ok", value: next });
+    setStorageError(null);
     return true;
   }, []);
 
@@ -1034,6 +1089,8 @@ export function useProgress() {
     setTodayHours,
     setDayHours,
     setDefaultDailyHours,
+    persistPlannerSettings,
+    applyPersistedPlannerSettings,
     addStudySession,
     initializeProgress,
     resetOnboarding,

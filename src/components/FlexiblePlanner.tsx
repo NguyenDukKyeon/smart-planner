@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,10 +14,14 @@ import { buildFlexiblePlan, findLessonById, type PlanDay } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
 import { daysBetweenISO, displayDate, getSundayISO, todayISO, weekdayVi } from "@/lib/date-utils";
 import {
-  updateLessonDetails,
-  type CatalogUpdateOptions,
-  type CatalogUpdateResult,
-} from "@/lib/custom-subjects";
+  buildChangeDayCapacityCandidate,
+  buildMoveLessonDateCandidate,
+} from "@/lib/schedule-candidates";
+import { createScheduleSnapshot } from "@/lib/schedule-transactions";
+import {
+  useScheduleTransactions,
+  type ScheduleTransactionAdapters,
+} from "@/components/flexible-planner/useScheduleTransactions";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";
@@ -32,12 +36,7 @@ import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
 type Props = {
   state: ProgressState;
   subjects?: Subject[];
-  onSetDayHours: (dateISO: string, hours: number | null) => void;
-  onSetDefaultDailyHours?: (hours: number) => void;
-  onSubjectsUpdated: (
-    subjects: Subject[],
-    options?: CatalogUpdateOptions,
-  ) => CatalogUpdateResult | boolean | void;
+  transactionAdapters: ScheduleTransactionAdapters;
 };
 
 type DisplayLesson = {
@@ -61,27 +60,6 @@ type WeekGroup = {
 };
 
 type LessonMode = "fixed" | "flexible";
-
-type UndoEntry = {
-  subjects: Subject[];
-  lessonTitle: string;
-  fromDateISO?: string;
-  toDateISO: string;
-};
-
-function catalogUpdateSucceeded(result: CatalogUpdateResult | boolean | void): boolean {
-  return result == null ? true : typeof result === "boolean" ? result : result.ok;
-}
-
-function isTextEditingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  );
-}
 
 function getLessonMode(lesson: Lesson): LessonMode {
   return (lesson as Lesson & { scheduleMode?: LessonMode }).scheduleMode ?? "flexible";
@@ -130,19 +108,13 @@ function createLessonDragPreview(event: ReactDragEvent<HTMLElement>, item: Displ
   window.setTimeout(() => preview.remove(), 0);
 }
 
-export function FlexiblePlanner({
-  state,
-  subjects = SUBJECTS,
-  onSetDayHours,
-  onSubjectsUpdated,
-}: Props) {
+export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapters }: Props) {
   const [numWeeks, setNumWeeks] = useState(2);
   const [subjectId, setSubjectId] = useState("all");
   const [userToggledWeeks, setUserToggledWeeks] = useState<Record<string, boolean>>({});
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [recentlyMovedLessonId, setRecentlyMovedLessonId] = useState<string | null>(null);
-  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const today = todayISO();
 
   const sortedSubjects = useMemo(() => sortSubjects(subjects), [subjects]);
@@ -304,42 +276,18 @@ export function FlexiblePlanner({
 
   const selectedSubject = subjectTabs.find((subject) => subject.id === subjectId) ?? subjectTabs[0];
 
-  const undoLastMove = useCallback(() => {
-    const entry = undoStack.at(-1);
-    if (!entry) return false;
-
-    const result = onSubjectsUpdated(entry.subjects, { createBackup: false });
-    if (!catalogUpdateSucceeded(result)) return false;
-
-    setUndoStack((current) => current.slice(0, -1));
-    setRecentlyMovedLessonId(null);
-    toast.success(`Đã hoàn tác “${entry.lessonTitle}”.`, {
-      description: entry.fromDateISO
-        ? `Khôi phục từ ${displayDate(entry.toDateISO)} về ${displayDate(entry.fromDateISO)}.`
-        : `Đã trả lại trạng thái trước khi chuyển sang ${displayDate(entry.toDateISO)}.`,
-    });
-    return true;
-  }, [onSubjectsUpdated, undoStack]);
-
-  useEffect(() => {
-    const handleUndoShortcut = (event: KeyboardEvent) => {
-      if (
-        !(event.ctrlKey || event.metaKey) ||
-        event.shiftKey ||
-        event.key.toLowerCase() !== "z" ||
-        isTextEditingTarget(event.target) ||
-        undoStack.length === 0
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      undoLastMove();
-    };
-
-    window.addEventListener("keydown", handleUndoShortcut);
-    return () => window.removeEventListener("keydown", handleUndoShortcut);
-  }, [undoLastMove, undoStack.length]);
+  const { history, canUndo, executeMutation, undoLastMutation } = useScheduleTransactions({
+    subjects,
+    plannerSettings: state.plannerSettings,
+    adapters: transactionAdapters,
+    onUndoSuccess: (entry) => {
+      setRecentlyMovedLessonId(null);
+      toast.success("Đã hoàn tác thay đổi lịch.", { description: entry.description });
+    },
+    onUndoError: (error, rollbackError) => {
+      toast.error(rollbackError ? `${error} ${rollbackError}` : error);
+    },
+  });
 
   const toggleWeek = (id: string, isCurrentlyCollapsed: boolean) => {
     setUserToggledWeeks((previous) => ({
@@ -350,39 +298,30 @@ export function FlexiblePlanner({
 
   const moveLessonToDate = (lessonId: string, targetDateISO: string) => {
     const lesson = findLessonById(lessonId, subjects);
-    if (!lesson) {
-      toast.error("Không tìm thấy bài học để di chuyển.");
-      return false;
-    }
-
-    if (lesson.scheduledDate === targetDateISO) {
-      setRecentlyMovedLessonId(lessonId);
-      window.setTimeout(() => setRecentlyMovedLessonId(null), 700);
-      return true;
-    }
-
-    const nextSubjects = updateLessonDetails(subjects, lessonId, {
-      scheduledDate: targetDateISO,
+    const built = buildMoveLessonDateCandidate({
+      current: createScheduleSnapshot(subjects, state.plannerSettings),
+      lessonId,
+      targetDateISO,
     });
-    if (nextSubjects === subjects) {
-      toast.error("Không thể cập nhật ngày của bài học.");
+    if (!built.ok || !lesson) {
+      toast.error(built.ok ? "Không tìm thấy bài học để di chuyển." : built.error);
       return false;
     }
 
-    const result = onSubjectsUpdated(nextSubjects, { createBackup: true });
-    if (!catalogUpdateSucceeded(result)) return false;
+    const fromLabel = lesson.scheduledDate ? displayDate(lesson.scheduledDate) : "chưa đặt ngày";
+    const result = executeMutation({
+      candidate: built.candidate,
+      kind: "move-lesson-date",
+      description: `Chuyển “${lesson.title}” từ ${fromLabel} sang ${displayDate(targetDateISO)}.`,
+    });
+    if (!result.ok) {
+      toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
+      return false;
+    }
 
-    setUndoStack((current) =>
-      [
-        ...current,
-        {
-          subjects,
-          lessonTitle: lesson.title,
-          fromDateISO: lesson.scheduledDate || undefined,
-          toDateISO: targetDateISO,
-        },
-      ].slice(-20),
-    );
+    setRecentlyMovedLessonId(lessonId);
+    window.setTimeout(() => setRecentlyMovedLessonId(null), result.status === "noop" ? 700 : 850);
+    if (result.status === "noop") return true;
 
     const mode = getLessonMode(lesson);
     toast.success(
@@ -396,9 +335,30 @@ export function FlexiblePlanner({
             : "Nếu ngày đó quá tải, lịch linh hoạt có thể dời bài sang ngày sau. Nhấn Ctrl+Z để hoàn tác.",
       },
     );
+    return true;
+  };
 
-    setRecentlyMovedLessonId(lessonId);
-    window.setTimeout(() => setRecentlyMovedLessonId(null), 850);
+  const commitDayCapacity = (dateISO: string, hours: number) => {
+    const { candidate } = buildChangeDayCapacityCandidate({
+      current: createScheduleSnapshot(subjects, state.plannerSettings),
+      dateISO,
+      hours,
+      todayDateISO: today,
+    });
+    const result = executeMutation({
+      candidate,
+      kind: "change-day-capacity",
+      description: `Đổi công suất ngày ${displayDate(dateISO)} thành ${hours} giờ.`,
+    });
+    if (!result.ok) {
+      toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
+      return false;
+    }
+    if (result.status === "committed") {
+      toast.success(`Đã đặt ${hours} giờ cho ${displayDate(dateISO)}.`, {
+        description: "Nhấn Ctrl+Z để hoàn tác.",
+      });
+    }
     return true;
   };
 
@@ -451,17 +411,17 @@ export function FlexiblePlanner({
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
           <button
             type="button"
-            disabled={undoStack.length === 0}
-            onClick={undoLastMove}
+            disabled={!canUndo}
+            onClick={undoLastMutation}
             className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 font-semibold text-slate-700 shadow-2xs transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Hoàn tác lần chuyển lịch gần nhất"
             title="Hoàn tác lần chuyển gần nhất (Ctrl+Z)"
           >
             <Undo2 className="h-3.5 w-3.5" />
             Hoàn tác
-            {undoStack.length > 0 && (
+            {history.length > 0 && (
               <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
-                {undoStack.length}
+                {history.length}
               </span>
             )}
             <span className="hidden text-[10px] font-medium text-slate-400 sm:inline">Ctrl+Z</span>
@@ -550,7 +510,7 @@ export function FlexiblePlanner({
                         draggedLessonId={draggedLessonId}
                         dragOverDate={dragOverDate}
                         recentlyMovedLessonId={recentlyMovedLessonId}
-                        onSetDayHours={onSetDayHours}
+                        onCommitDayHours={commitDayCapacity}
                         onDragStart={(event, item) => {
                           event.dataTransfer.effectAllowed = "move";
                           event.dataTransfer.setData(
@@ -616,6 +576,65 @@ export function FlexiblePlanner({
   );
 }
 
+function DayCapacityInput({
+  day,
+  onCommit,
+}: {
+  day: PlanDay;
+  onCommit: (dateISO: string, hours: number) => boolean;
+}) {
+  const [draft, setDraft] = useState(String(day.hours));
+  const cancelNextBlurCommitRef = useRef(false);
+
+  useEffect(() => {
+    setDraft(String(day.hours));
+  }, [day.hours]);
+
+  const commitDraft = () => {
+    if (cancelNextBlurCommitRef.current) {
+      cancelNextBlurCommitRef.current = false;
+      return;
+    }
+    if (draft.trim() === "") {
+      setDraft(String(day.hours));
+      return;
+    }
+    const value = Number(draft);
+    if (!Number.isFinite(value)) {
+      setDraft(String(day.hours));
+      return;
+    }
+    const normalized = normalizeDailyStudyHours(value);
+    const committed = onCommit(day.dateISO, normalized);
+    setDraft(String(committed ? normalized : day.hours));
+  };
+
+  return (
+    <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
+      <Input
+        type="number"
+        aria-label={`Giờ học ngày ${displayDate(day.dateISO)}`}
+        min={MIN_DAILY_STUDY_HOURS}
+        max={MAX_DAILY_STUDY_HOURS}
+        step={DAILY_STUDY_HOURS_STEP}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") {
+            cancelNextBlurCommitRef.current = true;
+            setDraft(String(day.hours));
+            event.currentTarget.blur();
+          }
+        }}
+        className="h-7 w-16 rounded-lg border-slate-200 bg-white px-1 text-center text-xs font-bold"
+      />
+      <span>giờ</span>
+    </label>
+  );
+}
+
 function PlanDayCard({
   day,
   today,
@@ -625,7 +644,7 @@ function PlanDayCard({
   draggedLessonId,
   dragOverDate,
   recentlyMovedLessonId,
-  onSetDayHours,
+  onCommitDayHours,
   onDragStart,
   onDragEnd,
   onDragOverDate,
@@ -640,7 +659,7 @@ function PlanDayCard({
   draggedLessonId: string | null;
   dragOverDate: string | null;
   recentlyMovedLessonId: string | null;
-  onSetDayHours: (dateISO: string, hours: number | null) => void;
+  onCommitDayHours: (dateISO: string, hours: number) => boolean;
   onDragStart: (event: ReactDragEvent<HTMLElement>, item: DisplayLesson) => void;
   onDragEnd: () => void;
   onDragOverDate: (dateISO: string | null) => void;
@@ -699,24 +718,7 @@ function PlanDayCard({
               </span>
             )}
           </div>
-          <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
-            <Input
-              type="number"
-              aria-label={`Giờ học ngày ${displayDate(day.dateISO)}`}
-              min={MIN_DAILY_STUDY_HOURS}
-              max={MAX_DAILY_STUDY_HOURS}
-              step={DAILY_STUDY_HOURS_STEP}
-              value={day.hours}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                if (Number.isFinite(value)) {
-                  onSetDayHours(day.dateISO, normalizeDailyStudyHours(value));
-                }
-              }}
-              className="h-7 w-16 rounded-lg border-slate-200 bg-white px-1 text-center text-xs font-bold"
-            />
-            <span>giờ</span>
-          </label>
+          <DayCapacityInput day={day} onCommit={onCommitDayHours} />
         </div>
         <HighStudyHoursNote hours={day.hours} />
 

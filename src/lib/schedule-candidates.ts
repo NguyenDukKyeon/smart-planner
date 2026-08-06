@@ -1,0 +1,236 @@
+import {
+  moveLessonBeforeInTopic,
+  moveLessonsToTopic,
+  updateLessonDetails,
+} from "./custom-subjects";
+import { isDateISO } from "./date-utils";
+import type { LessonScheduleMode, Subject } from "./mock-data";
+import { findLessonById } from "./planner";
+import { normalizeDailyStudyHours } from "./study-hours";
+import {
+  createScheduleSnapshot,
+  type ScheduleCandidate,
+  type ScheduleSnapshot,
+} from "./schedule-transactions";
+
+export type ScheduleCandidateBuildResult =
+  | { ok: true; candidate: ScheduleCandidate }
+  | {
+      ok: false;
+      error: string;
+    };
+
+export type MoveLessonDateCandidateResult = ScheduleCandidateBuildResult;
+
+export type ReorderLessonTarget = {
+  subjectId: string;
+  topicId: string;
+  beforeLessonId: string | null;
+};
+
+function isReviewTaskId(id: string): boolean {
+  return id.startsWith("review:");
+}
+
+function allLessonIds(subjects: Subject[]): string[] {
+  return subjects.flatMap((subject) =>
+    subject.milestones.flatMap((milestone) => milestone.lessons.map((lesson) => lesson.id)),
+  );
+}
+
+function preservesLessonIdentity(previous: Subject[], candidate: Subject[]): boolean {
+  const previousIds = allLessonIds(previous).sort();
+  const candidateIds = allLessonIds(candidate).sort();
+  return (
+    previousIds.length === candidateIds.length &&
+    new Set(candidateIds).size === candidateIds.length &&
+    previousIds.every((id, index) => id === candidateIds[index])
+  );
+}
+
+export function buildMoveLessonDateCandidate(params: {
+  current: ScheduleSnapshot;
+  lessonId: string;
+  targetDateISO: string;
+}): MoveLessonDateCandidateResult {
+  const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
+  const lesson = findLessonById(params.lessonId, current.subjects);
+  if (!lesson) {
+    return { ok: false, error: "Không tìm thấy bài học để di chuyển." };
+  }
+
+  if (lesson.scheduledDate === params.targetDateISO) {
+    return { ok: true, candidate: current };
+  }
+
+  const subjects = updateLessonDetails(current.subjects, params.lessonId, {
+    scheduledDate: params.targetDateISO,
+  });
+  if (subjects === current.subjects) {
+    return { ok: false, error: "Không thể cập nhật ngày của bài học." };
+  }
+
+  return {
+    ok: true,
+    candidate: {
+      subjects,
+      plannerSettings: current.plannerSettings,
+    },
+  };
+}
+
+export function buildChangeDayCapacityCandidate(params: {
+  current: ScheduleSnapshot;
+  dateISO: string;
+  hours: number;
+  todayDateISO: string;
+}): { candidate: ScheduleCandidate } {
+  const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
+  const normalized = normalizeDailyStudyHours(params.hours);
+  const dailyHours = { ...current.plannerSettings.dailyHours };
+
+  if (normalized === current.plannerSettings.defaultDailyHours) {
+    delete dailyHours[params.dateISO];
+  } else {
+    dailyHours[params.dateISO] = normalized;
+  }
+
+  return {
+    candidate: {
+      subjects: current.subjects,
+      plannerSettings: {
+        ...current.plannerSettings,
+        dailyHours,
+        todayHours:
+          params.dateISO === params.todayDateISO ? normalized : current.plannerSettings.todayHours,
+      },
+    },
+  };
+}
+
+export function buildChangeScheduleModeCandidate(params: {
+  current: ScheduleSnapshot;
+  lessonId: string;
+  scheduleMode: LessonScheduleMode;
+  scheduledDate?: string;
+}): ScheduleCandidateBuildResult {
+  const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
+  if (isReviewTaskId(params.lessonId)) {
+    return { ok: false, error: "Không thể đổi chế độ của nhiệm vụ ôn tập." };
+  }
+
+  const lesson = findLessonById(params.lessonId, current.subjects);
+  if (!lesson) {
+    return { ok: false, error: "Không tìm thấy bài học để đổi chế độ." };
+  }
+
+  const scheduledDate = params.scheduledDate ?? lesson.scheduledDate;
+  if (params.scheduleMode === "fixed" && !isDateISO(scheduledDate)) {
+    return { ok: false, error: "Bài cố định cần một ngày hợp lệ." };
+  }
+  if (params.scheduleMode === "flexible" && scheduledDate !== "" && !isDateISO(scheduledDate)) {
+    return { ok: false, error: "Ngày bắt đầu linh hoạt không hợp lệ." };
+  }
+
+  if (
+    (lesson.scheduleMode ?? "flexible") === params.scheduleMode &&
+    lesson.scheduledDate === scheduledDate
+  ) {
+    return { ok: true, candidate: current };
+  }
+
+  const subjects = updateLessonDetails(current.subjects, params.lessonId, {
+    scheduleMode: params.scheduleMode,
+    scheduledDate,
+  });
+  return {
+    ok: true,
+    candidate: {
+      subjects,
+      plannerSettings: current.plannerSettings,
+    },
+  };
+}
+
+export function buildReorderLessonCandidate(params: {
+  current: ScheduleSnapshot;
+  lessonId: string;
+  target: ReorderLessonTarget;
+}): ScheduleCandidateBuildResult {
+  const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
+  if (isReviewTaskId(params.lessonId)) {
+    return { ok: false, error: "Không thể sắp xếp nhiệm vụ ôn tập như bài học." };
+  }
+
+  const lesson = findLessonById(params.lessonId, current.subjects);
+  if (!lesson) {
+    return { ok: false, error: "Không tìm thấy bài học để sắp xếp." };
+  }
+
+  const targetSubject = current.subjects.find((subject) => subject.id === params.target.subjectId);
+  const targetTopic = targetSubject?.milestones.find(
+    (milestone) => milestone.id === params.target.topicId,
+  );
+  if (!targetSubject || !targetTopic) {
+    return { ok: false, error: "Không tìm thấy vị trí đích để sắp xếp bài học." };
+  }
+
+  if (
+    params.target.beforeLessonId &&
+    !targetTopic.lessons.some((candidate) => candidate.id === params.target.beforeLessonId)
+  ) {
+    return { ok: false, error: "Không tìm thấy vị trí chèn trong chủ đề đích." };
+  }
+
+  const sourceTopic = current.subjects
+    .flatMap((subject) =>
+      subject.milestones.map((milestone) => ({ subjectId: subject.id, milestone })),
+    )
+    .find(({ milestone }) =>
+      milestone.lessons.some((candidate) => candidate.id === params.lessonId),
+    );
+
+  if (params.target.beforeLessonId === params.lessonId) {
+    if (
+      sourceTopic?.subjectId === params.target.subjectId &&
+      sourceTopic.milestone.id === params.target.topicId
+    ) {
+      return { ok: true, candidate: current };
+    }
+    return { ok: false, error: "Không tìm thấy vị trí chèn trong chủ đề đích." };
+  }
+
+  let subjects = moveLessonsToTopic(
+    current.subjects,
+    [params.lessonId],
+    params.target.subjectId,
+    params.target.topicId,
+  );
+  if (subjects === current.subjects) {
+    return { ok: false, error: "Không thể sắp xếp bài học vào vị trí đã chọn." };
+  }
+
+  subjects = moveLessonBeforeInTopic(
+    subjects,
+    params.target.subjectId,
+    params.target.topicId,
+    params.lessonId,
+    params.target.beforeLessonId,
+  );
+
+  if (!preservesLessonIdentity(current.subjects, subjects)) {
+    return { ok: false, error: "Không thể bảo toàn danh sách bài học khi sắp xếp." };
+  }
+
+  if (JSON.stringify(subjects) === JSON.stringify(current.subjects)) {
+    return { ok: true, candidate: current };
+  }
+
+  return {
+    ok: true,
+    candidate: {
+      subjects,
+      plannerSettings: current.plannerSettings,
+    },
+  };
+}
