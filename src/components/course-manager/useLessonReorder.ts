@@ -24,8 +24,18 @@ export type UseLessonReorderResult = {
   resetDrag: () => void;
 };
 
+function findScrollableCourseContainer(target: HTMLElement): HTMLElement | null {
+  let container = target.closest<HTMLElement>("[data-course-scroll-container]");
+  while (container && container.scrollHeight <= container.clientHeight + 1) {
+    container = container.parentElement?.closest<HTMLElement>(
+      "[data-course-scroll-container]",
+    ) ?? null;
+  }
+  return container;
+}
+
 export function autoScrollDuringLessonDrag(event: DragEvent<HTMLElement>) {
-  const container = event.currentTarget.closest<HTMLElement>("[data-course-scroll-container]");
+  const container = findScrollableCourseContainer(event.currentTarget);
   if (!container) return;
 
   const rect = container.getBoundingClientRect();
