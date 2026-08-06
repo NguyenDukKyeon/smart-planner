@@ -160,7 +160,10 @@ describe("scheduled lesson dates", () => {
       new URL("../components/LearningRoadmap.tsx", import.meta.url),
       "utf8",
     );
-    const selectorSource = await fs.readFile(new URL("./roadmap-views.ts", import.meta.url), "utf8");
+    const selectorSource = await fs.readFile(
+      new URL("./roadmap-views.ts", import.meta.url),
+      "utf8",
+    );
 
     expect(componentSource).toContain("buildRoadmapProjection");
     expect(componentSource).toContain("shiftedDates");
