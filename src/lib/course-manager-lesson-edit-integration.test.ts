@@ -41,9 +41,7 @@ function snapshot() {
             id: "source-topic",
             title: "Chủ đề A",
             subtitle: "1 bài học",
-            lessons: [
-              lesson("lesson-1", "Bài một", "Môn nguồn", "Chủ đề A", "2030-01-01"),
-            ],
+            lessons: [lesson("lesson-1", "Bài một", "Môn nguồn", "Chủ đề A", "2030-01-01")],
           },
         ],
       },
@@ -56,9 +54,7 @@ function snapshot() {
             id: "target-topic",
             title: "Chủ đề B",
             subtitle: "1 bài học",
-            lessons: [
-              lesson("lesson-2", "Bài hai", "Môn đích", "Chủ đề B", "2030-01-02"),
-            ],
+            lessons: [lesson("lesson-2", "Bài hai", "Môn đích", "Chủ đề B", "2030-01-02")],
           },
         ],
       },

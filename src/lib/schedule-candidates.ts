@@ -97,9 +97,7 @@ export function buildEditLessonCandidate(params: {
     return { ok: false, error: "Không tìm thấy bài học để chỉnh sửa." };
   }
 
-  const targetSubject = current.subjects.find(
-    (subject) => subject.id === params.input.subjectId,
-  );
+  const targetSubject = current.subjects.find((subject) => subject.id === params.input.subjectId);
   if (!targetSubject) {
     return { ok: false, error: "Vui lòng chọn môn học đích hợp lệ." };
   }
