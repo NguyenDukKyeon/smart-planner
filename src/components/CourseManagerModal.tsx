@@ -1,14 +1,29 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, BookOpen, Search, Undo2 } from "lucide-react";
+import { LibraryBig, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Lesson, LessonScheduleMode, Subject } from "@/lib/mock-data";
 import type { PlannerSettings } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
 import {
+  addSubjectToSubjects,
+  addTopicToSubject,
+  archiveLesson,
   archiveLessons,
+  archiveSubject,
+  downloadFile,
+  duplicateLessonInSubjects,
+  getArchivedCatalog,
   getLastCatalogStorageError,
+  removeLessonFromSubjects,
   removeLessonsFromSubjects,
+  removeSubjectFromSubjects,
+  removeTopicAndMoveLessonsToUncategorized,
+  renameTopicInSubjects,
+  restoreArchivedLesson,
+  restoreArchivedSubject,
+  restoreCatalogBackup,
   updateLessonDetails,
+  updateSubjectDetails,
   type CatalogUpdateOptions,
   type CatalogUpdateResult,
 } from "@/lib/custom-subjects";
@@ -24,6 +39,17 @@ import {
 } from "@/lib/schedule-candidates";
 import { createScheduleSnapshot, type ScheduleMutationKind } from "@/lib/schedule-transactions";
 import type { ScheduleTransactionController } from "@/components/schedule/useScheduleTransactions";
+import { AddLessonModal } from "@/components/AddLessonModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,11 +60,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 import { BulkActionsBar } from "./course-manager/BulkActionsBar";
 import { LessonEditorDialog } from "./course-manager/LessonEditorDialog";
 import { LessonRow } from "./course-manager/LessonRow";
+import { SubjectHeader } from "./course-manager/SubjectHeader";
+import { SubjectListPane } from "./course-manager/SubjectListPane";
+import { SubjectWorkspace } from "./course-manager/SubjectWorkspace";
 import { TopicSection } from "./course-manager/TopicSection";
 import {
   buildMinutesByLesson,
@@ -65,8 +93,24 @@ type Props = {
   trigger?: ReactNode;
 };
 
+type PendingDelete = {
+  title: string;
+  description: string;
+  nextSubjects: Subject[];
+  successMessage: string;
+};
+
+type TopicEditor = {
+  id: string | null;
+  title: string;
+};
+
 function catalogUpdateSucceeded(result: CatalogUpdateResult | boolean | void): boolean {
   return result == null ? true : typeof result === "boolean" ? result : result.ok;
+}
+
+function allLessons(subject: Subject): Lesson[] {
+  return subject.milestones.flatMap((topic) => topic.lessons);
 }
 
 function findLessonOwner(subjects: Subject[], lessonId: string) {
@@ -91,6 +135,7 @@ export function CourseManagerModal({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState(currentSubjects[0]?.id ?? "");
+  const [mobileDetail, setMobileDetail] = useState(false);
   const [subjectSearch, setSubjectSearch] = useState("");
   const [lessonSearch, setLessonSearch] = useState("");
   const [filter, setFilter] = useState<LessonFilter>("all");
@@ -100,8 +145,16 @@ export function CourseManagerModal({
   const [bulkTargetSubjectId, setBulkTargetSubjectId] = useState("");
   const [bulkTargetTopicId, setBulkTargetTopicId] = useState("");
   const [bulkDate, setBulkDate] = useState("");
-  const [bulkScheduleMode, setBulkScheduleMode] = useState<LessonScheduleMode>("flexible");
+  const [bulkScheduleMode, setBulkScheduleMode] =
+    useState<LessonScheduleMode>("flexible");
   const [bulkMinutes, setBulkMinutes] = useState(120);
+  const [archiveView, setArchiveView] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [newSubjectEmoji, setNewSubjectEmoji] = useState("📖");
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [subjectDraft, setSubjectDraft] = useState({ name: "", emoji: "📖" });
+  const [topicEditor, setTopicEditor] = useState<TopicEditor | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [draft, setDraft] = useState<LessonEditorDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -149,8 +202,25 @@ export function CourseManagerModal({
   const stats = selectedSubject
     ? deriveSubjectStats(selectedSubject, minutesByLesson, progress)
     : null;
+  const archived = getArchivedCatalog();
   const reorderEnabled =
     !subjectSearch.trim() && !lessonSearch.trim() && filter === "all" && sort === "roadmap";
+
+  const applyCatalog = (
+    subjects: Subject[],
+    message?: string,
+    options: CatalogUpdateOptions = {},
+  ): boolean => {
+    if (subjects === currentSubjects) {
+      const error = getLastCatalogStorageError();
+      if (error) toast.error(error);
+      return false;
+    }
+    const result = onSubjectsUpdated(subjects, options);
+    if (!catalogUpdateSucceeded(result)) return false;
+    if (message) toast.success(message);
+    return true;
+  };
 
   const clearSelection = () => {
     setSelectedLessonIds(new Set());
@@ -173,6 +243,235 @@ export function CourseManagerModal({
     );
   };
 
+  const createSubject = () => {
+    const name = newSubjectName.trim();
+    if (!name) {
+      toast.error("Vui lòng nhập tên môn học.");
+      return;
+    }
+    if (
+      currentSubjects.some(
+        (subject) => subject.name.localeCompare(name, "vi", { sensitivity: "base" }) === 0,
+      )
+    ) {
+      toast.error("Môn học này đã tồn tại.");
+      return;
+    }
+    const next = addSubjectToSubjects(currentSubjects, name, newSubjectEmoji.trim() || "📖");
+    if (!applyCatalog(next, `Đã tạo môn ${name}.`, { createBackup: true })) return;
+    const created = next.find((subject) => subject.name === name);
+    if (created) {
+      setSelectedSubjectId(created.id);
+      setMobileDetail(true);
+    }
+    setNewSubjectName("");
+    setNewSubjectEmoji("📖");
+  };
+
+  const openSubjectEdit = (subject: Subject) => {
+    setEditingSubject(subject);
+    setSubjectDraft({ name: subject.name, emoji: subject.emoji });
+  };
+
+  const saveSubject = () => {
+    if (!editingSubject) return;
+    const name = subjectDraft.name.trim();
+    if (!name) {
+      toast.error("Tên môn học không được để trống.");
+      return;
+    }
+    const duplicate = currentSubjects.some(
+      (subject) =>
+        subject.id !== editingSubject.id &&
+        subject.name.localeCompare(name, "vi", { sensitivity: "base" }) === 0,
+    );
+    if (duplicate) {
+      toast.error("Môn học này đã tồn tại.");
+      return;
+    }
+    const next = updateSubjectDetails(currentSubjects, editingSubject.id, {
+      name,
+      emoji: subjectDraft.emoji.trim() || editingSubject.emoji,
+    });
+    if (applyCatalog(next, `Đã cập nhật môn ${name}.`, { createBackup: true })) {
+      setEditingSubject(null);
+    }
+  };
+
+  const saveTopic = () => {
+    if (!selectedSubject || !topicEditor) return;
+    const title = topicEditor.title.trim();
+    if (!title) {
+      toast.error("Tên chủ đề không được để trống.");
+      return;
+    }
+    const duplicate = selectedSubject.milestones.some(
+      (topic) =>
+        topic.id !== topicEditor.id &&
+        topic.title.localeCompare(title, "vi", { sensitivity: "base" }) === 0,
+    );
+    if (duplicate) {
+      toast.error("Chủ đề này đã tồn tại trong môn học.");
+      return;
+    }
+    const next = topicEditor.id
+      ? renameTopicInSubjects(currentSubjects, selectedSubject.id, topicEditor.id, title)
+      : addTopicToSubject(currentSubjects, selectedSubject.id, title);
+    const message = topicEditor.id
+      ? `Đã đổi tên chủ đề thành ${title}.`
+      : `Đã thêm chủ đề ${title}.`;
+    if (applyCatalog(next, message, { createBackup: true })) setTopicEditor(null);
+  };
+
+  const restoreSubject = (subjectId: string) => {
+    const subject = archived.subjects.find((item) => item.id === subjectId);
+    const next = restoreArchivedSubject(currentSubjects, subjectId);
+    if (
+      applyCatalog(next, `Đã khôi phục môn ${subject?.name ?? "học"}.`, {
+        alreadyPersisted: true,
+      })
+    ) {
+      setArchiveView(false);
+      setSelectedSubjectId(subjectId);
+    }
+  };
+
+  const restoreLesson = (lessonId: string) => {
+    const item = archived.lessons.find((candidate) => candidate.lesson.id === lessonId);
+    const next = restoreArchivedLesson(currentSubjects, lessonId);
+    applyCatalog(next, `Đã khôi phục bài ${item?.lesson.title ?? "học"}.`, {
+      alreadyPersisted: true,
+    });
+  };
+
+  const restoreCatalog = () => {
+    const restored = restoreCatalogBackup();
+    if (!restored) {
+      const error = getLastCatalogStorageError();
+      if (error) toast.error(error);
+      else toast.info("Chưa có thay đổi danh mục để hoàn tác.");
+      return;
+    }
+    applyCatalog(restored, "Đã hoàn tác thay đổi danh mục gần nhất.", {
+      alreadyPersisted: true,
+    });
+  };
+
+  const archiveCurrentSubject = () => {
+    if (!selectedSubject) return;
+    const lessons = allLessons(selectedSubject);
+    if (
+      !confirmTimerImpact(
+        lessons.map((lesson) => lesson.id),
+        `lưu trữ môn ${selectedSubject.name}`,
+      )
+    ) {
+      return;
+    }
+    if (
+      !window.confirm(`Lưu trữ môn “${selectedSubject.name}”? Lịch sử học vẫn được giữ.`)
+    ) {
+      return;
+    }
+    const next = archiveSubject(currentSubjects, selectedSubject.id);
+    if (
+      applyCatalog(next, `Đã lưu trữ môn ${selectedSubject.name}.`, {
+        alreadyPersisted: true,
+      })
+    ) {
+      setMobileDetail(false);
+    }
+  };
+
+  const requestDeleteSubject = () => {
+    if (!selectedSubject) return;
+    const lessons = allLessons(selectedSubject);
+    if (
+      !confirmTimerImpact(
+        lessons.map((lesson) => lesson.id),
+        `xóa môn ${selectedSubject.name}`,
+      )
+    ) {
+      return;
+    }
+    setPendingDelete({
+      title: `Xóa môn “${selectedSubject.name}”?`,
+      description: `${lessons.length} bài sẽ bị xóa khỏi lộ trình và lịch tương lai. Lịch sử các phiên học đã diễn ra vẫn được giữ.`,
+      nextSubjects: removeSubjectFromSubjects(currentSubjects, selectedSubject.id),
+      successMessage: `Đã xóa môn ${selectedSubject.name}.`,
+    });
+  };
+
+  const requestDeleteTopic = (topicId: string) => {
+    if (!selectedSubject) return;
+    const topic = selectedSubject.milestones.find((candidate) => candidate.id === topicId);
+    if (!topic) return;
+    setPendingDelete({
+      title: `Xóa chủ đề “${topic.title}”?`,
+      description: topic.lessons.length
+        ? `${topic.lessons.length} bài sẽ được chuyển sang “Chưa phân loại”; không có lịch sử học nào bị xóa.`
+        : "Chủ đề trống sẽ bị xóa khỏi môn học.",
+      nextSubjects: removeTopicAndMoveLessonsToUncategorized(
+        currentSubjects,
+        selectedSubject.id,
+        topic.id,
+      ),
+      successMessage: `Đã xóa chủ đề ${topic.title}.`,
+    });
+  };
+
+  const duplicateLesson = (lesson: Lesson) => {
+    applyCatalog(
+      duplicateLessonInSubjects(currentSubjects, lesson.id),
+      `Đã nhân bản bài ${lesson.title}.`,
+      { createBackup: true },
+    );
+  };
+
+  const archiveSingleLesson = (lesson: Lesson) => {
+    if (!confirmTimerImpact([lesson.id], `lưu trữ bài ${lesson.title}`)) return;
+    if (!window.confirm(`Lưu trữ bài “${lesson.title}”? Lịch sử học vẫn được giữ.`)) return;
+    applyCatalog(archiveLesson(currentSubjects, lesson.id), `Đã lưu trữ bài ${lesson.title}.`, {
+      alreadyPersisted: true,
+    });
+  };
+
+  const requestDeleteLesson = (lesson: Lesson) => {
+    if (!confirmTimerImpact([lesson.id], `xóa bài ${lesson.title}`)) return;
+    setPendingDelete({
+      title: `Xóa “${lesson.title}”?`,
+      description:
+        "Bài sẽ bị xóa khỏi lộ trình và lịch tương lai. Lịch sử phiên học đã diễn ra vẫn được giữ.",
+      nextSubjects: removeLessonFromSubjects(currentSubjects, lesson.id),
+      successMessage: `Đã xóa bài ${lesson.title}.`,
+    });
+  };
+
+  const exportSubject = (subject: Subject) => {
+    const rows = subject.milestones.flatMap((topic) =>
+      topic.lessons.map((lesson) => ({
+        subject_id: subject.id,
+        subject_name: subject.name,
+        topic: lesson.topic || topic.title,
+        lesson_id: lesson.id,
+        lesson_name: lesson.title,
+        target_minutes: lesson.plannedDurationMinutes,
+        planned_date: lesson.scheduledDate,
+        schedule_mode: lesson.scheduleMode ?? "flexible",
+        xp_reward: lesson.xp,
+      })),
+    );
+    const safeName =
+      subject.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase() || subject.id;
+    downloadFile(`mon-${safeName}.json`, JSON.stringify(rows, null, 2), "application/json");
+    toast.success(`Đã xuất môn ${subject.name}.`);
+  };
+
   const commitReorder = (
     built: ScheduleCandidateBuildResult,
     kind: ScheduleMutationKind,
@@ -183,7 +482,6 @@ export function CourseManagerModal({
       toast.error(built.error);
       return false;
     }
-
     const result = scheduleTransactions.executeMutation({
       candidate: built.candidate,
       kind,
@@ -207,7 +505,6 @@ export function CourseManagerModal({
       toast.error(built.error);
       return false;
     }
-
     const result = scheduleTransactions.executeMutation({
       candidate: built.candidate,
       kind,
@@ -217,7 +514,6 @@ export function CourseManagerModal({
       toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
       return false;
     }
-
     if (result.status === "committed") {
       toast.success(`${successMessage} Nhấn Ctrl+Z để hoàn tác thay đổi lịch.`);
     }
@@ -376,38 +672,31 @@ export function CourseManagerModal({
       return;
     }
     if (
-      !window.confirm(`Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`)
-    ) {
-      return;
-    }
-
-    const next = archiveLessons(currentSubjects, selectedLessonIds);
-    if (next === currentSubjects) {
-      const error = getLastCatalogStorageError();
-      if (error) toast.error(error);
-      return;
-    }
-    const result = onSubjectsUpdated(next, { alreadyPersisted: true });
-    if (!catalogUpdateSucceeded(result)) return;
-    toast.success(`Đã lưu trữ ${selectedLessonIds.size} bài học.`);
-    clearSelection();
-  };
-
-  const deleteSelected = () => {
-    if (!confirmTimerImpact(selectedLessonIds, `xóa ${selectedLessonIds.size} bài học`)) return;
-    if (
       !window.confirm(
-        `Xóa ${selectedLessonIds.size} bài học? Các bài sẽ bị xóa khỏi lộ trình và lịch tương lai. Lịch sử phiên học vẫn được giữ.`,
+        `Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`,
       )
     ) {
       return;
     }
+    const next = archiveLessons(currentSubjects, selectedLessonIds);
+    if (
+      applyCatalog(next, `Đã lưu trữ ${selectedLessonIds.size} bài học.`, {
+        alreadyPersisted: true,
+      })
+    ) {
+      clearSelection();
+    }
+  };
 
-    const next = removeLessonsFromSubjects(currentSubjects, selectedLessonIds);
-    const result = onSubjectsUpdated(next, { createBackup: true });
-    if (!catalogUpdateSucceeded(result)) return;
-    toast.success(`Đã xóa ${selectedLessonIds.size} bài học.`);
-    clearSelection();
+  const deleteSelected = () => {
+    if (!confirmTimerImpact(selectedLessonIds, `xóa ${selectedLessonIds.size} bài học`)) return;
+    setPendingDelete({
+      title: `Xóa ${selectedLessonIds.size} bài học?`,
+      description:
+        "Các bài sẽ bị xóa khỏi lộ trình và lịch tương lai. Lịch sử phiên học vẫn được giữ.",
+      nextSubjects: removeLessonsFromSubjects(currentSubjects, selectedLessonIds),
+      successMessage: `Đã xóa ${selectedLessonIds.size} bài học.`,
+    });
   };
 
   const lessonReorder = useLessonReorder({
@@ -424,7 +713,6 @@ export function CourseManagerModal({
     if (!topic) return;
     const index = topic.lessons.findIndex((lesson) => lesson.id === lessonId);
     if (index < 0) return;
-
     const beforeLessonId =
       direction === "up" ? topic.lessons[index - 1]?.id : (topic.lessons[index + 2]?.id ?? null);
     if (direction === "up" && beforeLessonId == null) return;
@@ -459,32 +747,26 @@ export function CourseManagerModal({
       toast.error("Không tìm thấy vị trí hiện tại của bài học.");
       return;
     }
-
     const classification = classifyLessonEdit({
       lesson: editingLesson,
       ownerSubjectId: owner.subjectId,
       ownerTopicId: owner.topicId,
       draft,
     });
-
     if (classification === "noop") {
       setEditingLesson(null);
       setDraft(null);
       return;
     }
-
     if (classification === "catalog-only") {
       const subjects = updateLessonDetails(currentSubjects, editingLesson.id, {
         title: draft.title.trim(),
       });
-      const result = onSubjectsUpdated(subjects, { createBackup: true });
-      if (!catalogUpdateSucceeded(result)) return;
-      toast.success("Đã cập nhật tên bài học.");
+      if (!applyCatalog(subjects, "Đã cập nhật tên bài học.", { createBackup: true })) return;
       setEditingLesson(null);
       setDraft(null);
       return;
     }
-
     if (
       activeTimerLessonId === editingLesson.id &&
       (draft.subjectId !== owner.subjectId || draft.topicId !== owner.topicId) &&
@@ -494,7 +776,6 @@ export function CourseManagerModal({
     ) {
       return;
     }
-
     const input: LessonEditorCandidateInput = {
       title: draft.title,
       subjectId: draft.subjectId,
@@ -512,7 +793,6 @@ export function CourseManagerModal({
       toast.error(built.error);
       return;
     }
-
     setSaving(true);
     const result = scheduleTransactions.executeMutation({
       candidate: built.candidate,
@@ -524,255 +804,302 @@ export function CourseManagerModal({
       toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
       return;
     }
-
-    if (result.status === "committed") toast.success("Đã cập nhật bài học và lịch học.");
+    if (result.status === "committed") {
+      toast.success("Đã cập nhật bài học và lịch học. Nhấn Ctrl+Z để hoàn tác thay đổi lịch.");
+    }
     setEditingLesson(null);
     setDraft(null);
   };
 
+  const undoSchedule = () => {
+    scheduleTransactions.undoLastMutation();
+  };
+
+  const selectedSubjectIndex = selectedSubject
+    ? currentSubjects.findIndex((subject) => subject.id === selectedSubject.id)
+    : -1;
+
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) setMobileDetail(false);
+        }}
+      >
         <DialogTrigger asChild>
           {trigger ?? (
-            <Button type="button" variant="outline" className="rounded-xl">
-              <BookOpen className="h-4 w-4" /> Quản lý khóa học
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 rounded-2xl border-indigo-200 bg-indigo-50/70 text-xs font-semibold text-indigo-800"
+            >
+              <LibraryBig className="h-4 w-4" />
+              <span className="hidden sm:inline">Môn & bài học</span>
             </Button>
           )}
         </DialogTrigger>
-        <DialogContent className="flex h-[88vh] max-h-[920px] max-w-6xl flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="border-b px-5 py-4">
-            <DialogTitle>Quản lý khóa học</DialogTitle>
+        <DialogContent className="grid h-[94vh] w-[97vw] max-w-6xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-3xl p-0">
+          <DialogHeader className="border-b bg-white px-5 py-4">
+            <DialogTitle className="flex items-center gap-2 font-serif text-xl">
+              <LibraryBig className="h-5 w-5 text-indigo-700" /> Quản lý môn & bài học
+            </DialogTitle>
             <DialogDescription>
-              Quản lý môn, chủ đề và bài học. Nhấn Ctrl+Z để hoàn tác thay đổi lịch.
+              Tổ chức môn học, chủ đề và các bài trong lộ trình của bạn.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 md:grid-cols-[280px_minmax(0,1fr)]">
-            <aside className="flex min-h-0 flex-col border-b bg-slate-50/70 p-3 md:border-b-0 md:border-r">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={subjectSearch}
-                  onChange={(event) => setSubjectSearch(event.target.value)}
-                  placeholder="Tìm môn học"
-                  className="pl-9"
-                />
-              </div>
-              <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto">
-                {visibleSubjects.map((subject) => {
-                  const subjectStats = deriveSubjectStats(subject, minutesByLesson, progress);
-                  const subjectIndex = currentSubjects.findIndex(
-                    (candidate) => candidate.id === subject.id,
-                  );
-                  return (
-                    <div
-                      key={subject.id}
-                      className={cn(
-                        "flex items-center gap-1 rounded-xl p-1 transition",
-                        selectedSubjectId === subject.id
-                          ? "bg-indigo-600 text-white"
-                          : "hover:bg-white",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 px-2 py-1 text-left"
-                        onClick={() => setSelectedSubjectId(subject.id)}
-                      >
-                        <span className="block truncate text-sm font-semibold">
-                          {subject.emoji} {subject.name}
-                        </span>
-                        <span
-                          className={cn(
-                            "mt-1 block text-xs",
-                            selectedSubjectId === subject.id ? "text-indigo-100" : "text-slate-500",
-                          )}
-                        >
-                          {subjectStats.completed}/{subjectStats.lessons} bài
-                        </span>
-                      </button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={!reorderEnabled || subjectIndex <= 0}
-                        aria-label={`Di chuyển môn lên: ${subject.name}`}
-                        onClick={() => moveSubject(subject.id, -1)}
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={!reorderEnabled || subjectIndex >= currentSubjects.length - 1}
-                        aria-label={`Di chuyển môn xuống: ${subject.name}`}
-                        onClick={() => moveSubject(subject.id, 1)}
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </aside>
+          <div className="grid min-h-0 flex-1 md:grid-cols-[280px_1fr]">
+            <SubjectListPane
+              subjects={currentSubjects}
+              visibleSubjects={visibleSubjects}
+              archivedSubjects={archived.subjects}
+              archivedLessons={archived.lessons}
+              selectedSubjectId={selectedSubjectId}
+              mobileDetail={mobileDetail}
+              archiveView={archiveView}
+              subjectSearch={subjectSearch}
+              newSubjectName={newSubjectName}
+              newSubjectEmoji={newSubjectEmoji}
+              getSubjectStats={(subject) => deriveSubjectStats(subject, minutesByLesson, progress)}
+              onSubjectSearchChange={setSubjectSearch}
+              onNewSubjectNameChange={setNewSubjectName}
+              onNewSubjectEmojiChange={setNewSubjectEmoji}
+              onCreateSubject={createSubject}
+              onArchiveViewChange={setArchiveView}
+              onSelectSubject={(subjectId) => {
+                setSelectedSubjectId(subjectId);
+                setMobileDetail(true);
+              }}
+              onRestoreSubject={restoreSubject}
+              onRestoreLesson={restoreLesson}
+              onRestoreCatalogBackup={restoreCatalog}
+            />
 
-            <main data-course-scroll-container className="min-h-0 overflow-y-auto p-4 sm:p-5">
-              {selectedSubject && stats ? (
-                <div className="space-y-5">
-                  <section className="rounded-2xl border bg-white p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h2 className="font-serif text-2xl font-semibold">
-                          {selectedSubject.emoji} {selectedSubject.name}
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {selectedSubject.milestones.length} chủ đề · {stats.lessons} bài ·{" "}
-                          {stats.completed} đã hoàn thành
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Undo2 className="h-4 w-4" />
-                        {scheduleTransactions.canUndo
-                          ? "Ctrl+Z sẵn sàng"
-                          : "Chưa có thay đổi lịch để hoàn tác"}
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center gap-3">
-                      <Progress value={stats.percent} className="h-2 flex-1" />
-                      <span className="text-xs font-bold text-indigo-700">{stats.percent}%</span>
-                    </div>
-                  </section>
-
-                  <section className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
-                    <Input
-                      value={lessonSearch}
-                      onChange={(event) => setLessonSearch(event.target.value)}
-                      placeholder="Tìm bài học hoặc chủ đề"
-                    />
-                    <select
-                      aria-label="Lọc bài học"
-                      value={filter}
-                      onChange={(event) => setFilter(event.target.value as LessonFilter)}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <option value="all">Tất cả</option>
-                      <option value="not-started">Chưa bắt đầu</option>
-                      <option value="in-progress">Đang học</option>
-                      <option value="completed">Đã hoàn thành</option>
-                      <option value="unscheduled">Chưa xếp lịch</option>
-                    </select>
-                    <select
-                      aria-label="Sắp xếp bài học"
-                      value={sort}
-                      onChange={(event) => setSort(event.target.value as LessonSort)}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <option value="roadmap">Theo lộ trình</option>
-                      <option value="date">Theo ngày</option>
-                      <option value="progress">Theo tiến độ</option>
-                      <option value="name">Theo tên</option>
-                      <option value="remaining">Theo thời gian còn lại</option>
-                    </select>
-                    <Button
-                      type="button"
-                      variant={selectionMode ? "default" : "outline"}
-                      className="rounded-xl"
-                      onClick={() => {
-                        if (selectionMode) clearSelection();
-                        else setSelectionMode(true);
-                      }}
-                    >
-                      {selectionMode ? "Hủy chọn" : "Chọn nhiều"}
-                    </Button>
-                  </section>
-
-                  {selectionMode ? (
-                    <BulkActionsBar
-                      subjects={currentSubjects}
-                      selectedSubject={selectedSubject}
-                      selectedCount={selectedLessonIds.size}
-                      targetSubjectId={bulkTargetSubjectId}
-                      targetTopicId={bulkTargetTopicId}
-                      date={bulkDate}
-                      scheduleMode={bulkScheduleMode}
-                      durationMinutes={bulkMinutes}
-                      onTargetSubjectIdChange={setBulkTargetSubjectId}
-                      onTargetTopicIdChange={setBulkTargetTopicId}
-                      onDateChange={setBulkDate}
-                      onScheduleModeChange={setBulkScheduleMode}
-                      onDurationMinutesChange={setBulkMinutes}
-                      onSelectVisible={() => setSelectedLessonIds(new Set(visibleLessonIds))}
-                      onMoveToSubject={moveSelectedToSubject}
-                      onMoveToTopic={moveSelectedToTopic}
-                      onUpdateDate={updateSelectedDate}
-                      onUpdateMode={updateSelectedMode}
-                      onUpdateDuration={updateSelectedDuration}
-                      onArchive={archiveSelected}
-                      onDelete={deleteSelected}
-                    />
-                  ) : null}
-
-                  {!reorderEnabled ? (
-                    <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                      Xóa tìm kiếm và chọn “Tất cả / Theo lộ trình” để sắp xếp môn, chủ đề hoặc bài
-                      học.
-                    </p>
-                  ) : null}
-
-                  <div className="space-y-3">
-                    {visibleMilestones.map((topic, topicIndex) => (
-                      <TopicSection
-                        key={topic.id}
-                        subjectId={selectedSubject.id}
-                        topic={topic}
-                        reorderEnabled={reorderEnabled}
-                        dragOverLocation={lessonReorder.dragOverLocation}
-                        canMoveTopicUp={topicIndex > 0}
-                        canMoveTopicDown={topicIndex < visibleMilestones.length - 1}
-                        onMoveTopic={(topicId, direction) =>
-                          moveTopic(selectedSubject.id, topicId, direction)
+            <SubjectWorkspace
+              mobileDetail={mobileDetail}
+              hasSubject={Boolean(selectedSubject)}
+              search={lessonSearch}
+              filter={filter}
+              sort={sort}
+              selectionMode={selectionMode}
+              reorderEnabled={reorderEnabled}
+              canUndoSchedule={scheduleTransactions.canUndo}
+              onBack={() => setMobileDetail(false)}
+              onSearchChange={setLessonSearch}
+              onFilterChange={setFilter}
+              onSortChange={setSort}
+              onToggleSelectionMode={() => {
+                if (selectionMode) clearSelection();
+                else setSelectionMode(true);
+              }}
+              onUndoSchedule={undoSchedule}
+              header={
+                selectedSubject && stats ? (
+                  <SubjectHeader
+                    subject={selectedSubject}
+                    stats={stats}
+                    canMoveUp={reorderEnabled && selectedSubjectIndex > 0}
+                    canMoveDown={
+                      reorderEnabled &&
+                      selectedSubjectIndex >= 0 &&
+                      selectedSubjectIndex < currentSubjects.length - 1
+                    }
+                    onEdit={() => openSubjectEdit(selectedSubject)}
+                    onMoveUp={() => moveSubject(selectedSubject.id, -1)}
+                    onMoveDown={() => moveSubject(selectedSubject.id, 1)}
+                    onArchive={archiveCurrentSubject}
+                    onDelete={requestDeleteSubject}
+                    onAddTopic={() => setTopicEditor({ id: null, title: "" })}
+                    onExport={() => exportSubject(selectedSubject)}
+                    addLesson={
+                      <AddLessonModal
+                        currentSubjects={currentSubjects}
+                        onSubjectsUpdated={(subjects) =>
+                          onSubjectsUpdated(subjects, { createBackup: true })
                         }
-                        onEnterDropTarget={lessonReorder.enterDropTarget}
-                        onLeaveDropTarget={lessonReorder.leaveDropTarget}
-                        onFinishDrop={lessonReorder.finishDrop}
-                        renderLesson={(lesson, lessonIndex) => (
-                          <LessonRow
-                            lesson={lesson}
-                            minutes={minutesByLesson.get(lesson.id) ?? 0}
-                            selected={selectedLessonIds.has(lesson.id)}
-                            selectionMode={selectionMode}
-                            activeTimer={activeTimerLessonId === lesson.id}
-                            reorderEnabled={reorderEnabled}
-                            dragArmed={lessonReorder.dragArmedLessonId === lesson.id}
-                            dragging={lessonReorder.draggedLessonId === lesson.id}
-                            canMoveUp={lessonIndex > 0}
-                            canMoveDown={lessonIndex < topic.lessons.length - 1}
-                            onToggleSelected={toggleLessonSelection}
-                            onEdit={openLessonEdit}
-                            onMove={moveLessonByButton}
-                            onArmDrag={lessonReorder.armDrag}
-                            onStartDrag={lessonReorder.startDrag}
-                            onSetDragImage={lessonReorder.setDragImage}
-                            onDragEnd={lessonReorder.resetDrag}
-                          />
-                        )}
+                        defaultSubjectName={selectedSubject.name}
+                        trigger={
+                          <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700">
+                            <Plus className="h-4 w-4" /> Thêm bài học
+                          </Button>
+                        }
                       />
-                    ))}
-                    {visibleMilestones.length === 0 ? (
-                      <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-slate-500">
-                        Không tìm thấy bài học phù hợp.
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid h-full place-items-center text-center text-sm text-slate-500">
-                  Chưa có môn học để quản lý.
-                </div>
-              )}
-            </main>
+                    }
+                  />
+                ) : null
+              }
+              bulkActions={
+                selectionMode && selectedSubject ? (
+                  <BulkActionsBar
+                    subjects={currentSubjects}
+                    selectedSubject={selectedSubject}
+                    selectedCount={selectedLessonIds.size}
+                    targetSubjectId={bulkTargetSubjectId}
+                    targetTopicId={bulkTargetTopicId}
+                    date={bulkDate}
+                    scheduleMode={bulkScheduleMode}
+                    durationMinutes={bulkMinutes}
+                    onTargetSubjectIdChange={setBulkTargetSubjectId}
+                    onTargetTopicIdChange={setBulkTargetTopicId}
+                    onDateChange={setBulkDate}
+                    onScheduleModeChange={setBulkScheduleMode}
+                    onDurationMinutesChange={setBulkMinutes}
+                    onSelectVisible={() => setSelectedLessonIds(new Set(visibleLessonIds))}
+                    onMoveToSubject={moveSelectedToSubject}
+                    onMoveToTopic={moveSelectedToTopic}
+                    onUpdateDate={updateSelectedDate}
+                    onUpdateMode={updateSelectedMode}
+                    onUpdateDuration={updateSelectedDuration}
+                    onArchive={archiveSelected}
+                    onDelete={deleteSelected}
+                  />
+                ) : undefined
+              }
+            >
+              {selectedSubject ? (
+                visibleMilestones.length ? (
+                  visibleMilestones.map((topic, topicIndex) => (
+                    <TopicSection
+                      key={topic.id}
+                      subjectId={selectedSubject.id}
+                      topic={topic}
+                      reorderEnabled={reorderEnabled}
+                      dragOverLocation={lessonReorder.dragOverLocation}
+                      canMoveTopicUp={topicIndex > 0}
+                      canMoveTopicDown={topicIndex < visibleMilestones.length - 1}
+                      onMoveTopic={(topicId, direction) =>
+                        moveTopic(selectedSubject.id, topicId, direction)
+                      }
+                      onEditTopic={(topicId) => {
+                        const current = selectedSubject.milestones.find(
+                          (candidate) => candidate.id === topicId,
+                        );
+                        if (current) setTopicEditor({ id: current.id, title: current.title });
+                      }}
+                      onDeleteTopic={requestDeleteTopic}
+                      onEnterDropTarget={lessonReorder.enterDropTarget}
+                      onLeaveDropTarget={lessonReorder.leaveDropTarget}
+                      onFinishDrop={lessonReorder.finishDrop}
+                      renderLesson={(lesson, lessonIndex) => (
+                        <LessonRow
+                          lesson={lesson}
+                          minutes={minutesByLesson.get(lesson.id) ?? 0}
+                          selected={selectedLessonIds.has(lesson.id)}
+                          selectionMode={selectionMode}
+                          activeTimer={activeTimerLessonId === lesson.id}
+                          reorderEnabled={reorderEnabled}
+                          dragArmed={lessonReorder.dragArmedLessonId === lesson.id}
+                          dragging={lessonReorder.draggedLessonId === lesson.id}
+                          canMoveUp={lessonIndex > 0}
+                          canMoveDown={lessonIndex < topic.lessons.length - 1}
+                          onToggleSelected={toggleLessonSelection}
+                          onEdit={openLessonEdit}
+                          onDuplicate={duplicateLesson}
+                          onArchive={archiveSingleLesson}
+                          onDelete={requestDeleteLesson}
+                          onMove={moveLessonByButton}
+                          onArmDrag={lessonReorder.armDrag}
+                          onStartDrag={lessonReorder.startDrag}
+                          onSetDragImage={lessonReorder.setDragImage}
+                          onDragEnd={lessonReorder.resetDrag}
+                        />
+                      )}
+                    />
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-slate-500">
+                    Không tìm thấy bài học phù hợp.
+                  </p>
+                )
+              ) : null}
+            </SubjectWorkspace>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingSubject)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setEditingSubject(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa môn học</DialogTitle>
+            <DialogDescription>Đổi tên hoặc biểu tượng của môn học.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Tên môn học</Label>
+              <Input
+                value={subjectDraft.name}
+                onChange={(event) =>
+                  setSubjectDraft((current) => ({ ...current, name: event.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label>Biểu tượng</Label>
+              <Input
+                value={subjectDraft.emoji}
+                maxLength={4}
+                onChange={(event) =>
+                  setSubjectDraft((current) => ({ ...current, emoji: event.target.value }))
+                }
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditingSubject(null)}>
+                Hủy
+              </Button>
+              <Button type="button" onClick={saveSubject}>
+                Lưu thay đổi
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(topicEditor)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setTopicEditor(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>{topicEditor?.id ? "Đổi tên chủ đề" : "Thêm chủ đề"}</DialogTitle>
+            <DialogDescription>
+              Chủ đề giúp nhóm các bài học trong cùng một môn.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Tên chủ đề</Label>
+              <Input
+                autoFocus
+                value={topicEditor?.title ?? ""}
+                onChange={(event) =>
+                  setTopicEditor((current) =>
+                    current ? { ...current, title: event.target.value } : current,
+                  )
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") saveTopic();
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setTopicEditor(null)}>
+                Hủy
+              </Button>
+              <Button type="button" onClick={saveTopic}>
+                Lưu chủ đề
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -788,6 +1115,40 @@ export function CourseManagerModal({
         onSubmit={saveLesson}
         submitting={saving}
       />
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingDelete?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{pendingDelete?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={() => {
+                if (!pendingDelete) return;
+                if (
+                  applyCatalog(pendingDelete.nextSubjects, pendingDelete.successMessage, {
+                    createBackup: true,
+                  })
+                ) {
+                  clearSelection();
+                  setMobileDetail(false);
+                }
+                setPendingDelete(null);
+              }}
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

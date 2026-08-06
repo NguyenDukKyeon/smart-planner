@@ -1,5 +1,5 @@
 import type { DragEvent } from "react";
-import { ArrowDown, ArrowUp, Edit3, GripVertical, Trash2 } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, Copy, Edit3, GripVertical, Trash2 } from "lucide-react";
 import type { Lesson } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -20,6 +20,8 @@ type Props = {
   canMoveDown: boolean;
   onToggleSelected?: (lessonId: string) => void;
   onEdit: (lesson: Lesson) => void;
+  onDuplicate?: (lesson: Lesson) => void;
+  onArchive?: (lesson: Lesson) => void;
   onDelete?: (lesson: Lesson) => void;
   onMove: (lessonId: string, direction: "up" | "down") => void;
   onArmDrag: (lessonId: string) => void;
@@ -41,6 +43,8 @@ export function LessonRow({
   canMoveDown,
   onToggleSelected,
   onEdit,
+  onDuplicate,
+  onArchive,
   onDelete,
   onMove,
   onArmDrag,
@@ -112,7 +116,7 @@ export function LessonRow({
         <Progress value={percent} className="mt-2 h-1.5" />
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
         <Button
           type="button"
           variant="ghost"
@@ -136,6 +140,28 @@ export function LessonRow({
         <Button type="button" variant="ghost" size="sm" onClick={() => onEdit(lesson)}>
           <Edit3 className="h-4 w-4" /> Chỉnh sửa
         </Button>
+        {onDuplicate ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Nhân bản ${lesson.title}`}
+            onClick={() => onDuplicate(lesson)}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        ) : null}
+        {onArchive ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Lưu trữ ${lesson.title}`}
+            onClick={() => onArchive(lesson)}
+          >
+            <Archive className="h-4 w-4" />
+          </Button>
+        ) : null}
         {onDelete ? (
           <Button
             type="button"

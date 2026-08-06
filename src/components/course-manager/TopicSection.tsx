@@ -1,7 +1,14 @@
 import { Fragment, type DragEvent, type ReactNode } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Edit3, MoreHorizontal, Trash2 } from "lucide-react";
 import type { Lesson, Milestone } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { autoScrollDuringLessonDrag, type DragLocation } from "./useLessonReorder";
 
@@ -13,6 +20,8 @@ type Props = {
   canMoveTopicUp: boolean;
   canMoveTopicDown: boolean;
   onMoveTopic: (topicId: string, direction: -1 | 1) => void;
+  onEditTopic?: (topicId: string) => void;
+  onDeleteTopic?: (topicId: string) => void;
   onEnterDropTarget: (location: DragLocation) => void;
   onLeaveDropTarget: () => void;
   onFinishDrop: (location: DragLocation) => void;
@@ -35,6 +44,8 @@ export function TopicSection({
   canMoveTopicUp,
   canMoveTopicDown,
   onMoveTopic,
+  onEditTopic,
+  onDeleteTopic,
   onEnterDropTarget,
   onLeaveDropTarget,
   onFinishDrop,
@@ -104,6 +115,36 @@ export function TopicSection({
         >
           <ArrowDown className="h-4 w-4" />
         </Button>
+        {onEditTopic || onDeleteTopic ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Quản lý chủ đề ${topic.title}`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl">
+              {onEditTopic ? (
+                <DropdownMenuItem onSelect={() => onEditTopic(topic.id)}>
+                  <Edit3 className="mr-2 h-4 w-4" /> Đổi tên chủ đề
+                </DropdownMenuItem>
+              ) : null}
+              {onEditTopic && onDeleteTopic ? <DropdownMenuSeparator /> : null}
+              {onDeleteTopic ? (
+                <DropdownMenuItem
+                  onSelect={() => onDeleteTopic(topic.id)}
+                  className="text-red-700"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Xóa chủ đề
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </header>
 
       {topic.lessons.length ? (
