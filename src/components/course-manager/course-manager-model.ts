@@ -1,12 +1,7 @@
 import type { Lesson, LessonScheduleMode, Milestone, Subject } from "@/lib/mock-data";
 import type { ProgressState } from "@/lib/progress-store";
 
-export type LessonFilter =
-  | "all"
-  | "not-started"
-  | "in-progress"
-  | "completed"
-  | "unscheduled";
+export type LessonFilter = "all" | "not-started" | "in-progress" | "completed" | "unscheduled";
 
 export type LessonSort = "roadmap" | "date" | "progress" | "name" | "remaining";
 
@@ -136,8 +131,7 @@ export function filterAndSortMilestones(params: FilterAndSortParams): Milestone[
         }),
     }))
     .filter(
-      (milestone) =>
-        milestone.lessons.length > 0 || (!keyword && params.filter === "all"),
+      (milestone) => milestone.lessons.length > 0 || (!keyword && params.filter === "all"),
     );
 }
 
