@@ -54,3 +54,13 @@ test("TodayPanel derives reasons and TodayLessonCard renders them", () => {
   expect(card).toContain("placementReason: PlacementReason");
   expect(card).toContain("<LessonPlacementReason reason={placementReason}");
 });
+
+test("review cards leave placement explanation to the single reason component", () => {
+  const card = readFileSync(
+    new URL("../components/today/TodayLessonCard.tsx", import.meta.url),
+    "utf8",
+  );
+
+  expect(card).not.toContain("Lượt ôn hôm nay");
+  expect(card).not.toContain("ôn sau {reviewAgeDays} ngày");
+});
