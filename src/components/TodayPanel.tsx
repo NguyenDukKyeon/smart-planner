@@ -32,6 +32,10 @@ import {
   normalizeDailyStudyHours,
 } from "@/lib/study-hours";
 import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
+import {
+  deriveLessonPlacementReason,
+  deriveReviewPlacementReason,
+} from "@/lib/lesson-placement";
 
 function StudyStreakBadge({ streak }: { streak: number }) {
   return (
@@ -154,7 +158,7 @@ export function TodayPanel({
       return {
         lesson,
         minutes: estimateLessonMinutes(lesson.id, state.studyMeta, subjects),
-        reason: `Bài mới phù hợp với quỹ ${queue.quotaMinutes} phút hôm nay.`,
+        placementReason: deriveLessonPlacementReason({ lesson, assignedDateISO: today }),
         reviewTaskId: undefined,
       };
     }
@@ -164,16 +168,16 @@ export function TodayPanel({
     return {
       lesson: reviewLesson,
       minutes: review.minutes,
-      reason: `Bài ôn đến hạn sau ${review.ageDays} ngày.`,
+      placementReason: deriveReviewPlacementReason({ ageDays: review.ageDays }),
       reviewTaskId: review.taskId,
     };
   }, [
-    queue.quotaMinutes,
     queue.reviewLessons,
     sortedNewLessons,
     state.completedLessons,
     state.studyMeta,
     subjects,
+    today,
   ]);
 
   const openTimer = (
@@ -362,7 +366,7 @@ export function TodayPanel({
                       {prioritizedLesson.lesson.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-700">
-                      {prioritizedLesson.reason} Dự kiến{" "}
+                      {prioritizedLesson.placementReason.description} Dự kiến{" "}
                       <strong className="font-semibold text-emerald-800">
                         {prioritizedLesson.minutes} phút
                       </strong>
@@ -446,6 +450,10 @@ export function TodayPanel({
                   lesson.topic ||
                   (position?.milestone !== "Toàn bộ bài học" ? position?.milestone : undefined);
                 const completedMins = getLessonCompletedMinutes(lesson.id, state);
+                const placementReason = deriveLessonPlacementReason({
+                  lesson,
+                  assignedDateISO: today,
+                });
                 return (
                   <TodayLessonCard
                     key={lesson.id}
@@ -456,6 +464,7 @@ export function TodayPanel({
                     plannedMinutes={lesson.plannedDurationMinutes ?? 120}
                     subjectLabel={`${position?.subject.emoji ?? "📚"} ${position?.subject.name ?? lesson.sourceSubject}`}
                     topicLabel={topic}
+                    placementReason={placementReason}
                     onToggle={() => onToggleLesson(lesson.id, lesson.xp)}
                     onStart={(minutes) => openTimer(lesson, minutes)}
                     onManualEntry={() => openManualEntry(lesson, estimated)}
@@ -481,6 +490,7 @@ export function TodayPanel({
                   lesson.topic ||
                   (position?.milestone !== "Toàn bộ bài học" ? position?.milestone : undefined);
                 const completedMins = getLessonCompletedMinutes(lesson.id, state);
+                const placementReason = deriveReviewPlacementReason({ ageDays: review.ageDays });
                 return (
                   <TodayLessonCard
                     key={lesson.id}
@@ -492,6 +502,7 @@ export function TodayPanel({
                     reviewAgeDays={review.ageDays}
                     subjectLabel={`${position?.subject.emoji ?? "📚"} ${position?.subject.name ?? lesson.sourceSubject}`}
                     topicLabel={topic}
+                    placementReason={placementReason}
                     onToggle={() => onToggleReview(lesson.id, today)}
                     onStart={(minutes) => openTimer(lesson, minutes, review.taskId)}
                     onManualEntry={() => openManualEntry(lesson, review.minutes, review.taskId)}
