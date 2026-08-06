@@ -47,12 +47,12 @@ describe("build purity", () => {
       "utf8",
     );
     const courseManagerSource = await readFile(
-      new URL("../components/CourseManagerModal.tsx", import.meta.url),
+      new URL("../components/CourseManagerModalContent.tsx", import.meta.url),
       "utf8",
     );
     const routeSource = await readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
-    expect(plannerSource).toContain("useScheduleTransactions");
+    expect(plannerSource).toContain("scheduleTransactions: ScheduleTransactionController");
     expect(plannerSource).toContain("buildMoveLessonDateCandidate");
     expect(plannerSource).toContain("unplacedFixedLessons");
     expect(plannerSource).toContain("application/x-smart-lesson-id");
@@ -60,6 +60,8 @@ describe("build purity", () => {
     expect(plannerSource).not.toContain("setUndoStack");
     expect(courseManagerSource).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
     expect(courseManagerSource).toContain("draggable={false}");
-    expect(routeSource).toContain("transactionAdapters={scheduleTransactionAdapters}");
+    expect(routeSource.match(/useScheduleTransactions\(/g)).toHaveLength(1);
+    expect(routeSource.match(/scheduleTransactions=\{scheduleTransactions\}/g)).toHaveLength(2);
+    expect(routeSource).not.toContain("transactionAdapters={scheduleTransactionAdapters}");
   });
 });
