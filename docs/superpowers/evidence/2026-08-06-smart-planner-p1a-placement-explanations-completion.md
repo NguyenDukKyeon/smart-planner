@@ -3,13 +3,14 @@
 ## Status
 
 - Package: `P1A — Placement explanations`
-- Implementation status: `IMPLEMENTED / SOURCE_HEAD_GREEN / DIFF_REVIEWED / PREDECESSOR_INTEGRATED / MERGED_RESULT_VERIFICATION_PENDING`
+- Implementation status: `IMPLEMENTED / DIFF_REVIEWED / MERGED_RESULT_GREEN / ACCEPTED_FOR_INTEGRATION`
 - P0 predecessor implementation head: `3e296b2d2bb1e7f52b482643a30496b4e3757c0a`
 - P0 predecessor integrated main head: `d1847a953baf4f1b93b814d2b1e29e2f4107077d`
 - Verified and reviewed P1A source head: `b9ee5de4092a1f38362d12dfadc7207ae2858c79`
+- Verified merged-result evidence head: `13ec8576e181e14d2fb30530a22e307b5e490f27`
 - Branch: `improve/p1a-placement-explanations`
-- Pull request: PR #5, ready for review
-- Integration state: retargeted to integrated `main`; P1A not merged; no deploy action performed by the implementer.
+- Pull request: PR #5, ready for integration
+- Integration state: retargeted to integrated `main`; accepted for integration; not yet merged at the time of this record.
 
 This companion completion record is separate from the immutable implementation plan to avoid reconstructing the 1,274-line historical plan solely to append evidence.
 
@@ -27,7 +28,7 @@ This companion completion record is separate from the immutable implementation p
 - `LessonPlacementReason` renders one badge and a keyboard-accessible button disclosure with `aria-expanded` and `aria-controls`.
 - Review cards keep one placement explanation only; duplicate review-age and “Lượt ôn hôm nay” reason signals were removed during independent diff review.
 
-## Exact source-head verification
+## Source-head verification
 
 GitHub Actions workflow run `31059503567`, job `92484131068`, against PR merge commit containing source head `b9ee5de4092a1f38362d12dfadc7207ae2858c79`:
 
@@ -42,6 +43,22 @@ GitHub Actions workflow run `31059503567`, job `92484131068`, against PR merge c
 | Vercel commit status | SUCCESS for source head `b9ee5de4092a1f38362d12dfadc7207ae2858c79` |
 
 The previous evidence head `ecc42f0fb61f38c36993cff857ca3f67158a2e67` also passed all GitHub Actions gates in run `31059687864`, job `92484696012`. Its Vercel build was declined only by the account build-rate-limit.
+
+## Fresh merged-result verification
+
+GitHub Actions workflow run `31060705327`, job `92487863285`, checked out merge ref `c9c087e146f66a248af1ab8ed86974b21e8dbed8`, which GitHub created by merging evidence head `13ec8576e181e14d2fb30530a22e307b5e490f27` into integrated predecessor `main@d1847a953baf4f1b93b814d2b1e29e2f4107077d`.
+
+| Gate | Result |
+|---|---|
+| Checkout exact merge ref | PASS |
+| `npm install` | PASS; 465 packages installed |
+| `npm run typecheck` | PASS |
+| `npm run lint` | PASS with 0 errors and 8 pre-existing warnings |
+| `npm test` | PASS — 42/42 test files, 256/256 tests |
+| `npm run build` | PASS; tests repeated 256/256, client/SSR/Nitro Vercel output built successfully |
+| `git diff --exit-code` | PASS; build/test did not mutate tracked files |
+
+The Vercel status attached to the evidence-only head was declined by the account build-rate-limit. This is an infrastructure quota result, not an application build failure: the reviewed source head has a successful Vercel deployment, and the exact merged result produced the complete Vercel-target output successfully in GitHub Actions.
 
 Focused P1A coverage included:
 
@@ -94,6 +111,6 @@ Changed-file allowlist:
 - Route generation reports that `src/routes/__root.test.tsx` is not a route; the file is still intentionally executed by the test command.
 - GitHub Actions post-checkout cleanup warns that `.gitmodules` has no URL for `smart-study-habit-planner-deploy`; the job nevertheless completed successfully and this pre-existing repository issue is outside P1A.
 
-## Final integration gate
+## Integration decision
 
-P0B is now integrated on `main` through merge commit `d1847a953baf4f1b93b814d2b1e29e2f4107077d`. PR #5 is retargeted to that base. This evidence-only commit exists to trigger a genuinely fresh merged-result GitHub Actions run against the integrated predecessor. P1A may be accepted and merged only if that run passes and GitHub still reports the PR mergeable with the same exact head. Green implementer evidence and the earlier diff review remain evidence, not package acceptance.
+P0B is integrated on `main` through merge commit `d1847a953baf4f1b93b814d2b1e29e2f4107077d`. P1A has passed independent diff review and a fresh merged-result build against that exact predecessor. No unresolved Critical or Important finding remains in scope. P1A is accepted for integration using a regular merge commit that preserves published Lovable history; squash, rebase, force-push and history rewriting are not authorized.
