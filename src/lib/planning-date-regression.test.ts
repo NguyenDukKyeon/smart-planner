@@ -156,13 +156,20 @@ describe("scheduled lesson dates", () => {
   });
 
   test("roadmap exposes final fixed and flexible placement semantics", async () => {
-    const source = await fs.readFile(
+    const componentSource = await fs.readFile(
       new URL("../components/LearningRoadmap.tsx", import.meta.url),
       "utf8",
     );
+    const selectorSource = await fs.readFile(
+      new URL("./roadmap-views.ts", import.meta.url),
+      "utf8",
+    );
 
-    expect(source).toContain('const mode = lesson.scheduleMode ?? "flexible"');
-    expect(source).toContain('shiftedDates[lesson.id] ?? "unplaced-fixed"');
-    expect(source).toContain("shiftedDates[lesson.id] ?? lesson.scheduledDate");
+    expect(componentSource).toContain("buildRoadmapProjection");
+    expect(componentSource).toContain("shiftedDates");
+    expect(selectorSource).toContain('const mode = lesson.scheduleMode ?? "flexible"');
+    expect(selectorSource).toContain('mode === "fixed" && !shiftedDate');
+    expect(selectorSource).toContain('mode === "flexible" ? lesson.scheduledDate : ""');
+    expect(selectorSource).toContain("completionDate || shiftedDate");
   });
 });
