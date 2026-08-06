@@ -58,11 +58,7 @@ function settings(hours = 1) {
 function commitCandidate(params: {
   current: ScheduleCandidate;
   candidate: ScheduleCandidate;
-  kind:
-    | "move-lesson-date"
-    | "change-schedule-mode"
-    | "reorder-lesson"
-    | "change-day-capacity";
+  kind: "move-lesson-date" | "change-schedule-mode" | "reorder-lesson" | "change-day-capacity";
 }) {
   return commitScheduleMutation({
     current: params.current,
@@ -219,10 +215,7 @@ describe("schedule operation transactions", () => {
   });
 
   test("failed move persistence publishes neither the new date nor provenance", () => {
-    const current = createScheduleSnapshot(
-      catalog([lesson("first", "2030-01-01")]),
-      settings(2),
-    );
+    const current = createScheduleSnapshot(catalog([lesson("first", "2030-01-01")]), settings(2));
     const built = buildMoveLessonDateCandidate({
       current,
       lessonId: "first",
@@ -249,10 +242,7 @@ describe("schedule operation transactions", () => {
   });
 
   test("undo restores the previous date and previous provenance", () => {
-    const current = createScheduleSnapshot(
-      catalog([lesson("first", "2030-01-01")]),
-      settings(2),
-    );
+    const current = createScheduleSnapshot(catalog([lesson("first", "2030-01-01")]), settings(2));
     current.subjects[0].milestones[0].lessons[0].placementProvenance = {
       kind: "manual-move",
       movedAt: "2030-01-01T00:00:00.000Z",
