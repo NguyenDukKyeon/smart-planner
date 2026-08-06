@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BookOpen, Edit3, Search, Undo2 } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Search, Undo2 } from "lucide-react";
 import { toast } from "sonner";
-import type { Subject, Lesson } from "@/lib/mock-data";
+import type { Lesson, Subject } from "@/lib/mock-data";
 import type { PlannerSettings } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
 import {
@@ -11,9 +11,13 @@ import {
 } from "@/lib/custom-subjects";
 import {
   buildEditLessonCandidate,
+  buildReorderLessonCandidate,
+  buildReorderSubjectCandidate,
+  buildReorderTopicCandidate,
   type LessonEditorCandidateInput,
+  type ScheduleCandidateBuildResult,
 } from "@/lib/schedule-candidates";
-import { createScheduleSnapshot } from "@/lib/schedule-transactions";
+import { createScheduleSnapshot, type ScheduleMutationKind } from "@/lib/schedule-transactions";
 import type { ScheduleTransactionController } from "@/components/schedule/useScheduleTransactions";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +32,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { LessonEditorDialog } from "./course-manager/LessonEditorDialog";
+import { LessonRow } from "./course-manager/LessonRow";
+import { TopicSection } from "./course-manager/TopicSection";
 import {
   buildMinutesByLesson,
   classifyLessonEdit,
@@ -38,6 +44,10 @@ import {
   type LessonFilter,
   type LessonSort,
 } from "./course-manager/course-manager-model";
+import {
+  useLessonReorder,
+  type DragLocation,
+} from "./course-manager/useLessonReorder";
 
 type Props = {
   currentSubjects: Subject[];
@@ -118,6 +128,113 @@ export function CourseManagerModal({
   const stats = selectedSubject
     ? deriveSubjectStats(selectedSubject, minutesByLesson, progress)
     : null;
+  const reorderEnabled =
+    !subjectSearch.trim() && !lessonSearch.trim() && filter === "all" && sort === "roadmap";
+
+  const commitReorder = (
+    built: ScheduleCandidateBuildResult,
+    kind: ScheduleMutationKind,
+    description: string,
+    successMessage: string,
+  ) => {
+    if (!built.ok) {
+      toast.error(built.error);
+      return false;
+    }
+
+    const result = scheduleTransactions.executeMutation({
+      candidate: built.candidate,
+      kind,
+      description,
+    });
+    if (!result.ok) {
+      toast.error(result.rollbackError ? `${result.error} ${result.rollbackError}` : result.error);
+      return false;
+    }
+    if (result.status === "committed") toast.success(successMessage);
+    return true;
+  };
+
+  const moveSubject = (subjectId: string, direction: -1 | 1) => {
+    const subject = currentSubjects.find((candidate) => candidate.id === subjectId);
+    if (!subject) return;
+    const built = buildReorderSubjectCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      subjectId,
+      direction,
+    });
+    commitReorder(
+      built,
+      "reorder-subject",
+      `Sắp xếp môn học ${subject.name}`,
+      "Đã cập nhật thứ tự môn học.",
+    );
+  };
+
+  const moveTopic = (subjectId: string, topicId: string, direction: -1 | 1) => {
+    const subject = currentSubjects.find((candidate) => candidate.id === subjectId);
+    const topic = subject?.milestones.find((candidate) => candidate.id === topicId);
+    if (!topic) return;
+    const built = buildReorderTopicCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      subjectId,
+      topicId,
+      direction,
+    });
+    commitReorder(
+      built,
+      "reorder-topic",
+      `Sắp xếp chủ đề ${topic.title}`,
+      "Đã cập nhật thứ tự chủ đề.",
+    );
+  };
+
+  const moveLessonTo = (lessonId: string, target: DragLocation) => {
+    const lesson = currentSubjects
+      .flatMap((subject) => subject.milestones)
+      .flatMap((topic) => topic.lessons)
+      .find((candidate) => candidate.id === lessonId);
+    if (!lesson) return;
+    const built = buildReorderLessonCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonId,
+      target,
+    });
+    commitReorder(
+      built,
+      "reorder-lesson",
+      `Sắp xếp bài học ${lesson.title}`,
+      "Đã cập nhật thứ tự bài học.",
+    );
+  };
+
+  const lessonReorder = useLessonReorder({
+    enabled: reorderEnabled,
+    onDrop: moveLessonTo,
+  });
+
+  const moveLessonByButton = (lessonId: string, direction: "up" | "down") => {
+    const owner = findLessonOwner(currentSubjects, lessonId);
+    if (!owner) return;
+    const topic = currentSubjects
+      .find((subject) => subject.id === owner.subjectId)
+      ?.milestones.find((candidate) => candidate.id === owner.topicId);
+    if (!topic) return;
+    const index = topic.lessons.findIndex((lesson) => lesson.id === lessonId);
+    if (index < 0) return;
+
+    const beforeLessonId =
+      direction === "up"
+        ? topic.lessons[index - 1]?.id
+        : (topic.lessons[index + 2]?.id ?? null);
+    if (direction === "up" && beforeLessonId == null) return;
+    if (direction === "down" && index >= topic.lessons.length - 1) return;
+    moveLessonTo(lessonId, {
+      subjectId: owner.subjectId,
+      topicId: owner.topicId,
+      beforeLessonId,
+    });
+  };
 
   const openLessonEdit = (lesson: Lesson) => {
     const nextDraft = createLessonEditorDraft({ subjects: currentSubjects, lesson });
@@ -231,7 +348,7 @@ export function CourseManagerModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 md:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 md:grid-cols-[280px_minmax(0,1fr)]">
             <aside className="flex min-h-0 flex-col border-b bg-slate-50/70 p-3 md:border-b-0 md:border-r">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -245,36 +362,65 @@ export function CourseManagerModal({
               <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto">
                 {visibleSubjects.map((subject) => {
                   const subjectStats = deriveSubjectStats(subject, minutesByLesson, progress);
+                  const subjectIndex = currentSubjects.findIndex(
+                    (candidate) => candidate.id === subject.id,
+                  );
                   return (
-                    <button
+                    <div
                       key={subject.id}
-                      type="button"
                       className={cn(
-                        "w-full rounded-xl px-3 py-2 text-left transition",
+                        "flex items-center gap-1 rounded-xl p-1 transition",
                         selectedSubjectId === subject.id
                           ? "bg-indigo-600 text-white"
                           : "hover:bg-white",
                       )}
-                      onClick={() => setSelectedSubjectId(subject.id)}
                     >
-                      <span className="block truncate text-sm font-semibold">
-                        {subject.emoji} {subject.name}
-                      </span>
-                      <span
-                        className={cn(
-                          "mt-1 block text-xs",
-                          selectedSubjectId === subject.id ? "text-indigo-100" : "text-slate-500",
-                        )}
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 px-2 py-1 text-left"
+                        onClick={() => setSelectedSubjectId(subject.id)}
                       >
-                        {subjectStats.completed}/{subjectStats.lessons} bài
-                      </span>
-                    </button>
+                        <span className="block truncate text-sm font-semibold">
+                          {subject.emoji} {subject.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "mt-1 block text-xs",
+                            selectedSubjectId === subject.id
+                              ? "text-indigo-100"
+                              : "text-slate-500",
+                          )}
+                        >
+                          {subjectStats.completed}/{subjectStats.lessons} bài
+                        </span>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={!reorderEnabled || subjectIndex <= 0}
+                        aria-label={`Di chuyển môn lên: ${subject.name}`}
+                        onClick={() => moveSubject(subject.id, -1)}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={!reorderEnabled || subjectIndex >= currentSubjects.length - 1}
+                        aria-label={`Di chuyển môn xuống: ${subject.name}`}
+                        onClick={() => moveSubject(subject.id, 1)}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                    </div>
                   );
                 })}
               </div>
             </aside>
 
-            <main className="min-h-0 overflow-y-auto p-4 sm:p-5">
+            <main data-course-scroll-container className="min-h-0 overflow-y-auto p-4 sm:p-5">
               {selectedSubject && stats ? (
                 <div className="space-y-5">
                   <section className="rounded-2xl border bg-white p-4">
@@ -333,53 +479,47 @@ export function CourseManagerModal({
                     </select>
                   </section>
 
+                  {!reorderEnabled ? (
+                    <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                      Xóa tìm kiếm và chọn “Tất cả / Theo lộ trình” để sắp xếp môn, chủ đề hoặc bài học.
+                    </p>
+                  ) : null}
+
                   <div className="space-y-3">
-                    {visibleMilestones.map((topic) => (
-                      <section
+                    {visibleMilestones.map((topic, topicIndex) => (
+                      <TopicSection
                         key={topic.id}
-                        className="overflow-hidden rounded-2xl border bg-white"
-                      >
-                        <header className="border-b bg-slate-50 px-4 py-3">
-                          <h3 className="font-semibold">{topic.title}</h3>
-                          <p className="text-xs text-slate-500">{topic.lessons.length} bài học</p>
-                        </header>
-                        {topic.lessons.length ? (
-                          <ul className="divide-y">
-                            {topic.lessons.map((lesson) => {
-                              const minutes = minutesByLesson.get(lesson.id) ?? 0;
-                              const percent = Math.min(
-                                100,
-                                Math.round(
-                                  (minutes / Math.max(1, lesson.plannedDurationMinutes)) * 100,
-                                ),
-                              );
-                              return (
-                                <li key={lesson.id} className="flex items-center gap-3 p-3">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-medium">{lesson.title}</p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      {lesson.plannedDurationMinutes} phút ·{" "}
-                                      {lesson.scheduledDate || "Chưa xếp lịch"} ·{" "}
-                                      {lesson.scheduleMode === "fixed" ? "Cố định" : "Linh hoạt"}
-                                    </p>
-                                    <Progress value={percent} className="mt-2 h-1.5" />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => openLessonEdit(lesson)}
-                                  >
-                                    <Edit3 className="h-4 w-4" /> Chỉnh sửa
-                                  </Button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : (
-                          <p className="p-4 text-sm text-slate-500">Chủ đề này chưa có bài học.</p>
+                        subjectId={selectedSubject.id}
+                        topic={topic}
+                        reorderEnabled={reorderEnabled}
+                        dragOverLocation={lessonReorder.dragOverLocation}
+                        canMoveTopicUp={topicIndex > 0}
+                        canMoveTopicDown={topicIndex < visibleMilestones.length - 1}
+                        onMoveTopic={(topicId, direction) =>
+                          moveTopic(selectedSubject.id, topicId, direction)
+                        }
+                        onEnterDropTarget={lessonReorder.enterDropTarget}
+                        onLeaveDropTarget={lessonReorder.leaveDropTarget}
+                        onFinishDrop={lessonReorder.finishDrop}
+                        renderLesson={(lesson, lessonIndex) => (
+                          <LessonRow
+                            lesson={lesson}
+                            minutes={minutesByLesson.get(lesson.id) ?? 0}
+                            activeTimer={activeTimerLessonId === lesson.id}
+                            reorderEnabled={reorderEnabled}
+                            dragArmed={lessonReorder.dragArmedLessonId === lesson.id}
+                            dragging={lessonReorder.draggedLessonId === lesson.id}
+                            canMoveUp={lessonIndex > 0}
+                            canMoveDown={lessonIndex < topic.lessons.length - 1}
+                            onEdit={openLessonEdit}
+                            onMove={moveLessonByButton}
+                            onArmDrag={lessonReorder.armDrag}
+                            onStartDrag={lessonReorder.startDrag}
+                            onSetDragImage={lessonReorder.setDragImage}
+                            onDragEnd={lessonReorder.resetDrag}
+                          />
                         )}
-                      </section>
+                      />
                     ))}
                     {visibleMilestones.length === 0 ? (
                       <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-slate-500">
