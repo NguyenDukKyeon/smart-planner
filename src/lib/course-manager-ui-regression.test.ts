@@ -65,10 +65,7 @@ describe("Course Manager UI transaction routing", () => {
         "utf8",
       ),
       readFile(new URL("../components/course-manager/LessonRow.tsx", import.meta.url), "utf8"),
-      readFile(
-        new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
-        "utf8",
-      ),
+      readFile(new URL("../components/course-manager/TopicSection.tsx", import.meta.url), "utf8"),
     ]);
 
     expect(hookSource).toContain("export function useLessonReorder");
