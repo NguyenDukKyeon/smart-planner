@@ -51,5 +51,19 @@ describe("Flexible schedule UX", () => {
     expect(moveDialogSource).not.toContain("buildMoveLessonDateCandidate");
     expect(moveDialogSource).not.toContain("executeMutation");
     expect(moveDialogSource).not.toContain("localStorage");
+
+    expect(plannerSource).toContain("FlexibleScheduleStatusFilter");
+    expect(plannerSource).toContain('aria-label="Lọc lịch theo trạng thái"');
+    expect(plannerSource).toContain("Tất cả công việc");
+    expect(plannerSource).toContain("Cần xử lý");
+    expect(plannerSource).toContain("filterFlexibleScheduleItems");
+    expect(plannerSource).toContain("isFlexibleScheduleAttentionDay");
+    expect(plannerSource).toContain("deriveFlexibleScheduleDayMetrics");
+    expect(plannerSource).toContain("Đã xếp");
+    expect(plannerSource).toContain("Quá công suất");
+    expect(plannerSource).toContain("Cố định chưa xếp");
+    expect(plannerSource).toContain(
+      "Không có ngày quá tải hoặc bài cố định chưa xếp trong khoảng lịch này.",
+    );
   });
 });
