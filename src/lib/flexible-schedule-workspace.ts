@@ -94,8 +94,7 @@ export function calculateMinimumHorizonWeeks(params: {
     return { weeks: 1, includesTarget: true, reason: "included" };
   }
 
-  const requiredWeeks =
-    1 + Math.ceil(daysBetweenISO(firstWeekEndISO, params.targetDateISO) / 7);
+  const requiredWeeks = 1 + Math.ceil(daysBetweenISO(firstWeekEndISO, params.targetDateISO) / 7);
   if (requiredWeeks > maxWeeks) {
     return { weeks: maxWeeks, includesTarget: false, reason: "beyond-max" };
   }
