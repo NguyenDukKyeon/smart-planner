@@ -12,13 +12,7 @@ import { toast } from "sonner";
 import { SUBJECTS, type Lesson, type Subject } from "@/lib/mock-data";
 import { buildFlexiblePlan, findLessonById, type PlanDay } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
-import {
-  daysBetweenISO,
-  displayDate,
-  getSundayISO,
-  todayISO,
-  weekdayVi,
-} from "@/lib/date-utils";
+import { daysBetweenISO, displayDate, getSundayISO, todayISO, weekdayVi } from "@/lib/date-utils";
 import {
   buildChangeDayCapacityCandidate,
   buildMoveLessonDateCandidate,
