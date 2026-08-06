@@ -135,10 +135,7 @@ export function TopicSection({
               ) : null}
               {onEditTopic && onDeleteTopic ? <DropdownMenuSeparator /> : null}
               {onDeleteTopic ? (
-                <DropdownMenuItem
-                  onSelect={() => onDeleteTopic(topic.id)}
-                  className="text-red-700"
-                >
+                <DropdownMenuItem onSelect={() => onDeleteTopic(topic.id)} className="text-red-700">
                   <Trash2 className="mr-2 h-4 w-4" /> Xóa chủ đề
                 </DropdownMenuItem>
               ) : null}

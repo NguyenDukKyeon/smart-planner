@@ -145,8 +145,7 @@ export function CourseManagerModal({
   const [bulkTargetSubjectId, setBulkTargetSubjectId] = useState("");
   const [bulkTargetTopicId, setBulkTargetTopicId] = useState("");
   const [bulkDate, setBulkDate] = useState("");
-  const [bulkScheduleMode, setBulkScheduleMode] =
-    useState<LessonScheduleMode>("flexible");
+  const [bulkScheduleMode, setBulkScheduleMode] = useState<LessonScheduleMode>("flexible");
   const [bulkMinutes, setBulkMinutes] = useState(120);
   const [archiveView, setArchiveView] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -368,9 +367,7 @@ export function CourseManagerModal({
     ) {
       return;
     }
-    if (
-      !window.confirm(`Lưu trữ môn “${selectedSubject.name}”? Lịch sử học vẫn được giữ.`)
-    ) {
+    if (!window.confirm(`Lưu trữ môn “${selectedSubject.name}”? Lịch sử học vẫn được giữ.`)) {
       return;
     }
     const next = archiveSubject(currentSubjects, selectedSubject.id);
@@ -672,9 +669,7 @@ export function CourseManagerModal({
       return;
     }
     if (
-      !window.confirm(
-        `Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`,
-      )
+      !window.confirm(`Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`)
     ) {
       return;
     }
@@ -1072,9 +1067,7 @@ export function CourseManagerModal({
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
             <DialogTitle>{topicEditor?.id ? "Đổi tên chủ đề" : "Thêm chủ đề"}</DialogTitle>
-            <DialogDescription>
-              Chủ đề giúp nhóm các bài học trong cùng một môn.
-            </DialogDescription>
+            <DialogDescription>Chủ đề giúp nhóm các bài học trong cùng một môn.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
