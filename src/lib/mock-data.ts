@@ -9,6 +9,13 @@ import { sortSubjects } from "./subject-order";
 
 export type LessonScheduleMode = "fixed" | "flexible";
 
+export type LessonPlacementProvenance = {
+  kind: "manual-move";
+  movedAt: string;
+  fromDateISO: string;
+  toDateISO: string;
+};
+
 export type Lesson = {
   id: string;
   title: string;
@@ -22,6 +29,7 @@ export type Lesson = {
   week: number;
   initialDone: boolean;
   habitAnchor?: string;
+  placementProvenance?: LessonPlacementProvenance;
 };
 export type Milestone = {
   id: string;

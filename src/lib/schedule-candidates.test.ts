@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { Lesson, Subject } from "./mock-data";
 import { DEFAULT_PLANNER_SETTINGS } from "./planner";
 import {
@@ -113,6 +113,77 @@ describe("buildMoveLessonDateCandidate", () => {
     expect(result.candidate.subjects[0].milestones[0].lessons[0].scheduledDate).toBe("2030-01-04");
     expect(result.candidate.plannerSettings).toEqual(current.plannerSettings);
     expect(current.subjects[0].milestones[0].lessons[0].scheduledDate).toBe("2030-01-01");
+  });
+
+  test("creates provenance for the first manual move", () => {
+    const result = buildMoveLessonDateCandidate({
+      current: currentSnapshot(),
+      lessonId: "lesson-1",
+      targetDateISO: "2030-01-04",
+      now: () => new Date("2030-01-02T03:04:05.000Z"),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.candidate.subjects[0].milestones[0].lessons[0]).toMatchObject({
+      scheduledDate: "2030-01-04",
+      placementProvenance: {
+        kind: "manual-move",
+        movedAt: "2030-01-02T03:04:05.000Z",
+        fromDateISO: "2030-01-01",
+        toDateISO: "2030-01-04",
+      },
+    });
+  });
+
+  test("a second move replaces the previous provenance", () => {
+    const current = currentSnapshot();
+    current.subjects[0].milestones[0].lessons[0].placementProvenance = {
+      kind: "manual-move",
+      movedAt: "2030-01-01T00:00:00.000Z",
+      fromDateISO: "2029-12-31",
+      toDateISO: "2030-01-01",
+    };
+    const result = buildMoveLessonDateCandidate({
+      current,
+      lessonId: "lesson-1",
+      targetDateISO: "2030-01-05",
+      now: () => new Date("2030-01-03T00:00:00.000Z"),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.candidate.subjects[0].milestones[0].lessons[0].placementProvenance).toEqual({
+      kind: "manual-move",
+      movedAt: "2030-01-03T00:00:00.000Z",
+      fromDateISO: "2030-01-01",
+      toDateISO: "2030-01-05",
+    });
+  });
+
+  test("a same-date no-op preserves the existing provenance", () => {
+    const current = currentSnapshot();
+    const previous = {
+      kind: "manual-move" as const,
+      movedAt: "2030-01-01T00:00:00.000Z",
+      fromDateISO: "2029-12-31",
+      toDateISO: "2030-01-01",
+    };
+    current.subjects[0].milestones[0].lessons[0].placementProvenance = previous;
+    const now = vi.fn(() => new Date("2030-01-03T00:00:00.000Z"));
+    const result = buildMoveLessonDateCandidate({
+      current,
+      lessonId: "lesson-1",
+      targetDateISO: "2030-01-01",
+      now,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.candidate.subjects[0].milestones[0].lessons[0].placementProvenance).toEqual(
+      previous,
+    );
+    expect(now).not.toHaveBeenCalled();
   });
 
   test("returns an error when the lesson does not exist", () => {

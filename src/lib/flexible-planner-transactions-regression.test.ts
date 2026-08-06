@@ -36,6 +36,14 @@ describe("Flexible Planner shared schedule transactions", () => {
     expect(plannerSource).not.toContain("setUndoStack");
   });
 
+  test("every Flexible Planner move method uses the canonical date-move candidate", () => {
+    expect(plannerSource).toContain("const moveLessonToDate =");
+    expect(plannerSource).toContain("buildMoveLessonDateCandidate({");
+    expect(plannerSource).toContain('kind: "move-lesson-date"');
+    expect(plannerSource).toContain("moveLessonToDate(lessonId, targetDateISO)");
+    expect(plannerSource).not.toContain("updateLessonDetails(subjects");
+  });
+
   test("day capacity commits on an explicit boundary instead of every keystroke", () => {
     expect(plannerSource).toContain("function DayCapacityInput(");
     expect(plannerSource).toContain("onBlur={commitDraft}");

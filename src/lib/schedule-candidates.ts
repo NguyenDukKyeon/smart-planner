@@ -52,6 +52,7 @@ export function buildMoveLessonDateCandidate(params: {
   current: ScheduleSnapshot;
   lessonId: string;
   targetDateISO: string;
+  now?: () => Date;
 }): MoveLessonDateCandidateResult {
   const current = createScheduleSnapshot(params.current.subjects, params.current.plannerSettings);
   const lesson = findLessonById(params.lessonId, current.subjects);
@@ -63,8 +64,15 @@ export function buildMoveLessonDateCandidate(params: {
     return { ok: true, candidate: current };
   }
 
+  const placementProvenance = {
+    kind: "manual-move" as const,
+    movedAt: (params.now ?? (() => new Date()))().toISOString(),
+    fromDateISO: lesson.scheduledDate,
+    toDateISO: params.targetDateISO,
+  };
   const subjects = updateLessonDetails(current.subjects, params.lessonId, {
     scheduledDate: params.targetDateISO,
+    placementProvenance,
   });
   if (subjects === current.subjects) {
     return { ok: false, error: "Không thể cập nhật ngày của bài học." };

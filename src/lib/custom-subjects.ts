@@ -5,6 +5,7 @@ import {
   SUBJECTS as DEFAULT_SUBJECTS,
 } from "./mock-data";
 import { weekdayFullVi, normalizeDateToISO } from "./date-utils";
+import { sanitizeLessonPlacementProvenance } from "./lesson-placement";
 import { sortSubjects } from "./subject-order";
 import {
   getBrowserStorage,
@@ -599,17 +600,25 @@ export function normalizeSubjects(value: unknown): Subject[] | null {
       ? subject.milestones.map((milestone) => ({
           ...milestone,
           lessons: Array.isArray(milestone.lessons)
-            ? milestone.lessons.map((lesson) => ({
-                ...lesson,
-                topic: typeof lesson.topic === "string" ? lesson.topic : undefined,
-                scheduleMode: (lesson.scheduleMode === "fixed"
-                  ? "fixed"
-                  : "flexible") as LessonScheduleMode,
-                plannedDurationMinutes: clampMinutes(
-                  (lesson as Lesson & { estimatedMinutes?: number }).plannedDurationMinutes ??
-                    (lesson as Lesson & { estimatedMinutes?: number }).estimatedMinutes,
-                ),
-              }))
+            ? milestone.lessons.map((lesson) => {
+                const placementProvenance = sanitizeLessonPlacementProvenance(
+                  (lesson as Lesson & { placementProvenance?: unknown }).placementProvenance,
+                );
+                return {
+                  ...lesson,
+                  topic: typeof lesson.topic === "string" ? lesson.topic : undefined,
+                  scheduleMode: (lesson.scheduleMode === "fixed"
+                    ? "fixed"
+                    : "flexible") as LessonScheduleMode,
+                  plannedDurationMinutes: clampMinutes(
+                    (lesson as Lesson & { estimatedMinutes?: number }).plannedDurationMinutes ??
+                      (lesson as Lesson & { estimatedMinutes?: number }).estimatedMinutes,
+                  ),
+                  ...(placementProvenance
+                    ? { placementProvenance }
+                    : { placementProvenance: undefined }),
+                };
+              })
             : [],
         }))
       : [];
@@ -755,13 +764,39 @@ export function updateLessonDetails(
   patch: Partial<
     Pick<
       Lesson,
-      "title" | "topic" | "plannedDurationMinutes" | "scheduledDate" | "scheduleMode" | "xp"
+      | "title"
+      | "topic"
+      | "plannedDurationMinutes"
+      | "scheduledDate"
+      | "scheduleMode"
+      | "xp"
+      | "placementProvenance"
     >
   >,
 ): Subject[] {
   const normalizeLesson = (lesson: Lesson, subjectName: string): Lesson => {
+    const previousMode = lesson.scheduleMode ?? "flexible";
+    const nextMode =
+      patch.scheduleMode === "fixed" || patch.scheduleMode === "flexible"
+        ? patch.scheduleMode
+        : previousMode;
     const scheduledDate =
       typeof patch.scheduledDate === "string" ? patch.scheduledDate : lesson.scheduledDate;
+    const dateChanged =
+      typeof patch.scheduledDate === "string" && patch.scheduledDate !== lesson.scheduledDate;
+    const modeChanged =
+      (patch.scheduleMode === "fixed" || patch.scheduleMode === "flexible") &&
+      patch.scheduleMode !== previousMode;
+    const hasExplicitProvenance = Object.prototype.hasOwnProperty.call(
+      patch,
+      "placementProvenance",
+    );
+    const explicitProvenance = sanitizeLessonPlacementProvenance(patch.placementProvenance);
+    const placementProvenance = hasExplicitProvenance
+      ? explicitProvenance
+      : dateChanged || modeChanged
+        ? undefined
+        : sanitizeLessonPlacementProvenance(lesson.placementProvenance);
     const requestedTopic = typeof patch.topic === "string" ? patch.topic.trim() : undefined;
     return {
       ...lesson,
@@ -776,12 +811,10 @@ export function updateLessonDetails(
           ? Math.min(1000, Math.max(0, Math.round(patch.xp)))
           : lesson.xp,
       scheduledDate,
-      scheduleMode:
-        patch.scheduleMode === "fixed" || patch.scheduleMode === "flexible"
-          ? patch.scheduleMode
-          : (lesson.scheduleMode ?? "flexible"),
+      scheduleMode: nextMode,
       weekday: scheduledDate ? weekdayFullVi(scheduledDate) : "",
       sourceSubject: subjectName,
+      ...(placementProvenance ? { placementProvenance } : { placementProvenance: undefined }),
     };
   };
 
@@ -1170,7 +1203,7 @@ export function shiftLessonDates(
 
 /**
  * Archive/catalog mutations always write the archive first and the live
- * catalog second.  Both raw values are protected by one verified snapshot, so
+ * catalog second. Both raw values are protected by one verified snapshot, so
  * a failure never leaves the caller with an optimistic catalog state.
  */
 function saveArchiveAndCatalogAtomically(
@@ -1356,7 +1389,7 @@ export function loadArchivedCatalog(
 }
 
 /**
- * Compatibility reader for existing callers.  The detailed result remains
+ * Compatibility reader for existing callers. The detailed result remains
  * available to mutation paths, so corrupt archive bytes are never treated as
  * permission to overwrite the archive.
  */
