@@ -44,10 +44,7 @@ import {
   type LessonFilter,
   type LessonSort,
 } from "./course-manager/course-manager-model";
-import {
-  useLessonReorder,
-  type DragLocation,
-} from "./course-manager/useLessonReorder";
+import { useLessonReorder, type DragLocation } from "./course-manager/useLessonReorder";
 
 type Props = {
   currentSubjects: Subject[];
@@ -224,9 +221,7 @@ export function CourseManagerModal({
     if (index < 0) return;
 
     const beforeLessonId =
-      direction === "up"
-        ? topic.lessons[index - 1]?.id
-        : (topic.lessons[index + 2]?.id ?? null);
+      direction === "up" ? topic.lessons[index - 1]?.id : (topic.lessons[index + 2]?.id ?? null);
     if (direction === "up" && beforeLessonId == null) return;
     if (direction === "down" && index >= topic.lessons.length - 1) return;
     moveLessonTo(lessonId, {
@@ -386,9 +381,7 @@ export function CourseManagerModal({
                         <span
                           className={cn(
                             "mt-1 block text-xs",
-                            selectedSubjectId === subject.id
-                              ? "text-indigo-100"
-                              : "text-slate-500",
+                            selectedSubjectId === subject.id ? "text-indigo-100" : "text-slate-500",
                           )}
                         >
                           {subjectStats.completed}/{subjectStats.lessons} bài
@@ -481,7 +474,8 @@ export function CourseManagerModal({
 
                   {!reorderEnabled ? (
                     <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                      Xóa tìm kiếm và chọn “Tất cả / Theo lộ trình” để sắp xếp môn, chủ đề hoặc bài học.
+                      Xóa tìm kiếm và chọn “Tất cả / Theo lộ trình” để sắp xếp môn, chủ đề
+                      hoặc bài học.
                     </p>
                   ) : null}
 
