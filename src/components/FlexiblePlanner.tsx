@@ -76,7 +76,7 @@ type OutsideHorizonMoveNotice = {
   subjectId: string;
   targetDateISO: string;
   mode: LessonMode;
-  horizonLimitReason?: "before-start" | "beyond-max";
+  horizonLimitReason?: "included" | "before-start" | "beyond-max";
 };
 
 const STATUS_FILTERS: Array<{ id: FlexibleScheduleStatusFilter; label: string }> = [
