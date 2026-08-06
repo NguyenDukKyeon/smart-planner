@@ -71,9 +71,7 @@ function projectedLessonIds(groups: ReturnType<typeof buildRoadmapProjection>) {
 
 function canonicalLessonIds(groups: ReturnType<typeof buildCanonicalRoadmap>) {
   return groups.flatMap((subject) =>
-    subject.milestones.flatMap((milestone) =>
-      milestone.items.map((item) => item.lesson.id),
-    ),
+    subject.milestones.flatMap((milestone) => milestone.items.map((item) => item.lesson.id)),
   );
 }
 
@@ -120,9 +118,9 @@ describe("buildRoadmapProjection", () => {
       status: "completed",
       effectiveDate: "2030-02-14",
     });
-    expect(groups.find((group) => group.items.some((item) => item.lesson.id === "m1"))?.mondayISO).toBe(
-      "2030-02-11",
-    );
+    expect(
+      groups.find((group) => group.items.some((item) => item.lesson.id === "m1"))?.mondayISO,
+    ).toBe("2030-02-11");
   });
 
   test("keeps fixed unplaced and undated lessons visible in dedicated groups", () => {
@@ -133,12 +131,14 @@ describe("buildRoadmapProjection", () => {
       selectedSubjectId: "math",
     });
 
-    expect(groups.find((group) => group.id === "week-unplaced-fixed")?.items.map((item) => item.lesson.id)).toEqual([
-      "fixed",
-    ]);
-    expect(groups.find((group) => group.id === "week-unscheduled")?.items.map((item) => item.lesson.id)).toEqual([
-      "m3",
-    ]);
+    expect(
+      groups
+        .find((group) => group.id === "week-unplaced-fixed")
+        ?.items.map((item) => item.lesson.id),
+    ).toEqual(["fixed"]);
+    expect(
+      groups.find((group) => group.id === "week-unscheduled")?.items.map((item) => item.lesson.id),
+    ).toEqual(["m3"]);
   });
 
   test("filters projection groups by the selected subject", () => {
