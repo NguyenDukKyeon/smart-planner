@@ -5,11 +5,7 @@ import { sortSubjects } from "./subject-order";
 export type RoadmapViewMode = "projection" | "canonical";
 
 export type RoadmapLessonStatus =
-  | "completed"
-  | "projected"
-  | "outside-horizon"
-  | "unplaced-fixed"
-  | "unscheduled";
+  "completed" | "projected" | "outside-horizon" | "unplaced-fixed" | "unscheduled";
 
 export type RoadmapLessonItem = {
   lesson: Lesson;
@@ -81,7 +77,8 @@ function buildItem(params: {
   const completionDate = completed[lesson.id];
   const shiftedDate = shiftedDates[lesson.id];
   const mode = lesson.scheduleMode ?? "flexible";
-  const effectiveDate = completionDate || shiftedDate || (mode === "flexible" ? lesson.scheduledDate : "");
+  const effectiveDate =
+    completionDate || shiftedDate || (mode === "flexible" ? lesson.scheduledDate : "");
 
   let status: RoadmapLessonStatus;
   if (completionDate) {
