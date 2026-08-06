@@ -87,19 +87,59 @@ describe("catalog order in the study plan", () => {
 });
 
 describe("Course Manager drag interaction", () => {
-  test("starts from a dedicated handle and shows an exact drop boundary", async () => {
-    const source = await fs.readFile(
-      new URL("../components/CourseManagerModalContent.tsx", import.meta.url),
-      "utf8",
-    );
+  test("extracts visual drag units while the modal owns every reorder transaction", async () => {
+    const [modalSource, hookSource, rowSource, topicSource] = await Promise.all([
+      fs.readFile(new URL("../components/CourseManagerModal.tsx", import.meta.url), "utf8"),
+      fs.readFile(
+        new URL("../components/course-manager/useLessonReorder.ts", import.meta.url),
+        "utf8",
+      ),
+      fs.readFile(
+        new URL("../components/course-manager/LessonRow.tsx", import.meta.url),
+        "utf8",
+      ),
+      fs.readFile(
+        new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
+        "utf8",
+      ),
+    ]);
 
-    expect(source).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
-    expect(source).toContain("application/x-smart-lesson-id");
-    expect(source).toContain("setDragImage");
-    expect(source).toContain("Chèn phía trên");
-    expect(source).toContain("Chèn phía dưới");
-    expect(source).toContain("function autoScrollDuringLessonDrag");
-    expect(source).toContain("data-course-scroll-container");
-    expect(source).not.toContain("Lần 2: giữ và kéo");
+    expect(rowSource).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
+    expect(rowSource).toContain("application/x-smart-lesson-id");
+    expect(rowSource).toContain("setDragImage");
+    expect(rowSource).toContain("draggable={false}");
+    expect(rowSource).toContain("Di chuyển lên");
+    expect(rowSource).toContain("Di chuyển xuống");
+    expect(rowSource).not.toContain("Lần 2: giữ và kéo");
+
+    expect(topicSource).toContain("Chèn phía trên");
+    expect(topicSource).toContain("Chèn phía dưới");
+    expect(topicSource).toContain("autoScrollDuringLessonDrag");
+    expect(topicSource).toContain("data-course-scroll-container");
+
+    for (const source of [hookSource, rowSource, topicSource]) {
+      expect(source).not.toContain("schedule-candidates");
+      expect(source).not.toContain("executeMutation");
+      expect(source).not.toContain("localStorage");
+      expect(source).not.toContain("sessionStorage");
+    }
+
+    expect(hookSource).toContain("draggedLessonId");
+    expect(hookSource).toContain("dragOverLocation");
+    expect(hookSource).toContain("beforeLessonId");
+    expect(hookSource).toContain("resetDrag");
+
+    expect(modalSource).toContain("useLessonReorder");
+    expect(modalSource).toContain("LessonRow");
+    expect(modalSource).toContain("TopicSection");
+    expect(modalSource).toContain("buildReorderSubjectCandidate");
+    expect(modalSource).toContain('kind: "reorder-subject"');
+    expect(modalSource).toContain("buildReorderTopicCandidate");
+    expect(modalSource).toContain('kind: "reorder-topic"');
+    expect(modalSource).toContain("buildReorderLessonCandidate");
+    expect(modalSource).toContain('kind: "reorder-lesson"');
+    expect(modalSource).toContain('filter === "all"');
+    expect(modalSource).toContain('sort === "roadmap"');
+    expect(modalSource).toContain("lessonSearch.trim()");
   });
 });

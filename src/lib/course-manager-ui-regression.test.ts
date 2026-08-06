@@ -56,4 +56,41 @@ describe("Course Manager UI transaction routing", () => {
     expect(modalSource).toContain('if (classification === "catalog-only")');
     expect(modalSource).toContain("setEditingLesson(null)");
   });
+
+  test("keeps reorder mechanics presentation-only and commits in the modal", async () => {
+    const [modalSource, hookSource, rowSource, topicSource] = await Promise.all([
+      readFile(new URL("../components/CourseManagerModal.tsx", import.meta.url), "utf8"),
+      readFile(
+        new URL("../components/course-manager/useLessonReorder.ts", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../components/course-manager/LessonRow.tsx", import.meta.url), "utf8"),
+      readFile(
+        new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
+        "utf8",
+      ),
+    ]);
+
+    expect(hookSource).toContain("export function useLessonReorder");
+    expect(rowSource).toContain("export function LessonRow");
+    expect(topicSource).toContain("export function TopicSection");
+
+    for (const source of [hookSource, rowSource, topicSource]) {
+      expect(source).not.toContain("buildReorder");
+      expect(source).not.toContain("scheduleTransactions");
+      expect(source).not.toContain("executeMutation");
+      expect(source).not.toContain("toast");
+    }
+
+    expect(modalSource).toContain("const reorderEnabled");
+    expect(modalSource).toContain("buildReorderSubjectCandidate");
+    expect(modalSource).toContain('kind: "reorder-subject"');
+    expect(modalSource).toContain("buildReorderTopicCandidate");
+    expect(modalSource).toContain('kind: "reorder-topic"');
+    expect(modalSource).toContain("buildReorderLessonCandidate");
+    expect(modalSource).toContain('kind: "reorder-lesson"');
+    expect(modalSource).not.toContain("moveLessonBeforeInTopic");
+    expect(modalSource).not.toContain("reorderSubject(");
+    expect(modalSource).not.toContain("reorderTopic(");
+  });
 });
