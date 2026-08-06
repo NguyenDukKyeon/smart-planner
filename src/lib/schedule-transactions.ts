@@ -5,7 +5,11 @@ export type ScheduleMutationKind =
   | "move-lesson-date"
   | "change-schedule-mode"
   | "change-day-capacity"
+  | "edit-lesson"
+  | "reorder-subject"
+  | "reorder-topic"
   | "reorder-lesson"
+  | "move-lessons"
   | "bulk-schedule-update";
 
 export type ScheduleSnapshot = {
