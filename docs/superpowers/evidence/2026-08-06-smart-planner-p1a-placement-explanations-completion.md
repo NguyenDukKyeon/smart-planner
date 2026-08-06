@@ -3,12 +3,13 @@
 ## Status
 
 - Package: `P1A — Placement explanations`
-- Implementation status: `IMPLEMENTED / SOURCE_HEAD_GREEN / DIFF_REVIEWED / READY_FOR_REVIEW`
-- P0 predecessor exact head: `3e296b2d2bb1e7f52b482643a30496b4e3757c0a`
+- Implementation status: `IMPLEMENTED / SOURCE_HEAD_GREEN / DIFF_REVIEWED / PREDECESSOR_INTEGRATED / MERGED_RESULT_VERIFICATION_PENDING`
+- P0 predecessor implementation head: `3e296b2d2bb1e7f52b482643a30496b4e3757c0a`
+- P0 predecessor integrated main head: `d1847a953baf4f1b93b814d2b1e29e2f4107077d`
 - Verified and reviewed P1A source head: `b9ee5de4092a1f38362d12dfadc7207ae2858c79`
 - Branch: `improve/p1a-placement-explanations`
-- Pull request: Draft PR #5
-- Integration state: stacked on P0; not merged; no deploy action performed by the implementer.
+- Pull request: PR #5, ready for review
+- Integration state: retargeted to integrated `main`; P1A not merged; no deploy action performed by the implementer.
 
 This companion completion record is separate from the immutable implementation plan to avoid reconstructing the 1,274-line historical plan solely to append evidence.
 
@@ -18,7 +19,7 @@ This companion completion record is separate from the immutable implementation p
 - Catalog reload preserves valid provenance and removes malformed provenance without deleting the lesson.
 - CSV/JSON imports cannot inject application-generated provenance.
 - Lesson editor schedule changes clear stale provenance only when date or mode actually changes; non-schedule edits preserve it.
-- Every Flexible Planner date move uses `buildMoveLessonDateCandidate` and the existing P0 transaction boundary.
+- Every Flexible Planner date move uses `buildMoveLessonDateCandidate` and the integrated P0 transaction boundary.
 - A same-date move is a no-op and does not replace provenance or call the clock.
 - Failed persistence publishes neither the new date nor provenance and appends no undo history.
 - Undo restores both the previous date and previous provenance.
@@ -40,6 +41,8 @@ GitHub Actions workflow run `31059503567`, job `92484131068`, against PR merge c
 | `git diff --exit-code` | PASS; build/test did not mutate tracked files |
 | Vercel commit status | SUCCESS for source head `b9ee5de4092a1f38362d12dfadc7207ae2858c79` |
 
+The previous evidence head `ecc42f0fb61f38c36993cff857ca3f67158a2e67` also passed all GitHub Actions gates in run `31059687864`, job `92484696012`. Its Vercel build was declined only by the account build-rate-limit.
+
 Focused P1A coverage included:
 
 - `src/lib/custom-subjects.test.ts` — 14 tests
@@ -54,7 +57,6 @@ Focused P1A coverage included:
 
 Review base `3e296b2d2bb1e7f52b482643a30496b4e3757c0a` → source head `b9ee5de4092a1f38362d12dfadc7207ae2858c79`:
 
-- Branch is 35 commits ahead and 0 behind the exact P0 predecessor.
 - Diff contains 16 files including this completion record; all are within the approved P1A design/plan, provenance model, catalog normalization/editor semantics, schedule-move candidate, Today reason UI, or regression/integration tests.
 - One important review finding was fixed: review cards previously displayed multiple competing placement explanations. A RED regression test reproduced the issue with 255/256 passing, then the fix passed 256/256.
 - A suspected undated-provenance edge was dismissed after source inspection: `remainingBySubject` excludes lessons without `scheduledDate`, so an undated lesson cannot reach the canonical Flexible Planner move path.
@@ -92,6 +94,6 @@ Changed-file allowlist:
 - Route generation reports that `src/routes/__root.test.tsx` is not a route; the file is still intentionally executed by the test command.
 - GitHub Actions post-checkout cleanup warns that `.gitmodules` has no URL for `smart-study-habit-planner-deploy`; the job nevertheless completed successfully and this pre-existing repository issue is outside P1A.
 
-## Review gate
+## Final integration gate
 
-P1A remains unmerged and stacked on P0. Review and merge decisions must use exact predecessor `3e296b2d2bb1e7f52b482643a30496b4e3757c0a` and the final evidence commit on `improve/p1a-placement-explanations`. A green implementer run and this diff review are evidence, not package acceptance.
+P0B is now integrated on `main` through merge commit `d1847a953baf4f1b93b814d2b1e29e2f4107077d`. PR #5 is retargeted to that base. This evidence-only commit exists to trigger a genuinely fresh merged-result GitHub Actions run against the integrated predecessor. P1A may be accepted and merged only if that run passes and GitHub still reports the PR mergeable with the same exact head. Green implementer evidence and the earlier diff review remain evidence, not package acceptance.
