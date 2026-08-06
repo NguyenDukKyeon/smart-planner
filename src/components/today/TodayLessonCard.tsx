@@ -90,10 +90,11 @@ export function TodayLessonCard({
                   {topicLabel}
                 </span>
               )}
-              {review && <span>ôn sau {reviewAgeDays} ngày</span>}
-              <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 font-semibold text-amber-700">
-                {review ? "Lượt ôn hôm nay" : `+${lesson.xp} XP`}
-              </span>
+              {!review && (
+                <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 font-semibold text-amber-700">
+                  +{lesson.xp} XP
+                </span>
+              )}
             </div>
 
             <LessonPlacementReason reason={placementReason} />
