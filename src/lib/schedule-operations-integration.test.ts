@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Lesson, Subject } from "./mock-data";
 import { DEFAULT_PLANNER_SETTINGS, DEFAULT_STUDY_META, buildFlexiblePlan } from "./planner";
 import {
+  buildBulkLessonUpdateCandidate,
   buildChangeDayCapacityCandidate,
   buildChangeScheduleModeCandidate,
   buildMoveLessonDateCandidate,
@@ -58,7 +59,12 @@ function settings(hours = 1) {
 function commitCandidate(params: {
   current: ScheduleCandidate;
   candidate: ScheduleCandidate;
-  kind: "move-lesson-date" | "change-schedule-mode" | "reorder-lesson" | "change-day-capacity";
+  kind:
+    | "move-lesson-date"
+    | "change-schedule-mode"
+    | "reorder-lesson"
+    | "change-day-capacity"
+    | "bulk-schedule-update";
 }) {
   return commitScheduleMutation({
     current: params.current,
@@ -301,6 +307,91 @@ describe("schedule operation transactions", () => {
       [],
       [],
       ["later"],
+    ]);
+  });
+
+  test("one successful bulk schedule update creates one history entry and undo restores everything", () => {
+    const current = createScheduleSnapshot(
+      catalog([lesson("first", "2030-01-01"), lesson("second", "2030-01-02")]),
+      settings(2),
+    );
+    const built = buildBulkLessonUpdateCandidate({
+      current,
+      lessonIds: ["first", "second"],
+      patch: {
+        scheduledDate: "2030-01-05",
+        plannedDurationMinutes: 90,
+      },
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) throw new Error(built.error);
+
+    const committed = commitCandidate({
+      current,
+      candidate: built.candidate,
+      kind: "bulk-schedule-update",
+    });
+    expect(committed.ok).toBe(true);
+    if (!committed.ok || committed.status !== "committed") throw new Error("Expected commit");
+    expect(committed.history).toHaveLength(1);
+    expect(committed.history[0].kind).toBe("bulk-schedule-update");
+
+    let restored: ScheduleCandidate | null = null;
+    const undone = undoLastScheduleMutation({
+      current: built.candidate,
+      history: committed.history,
+      saveSubjects: vi.fn(success),
+      savePlannerSettings: vi.fn(success),
+      applyCandidate: (candidate) => {
+        restored = candidate;
+      },
+    });
+
+    expect(undone.ok).toBe(true);
+    expect(restored).toEqual(current);
+  });
+
+  test("failed bulk persistence publishes nothing and preserves history", () => {
+    const current = createScheduleSnapshot(
+      catalog([lesson("first", "2030-01-01"), lesson("second", "2030-01-02")]),
+      settings(2),
+    );
+    const built = buildBulkLessonUpdateCandidate({
+      current,
+      lessonIds: ["first", "second"],
+      patch: { plannedDurationMinutes: 90 },
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) throw new Error(built.error);
+
+    const applyCandidate = vi.fn();
+    const existingHistory = [
+      {
+        id: "existing",
+        kind: "reorder-lesson" as const,
+        createdAt: 1,
+        description: "Existing mutation",
+        before: current,
+      },
+    ];
+    const result = commitScheduleMutation({
+      current,
+      candidate: built.candidate,
+      history: existingHistory,
+      kind: "bulk-schedule-update",
+      description: "Bulk update",
+      saveSubjects: vi.fn(() => ({ ok: false, error: "write failed" })),
+      savePlannerSettings: vi.fn(success),
+      backupSubjects: vi.fn(success),
+      applyCandidate,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(applyCandidate).not.toHaveBeenCalled();
+    expect(result.history).toEqual(existingHistory);
+    expect(current.subjects[0].milestones[0].lessons.map((item) => item.plannedDurationMinutes)).toEqual([
+      60,
+      60,
     ]);
   });
 });

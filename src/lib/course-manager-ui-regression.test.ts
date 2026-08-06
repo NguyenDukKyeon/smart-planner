@@ -95,4 +95,66 @@ describe("Course Manager UI transaction routing", () => {
     expect(modalSource).not.toContain("reorderSubject(");
     expect(modalSource).not.toContain("reorderTopic(");
   });
+
+  test("extracts presentation-only bulk actions and routes schedule changes atomically", async () => {
+    const [modalSource, bulkSource] = await Promise.all([
+      readFile(new URL("../components/CourseManagerModal.tsx", import.meta.url), "utf8"),
+      readFile(
+        new URL("../components/course-manager/BulkActionsBar.tsx", import.meta.url),
+        "utf8",
+      ),
+    ]);
+
+    expect(bulkSource).toContain("export function BulkActionsBar");
+    expect(bulkSource).toContain("Đã chọn");
+    expect(bulkSource).toContain("Chọn tất cả đang hiển thị");
+    expect(bulkSource).toContain("Chuyển sang môn…");
+    expect(bulkSource).toContain("Chuyển sang chủ đề…");
+    expect(bulkSource).toContain('type="date"');
+    expect(bulkSource).toContain("Linh hoạt");
+    expect(bulkSource).toContain("Cố định");
+    expect(bulkSource).toContain("30 phút");
+    expect(bulkSource).toContain("60 phút");
+    expect(bulkSource).toContain("90 phút");
+    expect(bulkSource).toContain("120 phút");
+    expect(bulkSource).toContain("Lưu trữ");
+    expect(bulkSource).toContain("Xóa các bài đã chọn");
+    expect(bulkSource).toContain("onMoveToSubject");
+    expect(bulkSource).toContain("onMoveToTopic");
+    expect(bulkSource).toContain("onUpdateDate");
+    expect(bulkSource).toContain("onUpdateMode");
+    expect(bulkSource).toContain("onUpdateDuration");
+    expect(bulkSource).toContain("onArchive");
+    expect(bulkSource).toContain("onDelete");
+
+    for (const forbidden of [
+      "custom-subjects",
+      "schedule-candidates",
+      "useScheduleTransactions",
+      "scheduleTransactions",
+      "executeMutation",
+      "toast",
+      "localStorage",
+      "sessionStorage",
+    ]) {
+      expect(bulkSource).not.toContain(forbidden);
+    }
+
+    expect(modalSource).toContain("buildMoveLessonsCandidate");
+    expect(modalSource).toContain("buildBulkLessonUpdateCandidate");
+    expect(modalSource).toMatch(
+      /buildMoveLessonsCandidate\([\s\S]*?commitBulkScheduleMutation\(\s*built,\s*"move-lessons"/,
+    );
+    expect(modalSource).toContain('kind: "bulk-schedule-update"');
+    expect(modalSource).toContain("scheduledDate: bulkDate");
+    expect(modalSource).toContain("scheduleMode: bulkScheduleMode");
+    expect(modalSource).toContain("plannedDurationMinutes: bulkMinutes");
+    expect(modalSource).toMatch(
+      /if \(!result\.ok\)[\s\S]*?return false;[\s\S]*?clearSelection\(\)/,
+    );
+    expect(modalSource).toContain("archiveLessons");
+    expect(modalSource).toContain("removeLessonsFromSubjects");
+    expect(modalSource).toContain("alreadyPersisted: true");
+    expect(modalSource).toContain("createBackup: true");
+  });
 });
