@@ -154,8 +154,9 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
   const [recentlyMovedLessonId, setRecentlyMovedLessonId] = useState<string | null>(null);
   const [pendingMoveVisibilityCheck, setPendingMoveVisibilityCheck] =
     useState<OutsideHorizonMoveNotice | null>(null);
-  const [outsideHorizonNotice, setOutsideHorizonNotice] =
-    useState<OutsideHorizonMoveNotice | null>(null);
+  const [outsideHorizonNotice, setOutsideHorizonNotice] = useState<OutsideHorizonMoveNotice | null>(
+    null,
+  );
   const today = todayISO();
 
   const sortedSubjects = useMemo(() => sortSubjects(subjects), [subjects]);
@@ -245,7 +246,10 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
   useEffect(() => {
     if (!pendingMoveVisibilityCheck) return;
     const publishedLesson = findLessonById(pendingMoveVisibilityCheck.lessonId, subjects);
-    if (!publishedLesson || publishedLesson.scheduledDate !== pendingMoveVisibilityCheck.targetDateISO) {
+    if (
+      !publishedLesson ||
+      publishedLesson.scheduledDate !== pendingMoveVisibilityCheck.targetDateISO
+    ) {
       return;
     }
 
