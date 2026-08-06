@@ -46,9 +46,10 @@ export type BulkLessonSchedulePatch = {
   plannedDurationMinutes?: number;
 };
 
-type SelectedLessonsResult =
-  { ok: true; ids: string[]; lessons: Map<string, Lesson> }
-  | { ok: false; error: string };
+type SelectedLessonsResult = { ok: true; ids: string[]; lessons: Map<string, Lesson> } | {
+  ok: false;
+  error: string;
+};
 
 function isReviewTaskId(id: string): boolean {
   return id.startsWith("review:");
