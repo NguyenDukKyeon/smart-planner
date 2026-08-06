@@ -22,11 +22,17 @@ export type FlexibleScheduleDayMetrics = {
   attentionRequired: boolean;
 };
 
-export type HorizonExpansionResult = {
-  weeks: number;
-  includesTarget: boolean;
-  reason: "included" | "before-start" | "beyond-max";
-};
+export type HorizonExpansionResult =
+  | {
+      weeks: number;
+      includesTarget: true;
+      reason: "included";
+    }
+  | {
+      weeks: number;
+      includesTarget: false;
+      reason: "before-start" | "beyond-max";
+    };
 
 function effectiveMode(item: FlexibleScheduleWorkspaceItem): "fixed" | "flexible" {
   return item.lesson.scheduleMode ?? "flexible";
