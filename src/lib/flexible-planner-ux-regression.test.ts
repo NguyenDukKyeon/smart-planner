@@ -65,5 +65,20 @@ describe("Flexible schedule UX", () => {
     expect(plannerSource).toContain(
       "Không có ngày quá tải hoặc bài cố định chưa xếp trong khoảng lịch này.",
     );
+
+    expect(plannerSource).toContain("MoveLessonDateDialog");
+    expect(plannerSource).toContain("onMove={onMoveLesson}");
+    expect(moveDialogSource).toContain("onMove(lesson.id, draftDate)");
+    expect(moveDialogSource).not.toContain("commitScheduleMutation");
+    expect(moveDialogSource).not.toContain("persistPlannerSettings");
+    expect(moveDialogSource).not.toContain("persistScheduleSubjects");
+    expect(plannerSource).toContain("summarizeUnscheduledWork");
+    expect(plannerSource).toContain("pendingMoveVisibilityCheck");
+    expect(plannerSource).toContain("outsideHorizonNotice");
+    expect(plannerSource).toContain("calculateMinimumHorizonWeeks");
+    expect(plannerSource).toContain("Ngoài khoảng đang mở");
+    expect(plannerSource).toContain("Mở rộng lịch");
+    expect(plannerSource).toContain("Xem môn này");
+    expect(plannerSource).toContain('role="status"');
   });
 });
