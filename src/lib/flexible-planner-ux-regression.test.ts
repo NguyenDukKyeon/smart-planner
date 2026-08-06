@@ -80,5 +80,13 @@ describe("Flexible schedule UX", () => {
     expect(plannerSource).toContain("Mở rộng lịch");
     expect(plannerSource).toContain("Xem môn này");
     expect(plannerSource).toContain('role="status"');
+
+    expect(plannerSource).not.toContain("localStorage");
+    expect(plannerSource).not.toContain("sessionStorage");
+    expect(plannerSource).not.toContain("TouchSensor");
+    expect(plannerSource).not.toContain("PointerSensor");
+    expect(plannerSource).not.toContain("DndContext");
+    expect(moveDialogSource).not.toContain("TouchSensor");
+    expect(moveDialogSource).not.toContain("PointerSensor");
   });
 });
