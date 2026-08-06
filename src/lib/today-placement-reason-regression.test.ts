@@ -55,6 +55,7 @@ test("TodayPanel derives reasons and TodayLessonCard renders them", () => {
   expect(card).toContain("<LessonPlacementReason reason={placementReason}");
 });
 
+// Review cards must not duplicate the explanation supplied by LessonPlacementReason.
 test("review cards leave placement explanation to the single reason component", () => {
   const card = readFileSync(
     new URL("../components/today/TodayLessonCard.tsx", import.meta.url),
