@@ -18,12 +18,15 @@ import {
   buildMoveLessonDateCandidate,
 } from "@/lib/schedule-candidates";
 import { createScheduleSnapshot } from "@/lib/schedule-transactions";
+import { summarizeUnscheduledWork } from "@/lib/schedule-visibility";
 import {
+  calculateMinimumHorizonWeeks,
   deriveFlexibleScheduleDayMetrics,
   filterFlexibleScheduleItems,
   isFlexibleScheduleAttentionDay,
   type FlexibleScheduleStatusFilter,
 } from "@/lib/flexible-schedule-workspace";
+import { MoveLessonDateDialog } from "@/components/flexible-planner/MoveLessonDateDialog";
 import {
   useScheduleTransactions,
   type ScheduleTransactionAdapters,
@@ -67,6 +70,15 @@ type WeekGroup = {
 
 type LessonMode = "fixed" | "flexible";
 
+type OutsideHorizonMoveNotice = {
+  lessonId: string;
+  lessonTitle: string;
+  subjectId: string;
+  targetDateISO: string;
+  mode: LessonMode;
+  horizonLimitReason?: "before-start" | "beyond-max";
+};
+
 const STATUS_FILTERS: Array<{ id: FlexibleScheduleStatusFilter; label: string }> = [
   { id: "all", label: "Tất cả công việc" },
   { id: "fixed", label: "Cố định" },
@@ -85,6 +97,14 @@ function getUnplacedFixedLessons(day: PlanDay): Lesson[] {
         unplacedFixedLessons?: Lesson[];
       }
     ).unplacedFixedLessons ?? []
+  );
+}
+
+function planContainsLesson(days: readonly PlanDay[], lessonId: string): boolean {
+  return days.some(
+    (day) =>
+      day.queue.newLessons.some((lesson) => lesson.id === lessonId) ||
+      getUnplacedFixedLessons(day).some((lesson) => lesson.id === lessonId),
   );
 }
 
@@ -132,6 +152,10 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [recentlyMovedLessonId, setRecentlyMovedLessonId] = useState<string | null>(null);
+  const [pendingMoveVisibilityCheck, setPendingMoveVisibilityCheck] =
+    useState<OutsideHorizonMoveNotice | null>(null);
+  const [outsideHorizonNotice, setOutsideHorizonNotice] =
+    useState<OutsideHorizonMoveNotice | null>(null);
   const today = todayISO();
 
   const sortedSubjects = useMemo(() => sortSubjects(subjects), [subjects]);
@@ -181,6 +205,17 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
     ],
   );
 
+  const visibilitySummary = useMemo(
+    () =>
+      summarizeUnscheduledWork({
+        subjects,
+        completed: state.completedLessons,
+        visiblePlan: days,
+        subjectId,
+      }),
+    [days, state.completedLessons, subjectId, subjects],
+  );
+
   const lessonPositionById = useMemo(() => {
     const map = new Map<
       string,
@@ -206,6 +241,28 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
     }
     return map;
   }, [subjects]);
+
+  useEffect(() => {
+    if (!pendingMoveVisibilityCheck) return;
+    const publishedLesson = findLessonById(pendingMoveVisibilityCheck.lessonId, subjects);
+    if (!publishedLesson || publishedLesson.scheduledDate !== pendingMoveVisibilityCheck.targetDateISO) {
+      return;
+    }
+
+    if (planContainsLesson(days, pendingMoveVisibilityCheck.lessonId)) {
+      setOutsideHorizonNotice((current) =>
+        current?.lessonId === pendingMoveVisibilityCheck.lessonId ? null : current,
+      );
+    } else {
+      setOutsideHorizonNotice(pendingMoveVisibilityCheck);
+    }
+    setPendingMoveVisibilityCheck(null);
+  }, [days, pendingMoveVisibilityCheck, subjects]);
+
+  useEffect(() => {
+    if (!outsideHorizonNotice || !planContainsLesson(days, outsideHorizonNotice.lessonId)) return;
+    setOutsideHorizonNotice(null);
+  }, [days, outsideHorizonNotice]);
 
   const allDisplayLessonsByDate = useMemo(() => {
     const map = new Map<string, DisplayLesson[]>();
@@ -316,6 +373,8 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
     adapters: transactionAdapters,
     onUndoSuccess: (entry) => {
       setRecentlyMovedLessonId(null);
+      setPendingMoveVisibilityCheck(null);
+      setOutsideHorizonNotice(null);
       toast.success("Đã hoàn tác thay đổi lịch.", { description: entry.description });
     },
     onUndoError: (error, rollbackError) => {
@@ -358,6 +417,14 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
     if (result.status === "noop") return true;
 
     const mode = getLessonMode(lesson);
+    setOutsideHorizonNotice(null);
+    setPendingMoveVisibilityCheck({
+      lessonId,
+      lessonTitle: lesson.title,
+      subjectId: lessonPositionById.get(lessonId)?.subjectId ?? "unknown",
+      targetDateISO,
+      mode,
+    });
     toast.success(
       mode === "fixed"
         ? `Đã chuyển “${lesson.title}” sang ${displayDate(targetDateISO)}.`
@@ -400,6 +467,25 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
     moveLessonToDate(lessonId, targetDateISO);
     setDraggedLessonId(null);
     setDragOverDate(null);
+  };
+
+  const expandHorizonToNotice = () => {
+    if (!outsideHorizonNotice) return;
+    const expansion = calculateMinimumHorizonWeeks({
+      todayDateISO: today,
+      targetDateISO: outsideHorizonNotice.targetDateISO,
+    });
+    setNumWeeks((current) => Math.max(current, expansion.weeks));
+    if (!expansion.includesTarget) {
+      setOutsideHorizonNotice((current) =>
+        current
+          ? {
+              ...current,
+              horizonLimitReason: expansion.reason,
+            }
+          : current,
+      );
+    }
   };
 
   return (
@@ -492,12 +578,67 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
           <span>
             {visibleLessonCount} mục trong {days.length} ngày
           </span>
+          <span>Chưa xong: {visibilitySummary.unfinishedCount}</span>
+          <span>Đã xếp trong khoảng: {visibilitySummary.visibleScheduledCount}</span>
+          <span>Ngoài khoảng: {visibilitySummary.outsideHorizonCount}</span>
           <span className="inline-flex items-center gap-1">
             <Move className="h-3.5 w-3.5" />
-            Trên điện thoại hoặc bàn phím, dùng nút lùi/tiến một ngày.
+            Trên điện thoại hoặc bàn phím, dùng nút lùi/tiến hoặc Chọn ngày.
           </span>
         </div>
       </div>
+
+      {outsideHorizonNotice && (
+        <div
+          role="status"
+          className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 shadow-xs"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="font-bold">Ngoài khoảng đang mở</p>
+              <p className="mt-1 text-xs leading-relaxed text-amber-900">
+                “{outsideHorizonNotice.lessonTitle}” có{" "}
+                {outsideHorizonNotice.mode === "fixed" ? "ngày cố định" : "ngày sớm nhất"}{" "}
+                {displayDate(outsideHorizonNotice.targetDateISO)} nhưng chưa xuất hiện trong khoảng
+                lịch hiện tại.
+              </p>
+              {outsideHorizonNotice.horizonLimitReason === "beyond-max" && (
+                <p className="mt-1 text-xs font-semibold text-amber-900">
+                  Ngày này vẫn nằm ngoài giới hạn hiển thị tối đa 52 tuần.
+                </p>
+              )}
+              {outsideHorizonNotice.horizonLimitReason === "before-start" && (
+                <p className="mt-1 text-xs font-semibold text-amber-900">
+                  Ngày này nằm trước ngày bắt đầu của lịch đang mở.
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={expandHorizonToNotice}
+                className="min-h-9 rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 hover:bg-amber-100"
+              >
+                Mở rộng lịch
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubjectId(outsideHorizonNotice.subjectId)}
+                className="min-h-9 rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 hover:bg-amber-100"
+              >
+                Xem môn này
+              </button>
+              <button
+                type="button"
+                onClick={() => setOutsideHorizonNotice(null)}
+                className="min-h-9 rounded-lg px-3 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                Bỏ qua
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <p className="sr-only" aria-live="polite">
         {draggedLessonId && dragOverDate
@@ -954,7 +1095,8 @@ function LessonCard({
           </div>
 
           {movable && (
-            <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-slate-100 pt-2">
+            <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5 border-t border-slate-100 pt-2">
+              <MoveLessonDateDialog lesson={item.lesson} onMove={onMoveLesson} />
               <button
                 type="button"
                 disabled={!previousDate}
