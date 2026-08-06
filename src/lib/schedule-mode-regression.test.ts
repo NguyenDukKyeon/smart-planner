@@ -171,7 +171,7 @@ describe("fixed and flexible lesson scheduling", () => {
 describe("Course Manager drag interaction", () => {
   test("uses a dedicated one-step handle, exact drop boundaries and edge auto-scroll", async () => {
     const source = await fs.readFile(
-      new URL("../components/CourseManagerModal.tsx", import.meta.url),
+      new URL("../components/CourseManagerModalContent.tsx", import.meta.url),
       "utf8",
     );
 

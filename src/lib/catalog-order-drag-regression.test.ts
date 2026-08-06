@@ -89,7 +89,7 @@ describe("catalog order in the study plan", () => {
 describe("Course Manager drag interaction", () => {
   test("starts from a dedicated handle and shows an exact drop boundary", async () => {
     const source = await fs.readFile(
-      new URL("../components/CourseManagerModal.tsx", import.meta.url),
+      new URL("../components/CourseManagerModalContent.tsx", import.meta.url),
       "utf8",
     );
 

@@ -27,10 +27,7 @@ import {
   type FlexibleScheduleStatusFilter,
 } from "@/lib/flexible-schedule-workspace";
 import { MoveLessonDateDialog } from "@/components/flexible-planner/MoveLessonDateDialog";
-import {
-  useScheduleTransactions,
-  type ScheduleTransactionAdapters,
-} from "@/components/flexible-planner/useScheduleTransactions";
+import type { ScheduleTransactionController } from "@/components/schedule/useScheduleTransactions";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { sortLessonsBySubjectPriority, sortSubjects } from "@/lib/subject-order";
@@ -45,7 +42,7 @@ import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
 type Props = {
   state: ProgressState;
   subjects?: Subject[];
-  transactionAdapters: ScheduleTransactionAdapters;
+  scheduleTransactions: ScheduleTransactionController;
 };
 
 type DisplayLesson = {
@@ -144,7 +141,7 @@ function emptyStateFor(statusFilter: FlexibleScheduleStatusFilter): string {
   return "Không có bài của môn đang xem trong khoảng lịch này.";
 }
 
-export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapters }: Props) {
+export function FlexiblePlanner({ state, subjects = SUBJECTS, scheduleTransactions }: Props) {
   const [numWeeks, setNumWeeks] = useState(2);
   const [subjectId, setSubjectId] = useState("all");
   const [statusFilter, setStatusFilter] = useState<FlexibleScheduleStatusFilter>("all");
@@ -370,21 +367,15 @@ export function FlexiblePlanner({ state, subjects = SUBJECTS, transactionAdapter
   );
 
   const selectedSubject = subjectTabs.find((subject) => subject.id === subjectId) ?? subjectTabs[0];
+  const { history, canUndo, executeMutation, undoLastMutation, lastUndoneEntry } =
+    scheduleTransactions;
 
-  const { history, canUndo, executeMutation, undoLastMutation } = useScheduleTransactions({
-    subjects,
-    plannerSettings: state.plannerSettings,
-    adapters: transactionAdapters,
-    onUndoSuccess: (entry) => {
-      setRecentlyMovedLessonId(null);
-      setPendingMoveVisibilityCheck(null);
-      setOutsideHorizonNotice(null);
-      toast.success("Đã hoàn tác thay đổi lịch.", { description: entry.description });
-    },
-    onUndoError: (error, rollbackError) => {
-      toast.error(rollbackError ? `${error} ${rollbackError}` : error);
-    },
-  });
+  useEffect(() => {
+    if (!lastUndoneEntry) return;
+    setRecentlyMovedLessonId(null);
+    setPendingMoveVisibilityCheck(null);
+    setOutsideHorizonNotice(null);
+  }, [lastUndoneEntry]);
 
   const toggleWeek = (id: string, isCurrentlyCollapsed: boolean) => {
     setUserToggledWeeks((previous) => ({
