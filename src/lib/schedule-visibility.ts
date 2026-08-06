@@ -12,13 +12,20 @@ export function summarizeUnscheduledWork(params: {
   subjects: Subject[];
   completed: Record<string, string>;
   visiblePlan: PlanDay[];
+  subjectId?: string;
 }): UnscheduledWorkSummary {
+  const scopedSubjects =
+    !params.subjectId || params.subjectId === "all"
+      ? params.subjects
+      : params.subjects.filter((subject) => subject.id === params.subjectId);
   const unfinishedLessonIds: string[] = [];
   const knownLessonIds = new Set<string>();
+  const scopedLessonIds = new Set<string>();
 
-  for (const subject of params.subjects) {
+  for (const subject of scopedSubjects) {
     for (const milestone of subject.milestones) {
       for (const lesson of milestone.lessons) {
+        scopedLessonIds.add(lesson.id);
         if (knownLessonIds.has(lesson.id)) continue;
         knownLessonIds.add(lesson.id);
         if (!params.completed[lesson.id]) unfinishedLessonIds.push(lesson.id);
@@ -31,11 +38,12 @@ export function summarizeUnscheduledWork(params: {
 
   for (const day of params.visiblePlan) {
     for (const lesson of day.queue.newLessons) {
+      if (!scopedLessonIds.has(lesson.id)) continue;
       visibleScheduledIds.add(lesson.id);
       visibleUnfinishedIds.add(lesson.id);
     }
     for (const lesson of day.queue.unplacedFixedLessons) {
-      visibleUnfinishedIds.add(lesson.id);
+      if (scopedLessonIds.has(lesson.id)) visibleUnfinishedIds.add(lesson.id);
     }
   }
 

@@ -36,6 +36,22 @@ function catalog(lessons: Lesson[]): Subject[] {
   ];
 }
 
+function subject(id: string, lessons: Lesson[]): Subject {
+  return {
+    id,
+    name: id,
+    emoji: "🧪",
+    milestones: [
+      {
+        id: `${id}-topic`,
+        title: "Chủ đề",
+        subtitle: `${lessons.length} bài học`,
+        lessons,
+      },
+    ],
+  };
+}
+
 function planDay(params: {
   dateISO: string;
   newLessons?: Lesson[];
@@ -119,6 +135,55 @@ describe("summarizeUnscheduledWork", () => {
     ).toEqual({
       unfinishedCount: 1,
       visibleScheduledCount: 1,
+      outsideHorizonCount: 0,
+      outsideHorizonLessonIds: [],
+    });
+  });
+
+  test("summarizes only the selected subject", () => {
+    const mathVisible = lesson("math-visible", "2030-01-01");
+    const mathOutside = lesson("math-outside", "2030-01-10");
+    const englishVisible = lesson("english-visible", "2030-01-01");
+    const mathUnplaced = {
+      ...lesson("math-unplaced", "2030-01-01"),
+      scheduleMode: "fixed" as const,
+    };
+
+    expect(
+      summarizeUnscheduledWork({
+        subjects: [
+          subject("math", [mathVisible, mathOutside, mathUnplaced]),
+          subject("english", [englishVisible]),
+        ],
+        completed: {},
+        visiblePlan: [
+          planDay({
+            dateISO: "2030-01-01",
+            newLessons: [mathVisible, englishVisible],
+            unplacedFixedLessons: [mathUnplaced],
+          }),
+        ],
+        subjectId: "math",
+      }),
+    ).toEqual({
+      unfinishedCount: 3,
+      visibleScheduledCount: 1,
+      outsideHorizonCount: 1,
+      outsideHorizonLessonIds: ["math-outside"],
+    });
+  });
+
+  test("returns zero counts for an unknown subject", () => {
+    expect(
+      summarizeUnscheduledWork({
+        subjects: [subject("math", [lesson("math", "2030-01-01")])],
+        completed: {},
+        visiblePlan: [],
+        subjectId: "missing",
+      }),
+    ).toEqual({
+      unfinishedCount: 0,
+      visibleScheduledCount: 0,
       outsideHorizonCount: 0,
       outsideHorizonLessonIds: [],
     });
