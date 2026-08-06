@@ -98,9 +98,7 @@ export function CourseManagerModal({
   const visibleSubjects = useMemo(() => {
     const keyword = subjectSearch.trim().toLocaleLowerCase("vi");
     return keyword
-      ? currentSubjects.filter((subject) =>
-          subject.name.toLocaleLowerCase("vi").includes(keyword),
-        )
+      ? currentSubjects.filter((subject) => subject.name.toLocaleLowerCase("vi").includes(keyword))
       : currentSubjects;
   }, [currentSubjects, subjectSearch]);
   const visibleMilestones = useMemo(
@@ -337,7 +335,10 @@ export function CourseManagerModal({
 
                   <div className="space-y-3">
                     {visibleMilestones.map((topic) => (
-                      <section key={topic.id} className="overflow-hidden rounded-2xl border bg-white">
+                      <section
+                        key={topic.id}
+                        className="overflow-hidden rounded-2xl border bg-white"
+                      >
                         <header className="border-b bg-slate-50 px-4 py-3">
                           <h3 className="font-semibold">{topic.title}</h3>
                           <p className="text-xs text-slate-500">{topic.lessons.length} bài học</p>
