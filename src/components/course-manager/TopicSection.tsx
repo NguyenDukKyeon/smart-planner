@@ -1,4 +1,4 @@
-import type { DragEvent, ReactNode } from "react";
+import { Fragment, type DragEvent, type ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Lesson, Milestone } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
@@ -115,12 +115,14 @@ export function TopicSection({
       {topic.lessons.length ? (
         <ul>
           {topic.lessons.map((lesson, index) => (
-            <li key={lesson.id} className="list-none">
-              {dropTarget(lesson.id, `Chèn phía trên ${lesson.title}`)}
+            <Fragment key={lesson.id}>
+              <li className="list-none">
+                {dropTarget(lesson.id, `Chèn phía trên ${lesson.title}`)}
+              </li>
               {renderLesson(lesson, index)}
-            </li>
+            </Fragment>
           ))}
-          {dropTarget(null, "Chèn phía dưới")}
+          <li className="list-none">{dropTarget(null, "Chèn phía dưới")}</li>
         </ul>
       ) : (
         <div className="p-4">
