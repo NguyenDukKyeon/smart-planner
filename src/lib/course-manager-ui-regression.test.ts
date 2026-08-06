@@ -99,10 +99,7 @@ describe("Course Manager UI transaction routing", () => {
   test("extracts presentation-only bulk actions and routes schedule changes atomically", async () => {
     const [modalSource, bulkSource] = await Promise.all([
       readFile(new URL("../components/CourseManagerModal.tsx", import.meta.url), "utf8"),
-      readFile(
-        new URL("../components/course-manager/BulkActionsBar.tsx", import.meta.url),
-        "utf8",
-      ),
+      readFile(new URL("../components/course-manager/BulkActionsBar.tsx", import.meta.url), "utf8"),
     ]);
 
     expect(bulkSource).toContain("export function BulkActionsBar");

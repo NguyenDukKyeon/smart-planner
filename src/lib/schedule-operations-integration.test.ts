@@ -389,9 +389,8 @@ describe("schedule operation transactions", () => {
     expect(result.ok).toBe(false);
     expect(applyCandidate).not.toHaveBeenCalled();
     expect(result.history).toEqual(existingHistory);
-    expect(current.subjects[0].milestones[0].lessons.map((item) => item.plannedDurationMinutes)).toEqual([
-      60,
-      60,
-    ]);
+    expect(
+      current.subjects[0].milestones[0].lessons.map((item) => item.plannedDurationMinutes),
+    ).toEqual([60, 60]);
   });
 });
