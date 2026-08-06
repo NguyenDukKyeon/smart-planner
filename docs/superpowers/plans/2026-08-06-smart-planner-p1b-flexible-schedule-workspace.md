@@ -4,7 +4,7 @@
 
 **Goal:** Turn Flexible Schedule into a capacity-first workspace with independent subject/status filters, explicit day metrics, direct date selection, and truthful outside-horizon feedback while preserving the P0B transaction boundary.
 
-**Architecture:** Add one pure selector/metrics module and extend the existing visibility helper, then compose both from `FlexiblePlanner`. Add a focused Radix dialog that owns only direct-date input state and delegates every mutation to the existing `moveLessonToDate()` callback. Post-move visibility is resolved only after the parent-published catalog reflects the committed target date, preventing stale-render false positives.
+**Architecture:** Add one pure selector/metrics module and extend the existing visibility helper, then compose both from `FlexiblePlanner`. Add a focused Radix dialog that owns only direct-date input state and delegates every mutation to the existing `moveLessonToDate()` callback. Resolve post-move visibility only after the parent-published catalog reflects the committed target date, preventing stale-render false positives.
 
 **Tech Stack:** React 19, TypeScript 5.8, Vitest 4, Radix Dialog, Tailwind CSS, TanStack Start, existing browser-local schedule transactions.
 
@@ -14,16 +14,13 @@
 - Preserve `P0B ACCEPTED / INTEGRATED` and `P1A ACCEPTED / INTEGRATED` behavior.
 - Do not change scheduler semantics, review intervals, review budgets, persistence ownership, or transaction-controller behavior.
 - Every drag, arrow, and direct-date move must call the single `moveLessonToDate()` boundary in `FlexiblePlanner`.
-- A failed mutation must publish no candidate, append no undo history, close no move dialog, and create no outside-horizon success notice.
-- A same-date move remains a canonical no-op with no persistence, clock call, or undo entry.
+- Failed mutations publish no candidate, append no undo history, close no move dialog, and create no outside-horizon success notice.
+- Same-date moves remain canonical no-ops with no persistence, clock call, or undo entry.
+- Filters and outside-horizon notices remain transient UI state and are not persisted.
+- `unplacedFixedMinutes` is never counted as scheduled minutes.
 - Do not add a dependency, schema migration, workflow change, touch-drag implementation, Roadmap change, Course Manager refactor, Forecast change, or broad visual redesign.
-- Filters and outside-horizon notices are transient UI state and are not persisted.
-- `unplacedFixedMinutes` must never be counted as scheduled minutes.
-- Use exact Vietnamese copy from this plan unless a test requires a smaller accessibility label.
 - Preserve published Lovable history: no squash, rebase, amend, force-push, or branch-history rewriting.
 - P1B remains `NOT_ACCEPTED` until independent review records an acceptance decision.
-
----
 
 ## File Structure
 
@@ -62,11 +59,6 @@
 - Create: `src/lib/flexible-schedule-workspace.test.ts`
 
 **Interfaces:**
-- Consumes:
-  - `Lesson` from `src/lib/mock-data.ts`
-  - `DayQueue` from `src/lib/planner.ts`
-  - `daysBetweenISO()` and `getSundayISO()` from `src/lib/date-utils.ts`
-- Produces:
 
 ```ts
 export type FlexibleScheduleStatusFilter = "all" | "fixed" | "flexible" | "attention";
@@ -94,41 +86,11 @@ export type HorizonExpansionResult = {
   includesTarget: boolean;
   reason: "included" | "before-start" | "beyond-max";
 };
-
-export function filterFlexibleScheduleItems<T extends FlexibleScheduleWorkspaceItem>(
-  items: readonly T[],
-  params: {
-    subjectId: string;
-    statusFilter: FlexibleScheduleStatusFilter;
-  },
-): T[];
-
-export function isFlexibleScheduleAttentionDay(
-  queue: Pick<DayQueue, "overloadMinutes" | "unplacedFixedMinutes">,
-): boolean;
-
-export function deriveFlexibleScheduleDayMetrics(
-  queue: Pick<
-    DayQueue,
-    | "quotaMinutes"
-    | "newMinutes"
-    | "reviewMinutes"
-    | "unallocatedMinutes"
-    | "overloadMinutes"
-    | "unplacedFixedMinutes"
-  >,
-): FlexibleScheduleDayMetrics;
-
-export function calculateMinimumHorizonWeeks(params: {
-  todayDateISO: string;
-  targetDateISO: string;
-  maxWeeks?: number;
-}): HorizonExpansionResult;
 ```
 
-- [ ] **Step 1: Write failing filter-classification tests**
+- [ ] **Step 1: Write failing item-filter tests**
 
-Create `src/lib/flexible-schedule-workspace.test.ts` with these fixtures and assertions:
+Create `src/lib/flexible-schedule-workspace.test.ts`:
 
 ```ts
 import { describe, expect, test } from "vitest";
@@ -176,7 +138,7 @@ describe("filterFlexibleScheduleItems", () => {
     ).toEqual(["math-fixed", "math-flex", "math-unplaced", "math-review"]);
   });
 
-  test("shows fixed ordinary lessons including unplaced fixed work", () => {
+  test("shows fixed lessons including unplaced fixed work", () => {
     expect(
       filterFlexibleScheduleItems(items, { subjectId: "all", statusFilter: "fixed" }).map(
         (entry) => entry.id,
@@ -184,7 +146,7 @@ describe("filterFlexibleScheduleItems", () => {
     ).toEqual(["math-fixed", "math-unplaced"]);
   });
 
-  test("shows only flexible ordinary lessons", () => {
+  test("shows flexible ordinary lessons and excludes reviews", () => {
     expect(
       filterFlexibleScheduleItems(items, { subjectId: "all", statusFilter: "flexible" }).map(
         (entry) => entry.id,
@@ -192,7 +154,7 @@ describe("filterFlexibleScheduleItems", () => {
     ).toEqual(["math-flex", "english-flex"]);
   });
 
-  test("treats attention as day-level and therefore preserves subject-filtered context", () => {
+  test("keeps subject context intact in day-level attention mode", () => {
     expect(
       filterFlexibleScheduleItems(items, { subjectId: "math", statusFilter: "attention" }).map(
         (entry) => entry.id,
@@ -202,24 +164,22 @@ describe("filterFlexibleScheduleItems", () => {
 });
 ```
 
-- [ ] **Step 2: Run the new test file and verify RED**
-
-Run:
+- [ ] **Step 2: Run the test and verify RED**
 
 ```bash
 npx vitest run src/lib/flexible-schedule-workspace.test.ts
 ```
 
-Expected: FAIL because `./flexible-schedule-workspace` does not exist.
+Expected: FAIL because the module does not exist.
 
-- [ ] **Step 3: Implement the filter type and function minimally**
+- [ ] **Step 3: Implement filtering minimally**
 
-Create `src/lib/flexible-schedule-workspace.ts` with imports, exported types, and this filtering rule:
+Create `src/lib/flexible-schedule-workspace.ts`:
 
 ```ts
+import { daysBetweenISO, getSundayISO } from "./date-utils";
 import type { Lesson } from "./mock-data";
 import type { DayQueue } from "./planner";
-import { daysBetweenISO, getSundayISO } from "./date-utils";
 
 export type FlexibleScheduleStatusFilter = "all" | "fixed" | "flexible" | "attention";
 
@@ -253,15 +213,13 @@ export function filterFlexibleScheduleItems<T extends FlexibleScheduleWorkspaceI
 }
 ```
 
-- [ ] **Step 4: Run the filter tests and verify GREEN**
-
-Run:
+- [ ] **Step 4: Run the test and verify GREEN**
 
 ```bash
 npx vitest run src/lib/flexible-schedule-workspace.test.ts
 ```
 
-Expected: PASS for the four filter cases.
+Expected: the four filter tests pass.
 
 - [ ] **Step 5: Add failing attention and metric tests**
 
@@ -277,7 +235,7 @@ describe("day diagnostics", () => {
     expect(isFlexibleScheduleAttentionDay(queue)).toBe(expected);
   });
 
-  test("derives scheduled minutes without counting unplaced fixed work", () => {
+  test("does not count unplaced fixed minutes as scheduled", () => {
     expect(
       deriveFlexibleScheduleDayMetrics({
         quotaMinutes: 360,
@@ -303,17 +261,15 @@ describe("day diagnostics", () => {
 
 - [ ] **Step 6: Run the test and verify RED**
 
-Run:
-
 ```bash
 npx vitest run src/lib/flexible-schedule-workspace.test.ts
 ```
 
-Expected: FAIL because the attention and metric functions are not exported.
+Expected: FAIL because the diagnostic exports do not exist.
 
-- [ ] **Step 7: Implement attention and metrics minimally**
+- [ ] **Step 7: Implement attention and metrics**
 
-Add:
+Append to the module:
 
 ```ts
 export function isFlexibleScheduleAttentionDay(
@@ -357,23 +313,13 @@ export function deriveFlexibleScheduleDayMetrics(
 }
 ```
 
-- [ ] **Step 8: Run the test and verify GREEN**
-
-Run:
-
-```bash
-npx vitest run src/lib/flexible-schedule-workspace.test.ts
-```
-
-Expected: PASS.
-
-- [ ] **Step 9: Add failing bounded-horizon tests**
+- [ ] **Step 8: Add failing horizon tests**
 
 Append:
 
 ```ts
 describe("calculateMinimumHorizonWeeks", () => {
-  test("uses one week for a target inside the partial first week", () => {
+  test("uses one week inside the partial first week", () => {
     expect(
       calculateMinimumHorizonWeeks({
         todayDateISO: "2030-01-02",
@@ -382,7 +328,7 @@ describe("calculateMinimumHorizonWeeks", () => {
     ).toEqual({ weeks: 1, includesTarget: true, reason: "included" });
   });
 
-  test("returns the minimum whole-week count for a reachable later target", () => {
+  test("returns the minimum later whole-week count", () => {
     expect(
       calculateMinimumHorizonWeeks({
         todayDateISO: "2030-01-02",
@@ -391,7 +337,7 @@ describe("calculateMinimumHorizonWeeks", () => {
     ).toEqual({ weeks: 3, includesTarget: true, reason: "included" });
   });
 
-  test("bounds a far-future target to 52 weeks", () => {
+  test("bounds a far-future target", () => {
     expect(
       calculateMinimumHorizonWeeks({
         todayDateISO: "2030-01-02",
@@ -400,7 +346,7 @@ describe("calculateMinimumHorizonWeeks", () => {
     ).toEqual({ weeks: 52, includesTarget: false, reason: "beyond-max" });
   });
 
-  test("reports that forward-only expansion cannot include a past target", () => {
+  test("reports that forward expansion cannot include a past target", () => {
     expect(
       calculateMinimumHorizonWeeks({
         todayDateISO: "2030-01-02",
@@ -411,19 +357,9 @@ describe("calculateMinimumHorizonWeeks", () => {
 });
 ```
 
-- [ ] **Step 10: Run the test and verify RED**
+- [ ] **Step 9: Implement the bounded horizon calculation**
 
-Run:
-
-```bash
-npx vitest run src/lib/flexible-schedule-workspace.test.ts
-```
-
-Expected: FAIL because `calculateMinimumHorizonWeeks()` is not implemented.
-
-- [ ] **Step 11: Implement the bounded calculation**
-
-Add:
+Append:
 
 ```ts
 export type HorizonExpansionResult = {
@@ -447,8 +383,8 @@ export function calculateMinimumHorizonWeeks(params: {
     return { weeks: 1, includesTarget: true, reason: "included" };
   }
 
-  const laterDays = daysBetweenISO(firstWeekEndISO, params.targetDateISO);
-  const requiredWeeks = 1 + Math.ceil(laterDays / 7);
+  const requiredWeeks =
+    1 + Math.ceil(daysBetweenISO(firstWeekEndISO, params.targetDateISO) / 7);
   if (requiredWeeks > maxWeeks) {
     return { weeks: maxWeeks, includesTarget: false, reason: "beyond-max" };
   }
@@ -457,9 +393,7 @@ export function calculateMinimumHorizonWeeks(params: {
 }
 ```
 
-- [ ] **Step 12: Run focused tests and typecheck**
-
-Run:
+- [ ] **Step 10: Run focused tests and typecheck**
 
 ```bash
 npx vitest run src/lib/flexible-schedule-workspace.test.ts
@@ -468,7 +402,7 @@ npm run typecheck
 
 Expected: both pass.
 
-- [ ] **Step 13: Commit Task 1**
+- [ ] **Step 11: Commit Task 1**
 
 ```bash
 git add src/lib/flexible-schedule-workspace.ts src/lib/flexible-schedule-workspace.test.ts
@@ -477,15 +411,13 @@ git commit -m "feat: add flexible schedule workspace selectors"
 
 ---
 
-### Task 2: Add subject-scoped outside-horizon accounting
+### Task 2: Add subject-scoped visibility accounting
 
 **Files:**
 - Modify: `src/lib/schedule-visibility.ts`
 - Modify: `src/lib/schedule-visibility.test.ts`
 
-**Interfaces:**
-- Consumes: existing `Subject[]`, completion map, and `PlanDay[]`.
-- Produces:
+**Interface:**
 
 ```ts
 export function summarizeUnscheduledWork(params: {
@@ -496,9 +428,9 @@ export function summarizeUnscheduledWork(params: {
 }): UnscheduledWorkSummary;
 ```
 
-- [ ] **Step 1: Refactor the test catalog fixture to support two subjects**
+- [ ] **Step 1: Add a two-subject fixture**
 
-In `src/lib/schedule-visibility.test.ts`, retain the existing `catalog()` helper and add:
+In `src/lib/schedule-visibility.test.ts` add:
 
 ```ts
 function subject(id: string, lessons: Lesson[]): Subject {
@@ -518,14 +450,12 @@ function subject(id: string, lessons: Lesson[]): Subject {
 }
 ```
 
-Do not change the three existing assertions.
+Keep all existing tests unchanged.
 
-- [ ] **Step 2: Add failing selected-subject and unknown-subject tests**
-
-Append:
+- [ ] **Step 2: Add failing scope tests**
 
 ```ts
-test("summarizes only the selected subject while preserving visible unplaced work", () => {
+test("summarizes only the selected subject", () => {
   const mathVisible = lesson("math-visible", "2030-01-01");
   const mathOutside = lesson("math-outside", "2030-01-10");
   const englishVisible = lesson("english-visible", "2030-01-01");
@@ -558,7 +488,7 @@ test("summarizes only the selected subject while preserving visible unplaced wor
   });
 });
 
-test("returns zero counts for an unknown subject instead of falling back to all", () => {
+test("returns zero counts for an unknown subject", () => {
   expect(
     summarizeUnscheduledWork({
       subjects: [subject("math", [lesson("math", "2030-01-01")])],
@@ -575,79 +505,43 @@ test("returns zero counts for an unknown subject instead of falling back to all"
 });
 ```
 
-- [ ] **Step 3: Run the focused tests and verify RED**
-
-Run:
+- [ ] **Step 3: Run and verify RED**
 
 ```bash
 npx vitest run src/lib/schedule-visibility.test.ts
 ```
 
-Expected: the selected-subject assertion fails because `subjectId` is ignored; the unknown subject falls back to all work.
+Expected: the new assertions fail because `subjectId` is ignored.
 
-- [ ] **Step 4: Implement subject scoping without changing default behavior**
+- [ ] **Step 4: Implement scope filtering**
 
-Update `summarizeUnscheduledWork()` as follows:
+At the start of `summarizeUnscheduledWork()` select:
 
 ```ts
-export function summarizeUnscheduledWork(params: {
-  subjects: Subject[];
-  completed: Record<string, string>;
-  visiblePlan: PlanDay[];
-  subjectId?: string;
-}): UnscheduledWorkSummary {
-  const scopedSubjects =
-    !params.subjectId || params.subjectId === "all"
-      ? params.subjects
-      : params.subjects.filter((subject) => subject.id === params.subjectId);
+const scopedSubjects =
+  !params.subjectId || params.subjectId === "all"
+    ? params.subjects
+    : params.subjects.filter((subject) => subject.id === params.subjectId);
+```
 
-  const unfinishedLessonIds: string[] = [];
-  const knownLessonIds = new Set<string>();
-  const scopedLessonIds = new Set<string>();
+Build `scopedLessonIds` while traversing `scopedSubjects`, and only add visible scheduled/unplaced lesson IDs when `scopedLessonIds.has(lesson.id)` is true. Preserve the existing de-duplication and return shape.
 
-  for (const subject of scopedSubjects) {
-    for (const milestone of subject.milestones) {
-      for (const lesson of milestone.lessons) {
-        scopedLessonIds.add(lesson.id);
-        if (knownLessonIds.has(lesson.id)) continue;
-        knownLessonIds.add(lesson.id);
-        if (!params.completed[lesson.id]) unfinishedLessonIds.push(lesson.id);
-      }
-    }
+The resulting visible loops must be:
+
+```ts
+for (const day of params.visiblePlan) {
+  for (const lesson of day.queue.newLessons) {
+    if (!scopedLessonIds.has(lesson.id)) continue;
+    visibleScheduledIds.add(lesson.id);
+    visibleUnfinishedIds.add(lesson.id);
   }
-
-  const visibleScheduledIds = new Set<string>();
-  const visibleUnfinishedIds = new Set<string>();
-
-  for (const day of params.visiblePlan) {
-    for (const lesson of day.queue.newLessons) {
-      if (!scopedLessonIds.has(lesson.id)) continue;
-      visibleScheduledIds.add(lesson.id);
-      visibleUnfinishedIds.add(lesson.id);
-    }
-    for (const lesson of day.queue.unplacedFixedLessons) {
-      if (scopedLessonIds.has(lesson.id)) visibleUnfinishedIds.add(lesson.id);
-    }
+  for (const lesson of day.queue.unplacedFixedLessons) {
+    if (scopedLessonIds.has(lesson.id)) visibleUnfinishedIds.add(lesson.id);
   }
-
-  const outsideHorizonLessonIds = unfinishedLessonIds.filter(
-    (lessonId) => !visibleUnfinishedIds.has(lessonId),
-  );
-
-  return {
-    unfinishedCount: unfinishedLessonIds.length,
-    visibleScheduledCount: unfinishedLessonIds.filter((lessonId) =>
-      visibleScheduledIds.has(lessonId),
-    ).length,
-    outsideHorizonCount: outsideHorizonLessonIds.length,
-    outsideHorizonLessonIds,
-  };
 }
 ```
 
-- [ ] **Step 5: Run visibility tests and typecheck**
-
-Run:
+- [ ] **Step 5: Run tests and typecheck**
 
 ```bash
 npx vitest run src/lib/schedule-visibility.test.ts
@@ -671,8 +565,7 @@ git commit -m "feat: scope schedule visibility by subject"
 - Create: `src/components/flexible-planner/MoveLessonDateDialog.tsx`
 - Modify: `src/lib/flexible-planner-ux-regression.test.ts`
 
-**Interfaces:**
-- Consumes:
+**Interface:**
 
 ```ts
 export type MoveLessonDateDialogProps = {
@@ -681,11 +574,9 @@ export type MoveLessonDateDialogProps = {
 };
 ```
 
-- Produces: one visible `Chọn ngày` trigger; a controlled internal Radix dialog; no persistence or candidate ownership.
+- [ ] **Step 1: Write a failing source-contract test**
 
-- [ ] **Step 1: Write a failing source-contract test for the new dialog**
-
-In `src/lib/flexible-planner-ux-regression.test.ts`, read the new file:
+Read the new file from `src/lib/flexible-planner-ux-regression.test.ts`:
 
 ```ts
 const moveDialogSource = await fs.readFile(
@@ -694,15 +585,13 @@ const moveDialogSource = await fs.readFile(
 );
 ```
 
-Add assertions inside the existing test or a new focused test:
+Add:
 
 ```ts
-expect(moveDialogSource).toContain("MoveLessonDateDialog");
 expect(moveDialogSource).toContain("DialogTrigger");
 expect(moveDialogSource).toContain("Chọn ngày");
 expect(moveDialogSource).toContain('type="date"');
 expect(moveDialogSource).toContain("isDateISO");
-expect(moveDialogSource).toContain("Ngày mới");
 expect(moveDialogSource).toContain("Bài cố định sẽ chỉ xuất hiện đúng ngày đã chọn.");
 expect(moveDialogSource).toContain(
   "Ngày đã chọn là ngày sớm nhất; lịch có thể xếp bài sang ngày sau nếu thiếu công suất.",
@@ -714,17 +603,15 @@ expect(moveDialogSource).not.toContain("executeMutation");
 expect(moveDialogSource).not.toContain("localStorage");
 ```
 
-- [ ] **Step 2: Run the regression test and verify RED**
-
-Run:
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
 npx vitest run src/lib/flexible-planner-ux-regression.test.ts
 ```
 
-Expected: FAIL with file-not-found for `MoveLessonDateDialog.tsx`.
+Expected: FAIL because the dialog file is absent.
 
-- [ ] **Step 3: Create the dialog with explicit validation and failure semantics**
+- [ ] **Step 3: Create the dialog**
 
 Create `src/components/flexible-planner/MoveLessonDateDialog.tsx`:
 
@@ -834,18 +721,14 @@ export function MoveLessonDateDialog({ lesson, onMove }: MoveLessonDateDialogPro
 }
 ```
 
-Use the existing `Button`, `Input`, and Dialog primitives exactly; do not add a form library.
-
 - [ ] **Step 4: Run regression and typecheck**
-
-Run:
 
 ```bash
 npx vitest run src/lib/flexible-planner-ux-regression.test.ts
 npm run typecheck
 ```
 
-Expected: both pass. If the existing `Button` API uses a different supported variant name, inspect `src/components/ui/button.tsx` and use an existing non-destructive outline-equivalent; do not change the primitive.
+Expected: both pass.
 
 - [ ] **Step 5: Commit Task 3**
 
@@ -856,39 +739,23 @@ git commit -m "feat: add direct lesson date dialog"
 
 ---
 
-### Task 4: Integrate independent status filters and explicit capacity metrics
+### Task 4: Integrate status filters and explicit capacity metrics
 
 **Files:**
 - Modify: `src/components/FlexiblePlanner.tsx`
 - Modify: `src/lib/flexible-planner-ux-regression.test.ts`
 
-**Interfaces:**
-- Consumes from Task 1:
-  - `FlexibleScheduleStatusFilter`
-  - `filterFlexibleScheduleItems()`
-  - `isFlexibleScheduleAttentionDay()`
-  - `deriveFlexibleScheduleDayMetrics()`
-- Produces: independent subject and status controls, attention-day view, truthful empty states, explicit day metrics.
-
-- [ ] **Step 1: Add failing regression assertions for status controls and metric copy**
-
-Extend `src/lib/flexible-planner-ux-regression.test.ts`:
+- [ ] **Step 1: Add failing regression assertions**
 
 ```ts
 expect(plannerSource).toContain("FlexibleScheduleStatusFilter");
 expect(plannerSource).toContain('aria-label="Lọc lịch theo trạng thái"');
 expect(plannerSource).toContain("Tất cả công việc");
-expect(plannerSource).toContain("Cố định");
-expect(plannerSource).toContain("Linh hoạt");
 expect(plannerSource).toContain("Cần xử lý");
 expect(plannerSource).toContain("filterFlexibleScheduleItems");
 expect(plannerSource).toContain("isFlexibleScheduleAttentionDay");
 expect(plannerSource).toContain("deriveFlexibleScheduleDayMetrics");
-expect(plannerSource).toContain("Công suất");
 expect(plannerSource).toContain("Đã xếp");
-expect(plannerSource).toContain("Bài mới");
-expect(plannerSource).toContain("Ôn tập");
-expect(plannerSource).toContain("Còn trống");
 expect(plannerSource).toContain("Quá công suất");
 expect(plannerSource).toContain("Cố định chưa xếp");
 expect(plannerSource).toContain(
@@ -896,19 +763,15 @@ expect(plannerSource).toContain(
 );
 ```
 
-- [ ] **Step 2: Run the regression test and verify RED**
-
-Run:
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
 npx vitest run src/lib/flexible-planner-ux-regression.test.ts
 ```
 
-Expected: FAIL because the status filter and metric labels are absent.
+Expected: FAIL because the controls and metric labels are absent.
 
-- [ ] **Step 3: Import pure workspace interfaces and add status state**
-
-In `FlexiblePlanner.tsx`, import:
+- [ ] **Step 3: Import helpers and add independent filter state**
 
 ```ts
 import {
@@ -919,15 +782,11 @@ import {
 } from "@/lib/flexible-schedule-workspace";
 ```
 
-Add beside `subjectId`:
+Add:
 
 ```ts
 const [statusFilter, setStatusFilter] = useState<FlexibleScheduleStatusFilter>("all");
-```
 
-Add the exact options:
-
-```ts
 const statusFilters: Array<{ id: FlexibleScheduleStatusFilter; label: string }> = [
   { id: "all", label: "Tất cả công việc" },
   { id: "fixed", label: "Cố định" },
@@ -936,23 +795,11 @@ const statusFilters: Array<{ id: FlexibleScheduleStatusFilter; label: string }> 
 ];
 ```
 
-- [ ] **Step 4: Stop applying subject filtering while constructing raw day items**
+- [ ] **Step 4: Separate raw item construction from filtering**
 
-Rename the current memo to `allDisplayLessonsByDate` and always push each constructed `DisplayLesson` into its day list. Remove these three conditional pushes:
+Rename the current map memo to `allDisplayLessonsByDate`. Replace every conditional item push with unconditional `items.push(item)` and remove `subjectId` from that memo dependency list.
 
-```ts
-if (subjectId === "all" || item.subjectId === subjectId) items.push(item);
-```
-
-Replace each with:
-
-```ts
-items.push(item);
-```
-
-Remove `subjectId` from that memo's dependency list.
-
-Then derive filtered items:
+Add:
 
 ```ts
 const displayLessonsByDate = useMemo(() => {
@@ -967,11 +814,9 @@ const displayLessonsByDate = useMemo(() => {
 }, [allDisplayLessonsByDate, statusFilter, subjectId]);
 ```
 
-This preserves all selected-subject context in `attention` because the pure filter treats it as a day-level mode.
+- [ ] **Step 5: Render the status tablist**
 
-- [ ] **Step 5: Render the status filter independently of subject tabs**
-
-Below the existing subject tablist, add:
+Place below subject tabs:
 
 ```tsx
 <div
@@ -999,11 +844,9 @@ Below the existing subject tablist, add:
 </div>
 ```
 
-Do not combine subject and status into one stored value.
+- [ ] **Step 6: Apply attention as a day-level view**
 
-- [ ] **Step 6: Filter expanded week days only in attention mode**
-
-Inside each week render, derive:
+Inside each week render:
 
 ```ts
 const renderedDays =
@@ -1012,14 +855,7 @@ const renderedDays =
     : week.days;
 ```
 
-Use `renderedDays` for:
-
-- the week matching-day count;
-- the expanded day-card map.
-
-Keep the week header visible when `renderedDays.length === 0`.
-
-When an expanded attention week has zero matching days, render:
+Use `renderedDays` for week counts and day-card rendering. Keep week headers visible. For an expanded attention week with zero days render:
 
 ```tsx
 <div className="p-4 text-center text-xs font-medium text-slate-500 lg:col-span-2">
@@ -1027,17 +863,15 @@ When an expanded attention week has zero matching days, render:
 </div>
 ```
 
-For non-attention item filters, keep day cards visible and let each card use filter-specific empty wording rather than implying deletion.
+- [ ] **Step 7: Render explicit day metrics**
 
-- [ ] **Step 7: Derive and render explicit day metrics**
-
-At the top of `PlanDayCard`, add:
+In `PlanDayCard`:
 
 ```ts
 const metrics = deriveFlexibleScheduleDayMetrics(day.queue);
 ```
 
-Replace the single compact capacity paragraph with a wrapping metrics group that renders:
+Replace the old compact capacity sentence with:
 
 ```tsx
 <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-700">
@@ -1063,11 +897,7 @@ Replace the single compact capacity paragraph with a wrapping metrics group that
 </div>
 ```
 
-Delete the now-unused local `unplacedFixedMinutes` variable only after the JSX no longer references it.
-
-- [ ] **Step 8: Make item empty states filter-aware**
-
-Pass `statusFilter` into `PlanDayCard`. Add a local helper or exact expression that returns:
+Pass `statusFilter` into `PlanDayCard` and use these exact empty messages:
 
 ```ts
 const emptyMessage =
@@ -1078,11 +908,7 @@ const emptyMessage =
       : "Không có bài của môn đang xem.";
 ```
 
-Keep the drag-target override `Thả bài vào ngày này` unchanged.
-
-- [ ] **Step 9: Run focused unit/regression tests and typecheck**
-
-Run:
+- [ ] **Step 8: Run focused tests and typecheck**
 
 ```bash
 npx vitest run src/lib/flexible-schedule-workspace.test.ts src/lib/flexible-planner-ux-regression.test.ts
@@ -1091,7 +917,7 @@ npm run typecheck
 
 Expected: all pass.
 
-- [ ] **Step 10: Commit Task 4**
+- [ ] **Step 9: Commit Task 4**
 
 ```bash
 git add src/components/FlexiblePlanner.tsx src/lib/flexible-planner-ux-regression.test.ts
@@ -1100,29 +926,16 @@ git commit -m "feat: add flexible schedule workspace filters"
 
 ---
 
-### Task 5: Route the direct-date dialog through the canonical move boundary
+### Task 5: Connect direct moves and outside-horizon feedback
 
 **Files:**
 - Modify: `src/components/FlexiblePlanner.tsx`
-- Modify: `src/lib/flexible-planner-transactions-regression.test.ts`
 - Modify: `src/lib/flexible-planner-ux-regression.test.ts`
+- Modify: `src/lib/flexible-planner-transactions-regression.test.ts`
 
-**Interfaces:**
-- Consumes: `MoveLessonDateDialog` from Task 3 and the existing `(lessonId, targetDateISO) => boolean` `moveLessonToDate()` callback.
-- Produces: direct date selection for every ordinary lesson; reviews remain non-movable.
+- [ ] **Step 1: Add failing canonical-boundary assertions**
 
-- [ ] **Step 1: Add failing regression assertions for canonical delegation**
-
-In `src/lib/flexible-planner-transactions-regression.test.ts`, read the dialog source:
-
-```ts
-const moveDialogSource = readFileSync(
-  new URL("../components/flexible-planner/MoveLessonDateDialog.tsx", import.meta.url),
-  "utf8",
-);
-```
-
-Extend the canonical move test:
+Read the dialog source in both regression files where needed, then add:
 
 ```ts
 expect(plannerSource).toContain("MoveLessonDateDialog");
@@ -1130,168 +943,56 @@ expect(plannerSource).toContain("onMove={onMoveLesson}");
 expect(moveDialogSource).toContain("onMove(lesson.id, draftDate)");
 expect(moveDialogSource).not.toContain("buildMoveLessonDateCandidate");
 expect(moveDialogSource).not.toContain("commitScheduleMutation");
-expect(moveDialogSource).not.toContain("persist");
+expect(moveDialogSource).not.toContain("persistPlannerSettings");
+expect(moveDialogSource).not.toContain("persistScheduleSubjects");
 ```
 
-In `src/lib/flexible-planner-ux-regression.test.ts`, assert:
+Add outside-horizon assertions:
 
 ```ts
-expect(plannerSource).toContain("<MoveLessonDateDialog");
-expect(plannerSource).toContain("onMove={onMoveLesson}");
+expect(plannerSource).toContain("summarizeUnscheduledWork");
+expect(plannerSource).toContain("pendingMoveVisibilityCheck");
+expect(plannerSource).toContain("outsideHorizonNotice");
+expect(plannerSource).toContain("calculateMinimumHorizonWeeks");
+expect(plannerSource).toContain("Ngoài khoảng đang mở");
+expect(plannerSource).toContain("Mở rộng lịch");
+expect(plannerSource).toContain("Xem môn này");
+expect(plannerSource).toContain('role="status"');
 ```
 
-- [ ] **Step 2: Run both regression files and verify RED**
-
-Run:
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
-npx vitest run src/lib/flexible-planner-transactions-regression.test.ts src/lib/flexible-planner-ux-regression.test.ts
+npx vitest run src/lib/flexible-planner-ux-regression.test.ts src/lib/flexible-planner-transactions-regression.test.ts
 ```
 
-Expected: FAIL because `FlexiblePlanner` does not render the dialog.
+Expected: FAIL because the dialog and notice are not integrated.
 
-- [ ] **Step 3: Import and render the dialog only for ordinary lessons**
+- [ ] **Step 3: Render the dialog for ordinary lessons only**
 
-In `FlexiblePlanner.tsx`, import:
+Import:
 
 ```ts
 import { MoveLessonDateDialog } from "@/components/flexible-planner/MoveLessonDateDialog";
 ```
 
-Inside `LessonCard`, in the existing `movable` action row, add between previous and next controls or before both:
+Inside the existing `movable` action row in `LessonCard` render:
 
 ```tsx
 <MoveLessonDateDialog lesson={item.lesson} onMove={onMoveLesson} />
 ```
 
-Do not render it outside the `movable` branch. Reviews must still have no drag handle, arrows, or direct-date trigger.
+Reviews remain outside the `movable` branch.
 
-- [ ] **Step 4: Verify all move surfaces share the same callback**
+- [ ] **Step 4: Add subject-scoped visibility summary**
 
-Inspect the final source and confirm:
-
-```text
-drag/drop → handleDrop() → moveLessonToDate()
-previous arrow → onMoveLesson() → moveLessonToDate()
-next arrow → onMoveLesson() → moveLessonToDate()
-direct date dialog → onMoveLesson() → moveLessonToDate()
-```
-
-Do not add a second candidate builder call or transaction hook instance.
-
-- [ ] **Step 5: Run transaction, UX, candidate, and integration coverage**
-
-Run:
-
-```bash
-npx vitest run \
-  src/lib/flexible-planner-transactions-regression.test.ts \
-  src/lib/flexible-planner-ux-regression.test.ts \
-  src/lib/schedule-candidates.test.ts \
-  src/lib/schedule-operations-integration.test.ts
-npm run typecheck
-```
-
-Expected: all pass. Existing candidate/integration tests continue proving same-date no-op, atomic date-plus-provenance persistence, rollback, and undo semantics.
-
-- [ ] **Step 6: Commit Task 5**
-
-```bash
-git add \
-  src/components/FlexiblePlanner.tsx \
-  src/lib/flexible-planner-transactions-regression.test.ts \
-  src/lib/flexible-planner-ux-regression.test.ts
-git commit -m "feat: connect direct date moves to schedule transactions"
-```
-
----
-
-### Task 6: Add subject-scoped visibility summary and post-move outside-horizon notice
-
-**Files:**
-- Modify: `src/components/FlexiblePlanner.tsx`
-- Modify: `src/lib/flexible-planner-ux-regression.test.ts`
-
-**Interfaces:**
-- Consumes:
-  - `summarizeUnscheduledWork()` from Task 2
-  - `calculateMinimumHorizonWeeks()` from Task 1
-  - existing `findLessonById()` and `moveLessonToDate()` result status
-- Produces:
-
-```ts
-type PendingMoveVisibilityCheck = {
-  lessonId: string;
-  lessonTitle: string;
-  subjectId: string;
-  targetDateISO: string;
-  scheduleMode: "fixed" | "flexible";
-};
-
-type OutsideHorizonMoveNotice = PendingMoveVisibilityCheck;
-```
-
-- [ ] **Step 1: Add failing regression assertions for summary and notice actions**
-
-Extend `src/lib/flexible-planner-ux-regression.test.ts`:
-
-```ts
-expect(plannerSource).toContain("summarizeUnscheduledWork");
-expect(plannerSource).toContain("Ngoài khoảng đang mở");
-expect(plannerSource).toContain("outsideHorizonNotice");
-expect(plannerSource).toContain("pendingMoveVisibilityCheck");
-expect(plannerSource).toContain("Mở rộng lịch");
-expect(plannerSource).toContain("Xem môn này");
-expect(plannerSource).toContain("calculateMinimumHorizonWeeks");
-expect(plannerSource).toContain('role="status"');
-expect(plannerSource).toContain("setOutsideHorizonNotice(null)");
-```
-
-- [ ] **Step 2: Run the regression test and verify RED**
-
-Run:
-
-```bash
-npx vitest run src/lib/flexible-planner-ux-regression.test.ts
-```
-
-Expected: FAIL because visibility summary and notice state are absent.
-
-- [ ] **Step 3: Import visibility helpers and define state types**
-
-In `FlexiblePlanner.tsx`, import:
+Import:
 
 ```ts
 import { summarizeUnscheduledWork } from "@/lib/schedule-visibility";
-import { calculateMinimumHorizonWeeks } from "@/lib/flexible-schedule-workspace";
 ```
 
-Add module-local types:
-
-```ts
-type PendingMoveVisibilityCheck = {
-  lessonId: string;
-  lessonTitle: string;
-  subjectId: string;
-  targetDateISO: string;
-  scheduleMode: LessonMode;
-};
-
-type OutsideHorizonMoveNotice = PendingMoveVisibilityCheck;
-```
-
-Add state:
-
-```ts
-const [pendingMoveVisibilityCheck, setPendingMoveVisibilityCheck] =
-  useState<PendingMoveVisibilityCheck | null>(null);
-const [outsideHorizonNotice, setOutsideHorizonNotice] =
-  useState<OutsideHorizonMoveNotice | null>(null);
-```
-
-- [ ] **Step 4: Derive the subject-scoped visibility summary**
-
-After `days` is built, add:
+Derive:
 
 ```ts
 const visibilitySummary = useMemo(
@@ -1306,7 +1007,7 @@ const visibilitySummary = useMemo(
 );
 ```
 
-In the toolbar summary row, render:
+Render in the toolbar:
 
 ```tsx
 <span>{visibilitySummary.unfinishedCount} bài chưa hoàn thành</span>
@@ -1316,15 +1017,34 @@ In the toolbar summary row, render:
 </span>
 ```
 
-Do not treat outside-horizon count as an error or completed count.
+- [ ] **Step 5: Add pending and notice state**
 
-- [ ] **Step 5: Record pending checks only for committed non-noop moves**
-
-Inside `moveLessonToDate()`, retain the existing failure and no-op behavior. After a successful `executeMutation()` result:
+Define:
 
 ```ts
-if (result.status === "noop") return true;
+type PendingMoveVisibilityCheck = {
+  lessonId: string;
+  lessonTitle: string;
+  subjectId: string;
+  targetDateISO: string;
+  scheduleMode: LessonMode;
+};
 
+type OutsideHorizonMoveNotice = PendingMoveVisibilityCheck;
+```
+
+Add:
+
+```ts
+const [pendingMoveVisibilityCheck, setPendingMoveVisibilityCheck] =
+  useState<PendingMoveVisibilityCheck | null>(null);
+const [outsideHorizonNotice, setOutsideHorizonNotice] =
+  useState<OutsideHorizonMoveNotice | null>(null);
+```
+
+Inside `moveLessonToDate()`, after successful execution and after the no-op return, set:
+
+```ts
 const position = lessonPositionById.get(lessonId);
 setPendingMoveVisibilityCheck({
   lessonId,
@@ -1335,15 +1055,11 @@ setPendingMoveVisibilityCheck({
 });
 ```
 
-Then continue the existing success toast.
+Do not set pending state for failure or no-op.
 
-Do not set pending state before `executeMutation()` succeeds. Do not set it for `noop`.
+- [ ] **Step 6: Resolve visibility after published state catches up**
 
-Add `lessonPositionById` to any callback/memo dependency only if `moveLessonToDate` is converted to `useCallback`; otherwise no dependency change is required.
-
-- [ ] **Step 6: Resolve pending checks only after parent-published catalog state catches up**
-
-Add a raw-plan visibility helper inside the component or module scope:
+Add:
 
 ```ts
 function planContainsLesson(days: PlanDay[], lessonId: string): boolean {
@@ -1355,7 +1071,7 @@ function planContainsLesson(days: PlanDay[], lessonId: string): boolean {
 }
 ```
 
-Add an effect:
+Add the guarded effect:
 
 ```ts
 useEffect(() => {
@@ -1366,10 +1082,7 @@ useEffect(() => {
     setPendingMoveVisibilityCheck(null);
     return;
   }
-
-  if (publishedLesson.scheduledDate !== pendingMoveVisibilityCheck.targetDateISO) {
-    return;
-  }
+  if (publishedLesson.scheduledDate !== pendingMoveVisibilityCheck.targetDateISO) return;
 
   if (planContainsLesson(days, pendingMoveVisibilityCheck.lessonId)) {
     setOutsideHorizonNotice((current) =>
@@ -1382,11 +1095,9 @@ useEffect(() => {
 }, [days, pendingMoveVisibilityCheck, subjects]);
 ```
 
-The `scheduledDate` equality guard is mandatory. Without it, the effect can inspect stale `days` immediately after local pending state changes and incorrectly clear the check before React publishes the committed catalog.
+The `scheduledDate` equality guard is mandatory.
 
-- [ ] **Step 7: Clear a notice automatically after horizon expansion makes the lesson visible**
-
-Add:
+Add automatic clearing after a reachable expansion:
 
 ```ts
 useEffect(() => {
@@ -1397,66 +1108,11 @@ useEffect(() => {
 }, [days, outsideHorizonNotice]);
 ```
 
-This uses the raw plan, not filtered card visibility. A subject/status filter must never be mistaken for outside-horizon loss.
+In `onUndoSuccess`, clear both pending and notice state.
 
-- [ ] **Step 8: Clear pending/notice state during undo**
+- [ ] **Step 7: Implement bounded expansion and subject focus**
 
-In `onUndoSuccess`, add:
-
-```ts
-setPendingMoveVisibilityCheck(null);
-setOutsideHorizonNotice(null);
-```
-
-Keep the existing recently-moved reset and success toast.
-
-- [ ] **Step 9: Render the dismissible notice with exact actions**
-
-Above the week list, render when `outsideHorizonNotice` exists:
-
-```tsx
-<div
-  role="status"
-  className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
->
-  <div className="flex items-start justify-between gap-3">
-    <div>
-      <p className="font-bold">“{outsideHorizonNotice.lessonTitle}” đang ngoài khoảng lịch mở.</p>
-      <p className="mt-1 text-xs text-amber-800">
-        {outsideHorizonNotice.scheduleMode === "fixed"
-          ? `Bài cố định đã được chuyển đúng sang ${displayDate(outsideHorizonNotice.targetDateISO)}.`
-          : `${displayDate(outsideHorizonNotice.targetDateISO)} là ngày sớm nhất; công suất có thể xếp bài muộn hơn.`}
-      </p>
-    </div>
-    <button
-      type="button"
-      onClick={() => setOutsideHorizonNotice(null)}
-      aria-label="Đóng thông báo bài ngoài khoảng lịch"
-      className="min-h-8 rounded-lg px-2 text-xs font-semibold hover:bg-amber-100"
-    >
-      Đóng
-    </button>
-  </div>
-  <div className="mt-3 flex flex-wrap gap-2">
-    <button type="button" onClick={expandToNoticeTarget} className="...">
-      Mở rộng lịch
-    </button>
-    <button
-      type="button"
-      onClick={() => setSubjectId(outsideHorizonNotice.subjectId)}
-      className="..."
-    >
-      Xem môn này
-    </button>
-  </div>
-</div>
-```
-
-Replace `className="..."` in implementation with the same concrete border/background/min-height utility pattern used by existing toolbar buttons. Do not leave ellipses in committed code.
-
-- [ ] **Step 10: Implement bounded expansion behavior**
-
-Define before JSX:
+Import `calculateMinimumHorizonWeeks` and add:
 
 ```ts
 const expandToNoticeTarget = () => {
@@ -1475,15 +1131,7 @@ const expandToNoticeTarget = () => {
     toast.info("Đã mở tối đa 52 tuần; bài vẫn có thể nằm ngoài khoảng hiển thị.");
   }
 };
-```
 
-For reachable targets, the second effect clears the notice after the expanded `days` contains the lesson. For past or beyond-max targets, keep the notice visible so the limitation remains discoverable.
-
-- [ ] **Step 11: Guard `Xem môn này` against an unknown subject**
-
-Use:
-
-```ts
 const focusNoticeSubject = () => {
   if (!outsideHorizonNotice) return;
   if (sortedSubjects.some((subject) => subject.id === outsideHorizonNotice.subjectId)) {
@@ -1492,11 +1140,55 @@ const focusNoticeSubject = () => {
 };
 ```
 
-Pass `focusNoticeSubject` to the button. Do not create an invalid selected-subject state.
+- [ ] **Step 8: Render the notice with concrete controls**
 
-- [ ] **Step 12: Run all focused P1B tests and typecheck**
+Above the week list:
 
-Run:
+```tsx
+{outsideHorizonNotice && (
+  <div
+    role="status"
+    className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+  >
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="font-bold">“{outsideHorizonNotice.lessonTitle}” đang ngoài khoảng lịch mở.</p>
+        <p className="mt-1 text-xs text-amber-800">
+          {outsideHorizonNotice.scheduleMode === "fixed"
+            ? `Bài cố định đã được chuyển đúng sang ${displayDate(outsideHorizonNotice.targetDateISO)}.`
+            : `${displayDate(outsideHorizonNotice.targetDateISO)} là ngày sớm nhất; công suất có thể xếp bài muộn hơn.`}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setOutsideHorizonNotice(null)}
+        aria-label="Đóng thông báo bài ngoài khoảng lịch"
+        className="min-h-8 rounded-lg px-2 text-xs font-semibold hover:bg-amber-100"
+      >
+        Đóng
+      </button>
+    </div>
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={expandToNoticeTarget}
+        className="min-h-9 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 shadow-2xs hover:bg-amber-100"
+      >
+        Mở rộng lịch
+      </button>
+      <button
+        type="button"
+        onClick={focusNoticeSubject}
+        className="min-h-9 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 shadow-2xs hover:bg-amber-100"
+      >
+        Xem môn này
+      </button>
+    </div>
+  </div>
+)}
+```
+
+- [ ] **Step 9: Run focused transaction and UX coverage**
 
 ```bash
 npx vitest run \
@@ -1509,31 +1201,29 @@ npx vitest run \
 npm run typecheck
 ```
 
-Expected: all pass.
+Expected: all pass. Existing candidate/integration tests continue proving no-op, atomic provenance, rollback, and undo semantics.
 
-- [ ] **Step 13: Commit Task 6**
+- [ ] **Step 10: Commit Task 5**
 
 ```bash
-git add src/components/FlexiblePlanner.tsx src/lib/flexible-planner-ux-regression.test.ts
+git add \
+  src/components/FlexiblePlanner.tsx \
+  src/lib/flexible-planner-ux-regression.test.ts \
+  src/lib/flexible-planner-transactions-regression.test.ts
 git commit -m "feat: surface work outside the schedule horizon"
 ```
 
 ---
 
-### Task 7: Harden regression contracts and complete package verification
+### Task 6: Complete exact-head verification and review handoff
 
 **Files:**
-- Modify: `src/lib/flexible-planner-ux-regression.test.ts`
-- Modify: `src/lib/flexible-planner-transactions-regression.test.ts`
-- Modify only if a discovered regression requires it: files already authorized above
-
-**Interfaces:**
-- Consumes: final P1B source.
-- Produces: exact source-contract protection and green package evidence; no acceptance or merge decision.
+- Modify only authorized regression files when a real contract gap is found.
+- Do not create an acceptance record or merge commit.
 
 - [ ] **Step 1: Add final negative regression assertions**
 
-Ensure the regression files contain these prohibitions:
+Ensure the regression suite contains:
 
 ```ts
 expect(plannerSource).not.toContain("setStatusFilter(localStorage");
@@ -1545,86 +1235,47 @@ expect(moveDialogSource).not.toContain("buildMoveLessonDateCandidate");
 expect(moveDialogSource).not.toContain("executeMutation");
 expect(moveDialogSource).not.toContain("persistPlannerSettings");
 expect(moveDialogSource).not.toContain("persistScheduleSubjects");
-```
-
-Also assert the status filter and direct-date control are independent:
-
-```ts
 expect(plannerSource).toContain("const [subjectId, setSubjectId]");
 expect(plannerSource).toContain("const [statusFilter, setStatusFilter]");
 expect(plannerSource).toContain("<MoveLessonDateDialog");
 ```
 
-- [ ] **Step 2: Run focused regression tests**
-
-Run:
+- [ ] **Step 2: Run focused regressions**
 
 ```bash
 npx vitest run src/lib/flexible-planner-ux-regression.test.ts src/lib/flexible-planner-transactions-regression.test.ts
 ```
 
-Expected: PASS. If a negative assertion reveals a real ownership violation, fix the violating authorized source rather than weakening the assertion.
+Expected: PASS. Fix actual ownership violations rather than weakening assertions.
 
-- [ ] **Step 3: Run the complete unit and integration suite**
-
-Run:
-
-```bash
-npm test
-```
-
-Expected: all test files and tests pass. Record the exact file/test counts from output for the PR body; do not predict or hard-code a count in source.
-
-- [ ] **Step 4: Run typecheck**
-
-Run:
+- [ ] **Step 3: Run full gates**
 
 ```bash
 npm run typecheck
-```
-
-Expected: PASS with no TypeScript errors.
-
-- [ ] **Step 5: Run lint**
-
-Run:
-
-```bash
 npm run lint
-```
-
-Expected: zero lint errors. Existing pre-package warnings may be recorded but must not be represented as newly introduced.
-
-- [ ] **Step 6: Run production build**
-
-Run:
-
-```bash
+npm test
 npm run build
-```
-
-Expected: tests rerun successfully and Vite/Nitro produce the production target without modifying tracked source.
-
-- [ ] **Step 7: Verify clean tracked source**
-
-Run:
-
-```bash
 git diff --exit-code
 ```
 
-Expected: exit code 0 after all verification commands.
+Expected:
 
-- [ ] **Step 8: Audit the exact branch diff against the predecessor**
+- zero TypeScript errors;
+- zero lint errors;
+- all test files/tests pass;
+- production Vite/Nitro build succeeds;
+- tracked source remains clean.
 
-Run:
+Record exact test file/test counts from output. Do not predict them.
+
+- [ ] **Step 4: Audit exact branch scope**
 
 ```bash
-git diff --stat 8a23a4e88890ba1deb4619527ae8d1094c423105...HEAD
-git diff --name-only 8a23a4e88890ba1deb4619527ae8d1094c423105...HEAD
+git diff --stat 8a23a4e88890ba1deb4619527ae8d1094c423105 HEAD
+git diff --name-only 8a23a4e88890ba1deb4619527ae8d1094c423105 HEAD
 ```
 
-Expected changed implementation paths are limited to:
+Expected implementation paths:
 
 ```text
 src/lib/flexible-schedule-workspace.ts
@@ -1637,29 +1288,25 @@ src/lib/flexible-planner-ux-regression.test.ts
 src/lib/flexible-planner-transactions-regression.test.ts
 ```
 
-The already-approved design and plan documents are also expected in the branch diff:
+Expected documentation paths:
 
 ```text
 docs/superpowers/specs/2026-08-06-smart-planner-p1b-flexible-schedule-workspace-design.md
 docs/superpowers/plans/2026-08-06-smart-planner-p1b-flexible-schedule-workspace.md
 ```
 
-No dependency, lockfile, workflow, scheduler, persistence, or schema file may appear.
+No dependency, lockfile, workflow, scheduler, persistence, schema, Roadmap, Course Manager, or Forecast file may appear.
 
-- [ ] **Step 9: Commit any final regression-only adjustments**
-
-If Step 1 changed tests after Task 6, commit them:
+- [ ] **Step 5: Commit final regression-only changes when present**
 
 ```bash
 git add src/lib/flexible-planner-ux-regression.test.ts src/lib/flexible-planner-transactions-regression.test.ts
 git commit -m "test: harden P1B workspace boundaries"
 ```
 
-If there are no uncommitted changes, do not create an empty commit.
+Do not create an empty commit when the tree is already clean.
 
-- [ ] **Step 10: Re-run exact-head gates after the final commit**
-
-Run:
+- [ ] **Step 6: Re-run exact-head gates after the final commit**
 
 ```bash
 npm run typecheck
@@ -1669,9 +1316,9 @@ npm run build
 git diff --exit-code
 ```
 
-Expected: all pass on the exact source head that will be proposed for review.
+Expected: all pass on the exact source head proposed for review.
 
-- [ ] **Step 11: Prepare review state without claiming acceptance**
+- [ ] **Step 7: Prepare review state without claiming acceptance**
 
 Record in the pull request body:
 
@@ -1679,15 +1326,7 @@ Record in the pull request body:
 P1B IMPLEMENTED / SOURCE_HEAD_GREEN / DIFF_REVIEWED / READY_FOR_REVIEW / NOT_MERGED / NOT_ACCEPTED
 ```
 
-Include:
-
-- exact predecessor SHA;
-- exact source-head SHA;
-- changed-file list;
-- exact test file/test counts;
-- typecheck/lint/build/clean-tree results;
-- statement that drag, arrows, and direct date use one transaction boundary;
-- statement that no dependency, workflow, schema, scheduler, review-algorithm, persistence-owner, Roadmap, Course Manager, or Forecast change exists.
+Include exact predecessor SHA, exact source-head SHA, changed-file list, exact test counts, quality-gate results, single-transaction-boundary evidence, and the absence of unauthorized changes.
 
 Do not merge, mark accepted, delete the branch, or rewrite history.
 
@@ -1695,34 +1334,32 @@ Do not merge, mark accepted, delete the branch, or rewrite history.
 
 ## Spec Coverage Matrix
 
-| Design requirement | Implementation task |
+| Design requirement | Task |
 |---|---|
-| Independent subject and status filters | Task 1, Task 4 |
-| `all`, `fixed`, `flexible`, `attention` semantics | Task 1, Task 4 |
-| Attention days preserve full subject-scoped context | Task 1, Task 4 |
-| Reviews excluded from fixed/flexible views | Task 1 |
-| Explicit quota/scheduled/new/review/free/overload/unplaced metrics | Task 1, Task 4 |
-| Unplaced fixed work excluded from scheduled total | Task 1, Task 4 |
-| Keyboard/mobile direct date chooser | Task 3, Task 5 |
-| Fixed/flexible date semantics copy | Task 3 |
-| Invalid input stays in dialog | Task 3 |
-| Failed move keeps dialog open | Task 3, Task 5 |
-| One canonical move boundary | Task 5, Task 7 |
-| Subject-scoped outside-horizon summary | Task 2, Task 6 |
-| Post-commit outside-horizon notice | Task 6 |
-| Expand horizon to bounded minimum | Task 1, Task 6 |
-| Switch to affected subject | Task 6 |
-| Undo clears stale notice | Task 6 |
-| No touch drag, dependency, schema, workflow, or ownership expansion | Global Constraints, Task 7 |
-| Full exact-head verification and independent acceptance gate | Task 7 |
+| Independent subject and status filters | 1, 4 |
+| `all`, `fixed`, `flexible`, `attention` semantics | 1, 4 |
+| Attention days preserve full subject-scoped context | 1, 4 |
+| Reviews excluded from fixed/flexible views | 1 |
+| Explicit day capacity metrics | 1, 4 |
+| Unplaced fixed work excluded from scheduled total | 1, 4 |
+| Accessible direct date chooser | 3, 5 |
+| Fixed/flexible date semantics copy | 3 |
+| Invalid and failed submissions keep dialog open | 3, 5 |
+| One canonical move boundary | 5, 6 |
+| Subject-scoped outside-horizon summary | 2, 5 |
+| Post-commit notice and undo clearing | 5 |
+| Bounded horizon expansion | 1, 5 |
+| Affected-subject action | 5 |
+| No dependency/schema/workflow/ownership expansion | Global Constraints, 6 |
+| Exact-head gates and independent acceptance gate | 6 |
 
 ## Plan Self-Review Result
 
 ```text
 SPEC COVERAGE: COMPLETE
 PLACEHOLDERS: NONE
-TYPE/SIGNATURE CONSISTENCY: CHECKED
-TASK SCOPE: SEVEN INDEPENDENT TDD DELIVERABLES
+TYPE AND SIGNATURE CONSISTENCY: CHECKED
+TASK SCOPE: SIX INDEPENDENT TDD DELIVERABLES
 UNAUTHORIZED FILES OR DEPENDENCIES: NONE
-IMPLEMENTATION SOURCE CHANGED BY THIS PLAN COMMIT: NONE
+IMPLEMENTATION SOURCE CHANGED BY PLAN COMMITS: NONE
 ```
