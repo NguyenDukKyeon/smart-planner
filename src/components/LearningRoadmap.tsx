@@ -54,10 +54,8 @@ export function LearningRoadmap({
   );
 
   const activeLessons = useMemo(() => {
-    const selectedSubjects =
-      subjectId === "all"
-        ? sortedSubjects
-        : sortedSubjects.filter((subject) => subject.id === subjectId);
+    const selectedSubject = sortedSubjects.find((subject) => subject.id === subjectId);
+    const selectedSubjects = subjectId === "all" || !selectedSubject ? sortedSubjects : [selectedSubject];
     return selectedSubjects.flatMap((subject) =>
       subject.milestones.flatMap((milestone) => milestone.lessons),
     );
@@ -91,9 +89,7 @@ export function LearningRoadmap({
   }, [projectionGroups]);
 
   const currentOpenId =
-    openId && projectionGroups.some((group) => group.id === openId)
-      ? openId
-      : activeProjectionId;
+    openId && projectionGroups.some((group) => group.id === openId) ? openId : activeProjectionId;
   const currentProjection =
     projectionGroups.find((group) => group.id === currentOpenId) ?? projectionGroups[0];
 
@@ -185,9 +181,7 @@ export function LearningRoadmap({
           </div>
         </div>
         <div>
-          <div className="text-base font-bold text-emerald-700 sm:text-lg">
-            {completedCount}
-          </div>
+          <div className="text-base font-bold text-emerald-700 sm:text-lg">{completedCount}</div>
           <div className="text-[11px] font-medium text-slate-500">Đã học</div>
         </div>
         <div>
@@ -368,50 +362,51 @@ function CanonicalRoadmap({
 }) {
   return (
     <div className="space-y-4" aria-label="Thứ tự nội dung lộ trình">
-      {groups.map((subject) => (
-        <section
-          key={subject.subjectId}
-          className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/40 p-4"
-          aria-labelledby={`roadmap-subject-${subject.subjectId}`}
-        >
-          {showSubjectHeadings && (
-            <h3
-              id={`roadmap-subject-${subject.subjectId}`}
-              className="font-serif text-lg font-bold text-slate-900"
-            >
-              <span aria-hidden="true">{subject.subjectEmoji}</span> {subject.subjectName}
-            </h3>
-          )}
+      {groups.map((subject) => {
+        const headingId = `roadmap-subject-${subject.subjectId}`;
+        return (
+          <section
+            key={subject.subjectId}
+            className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/40 p-4"
+            aria-labelledby={showSubjectHeadings ? headingId : undefined}
+            aria-label={showSubjectHeadings ? undefined : subject.subjectName}
+          >
+            {showSubjectHeadings && (
+              <h3 id={headingId} className="font-serif text-lg font-bold text-slate-900">
+                <span aria-hidden="true">{subject.subjectEmoji}</span> {subject.subjectName}
+              </h3>
+            )}
 
-          {subject.milestones.map((milestone) => (
-            <section
-              key={milestone.milestoneId}
-              className="space-y-2"
-              aria-labelledby={`roadmap-milestone-${subject.subjectId}-${milestone.milestoneId}`}
-            >
-              <h4
-                id={`roadmap-milestone-${subject.subjectId}-${milestone.milestoneId}`}
-                className="text-sm font-bold text-slate-800"
+            {subject.milestones.map((milestone) => (
+              <section
+                key={milestone.milestoneId}
+                className="space-y-2"
+                aria-labelledby={`roadmap-milestone-${subject.subjectId}-${milestone.milestoneId}`}
               >
-                {milestone.milestoneTitle}
-              </h4>
-              <ul className="grid gap-2.5 sm:grid-cols-2">
-                {milestone.items.map((item) => (
-                  <li key={item.lesson.id}>
-                    <RoadmapLessonButton
-                      item={item}
-                      completed={completed}
-                      onToggleLesson={onToggleLesson}
-                      showSubject={false}
-                      showStatus
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </section>
-      ))}
+                <h4
+                  id={`roadmap-milestone-${subject.subjectId}-${milestone.milestoneId}`}
+                  className="text-sm font-bold text-slate-800"
+                >
+                  {milestone.milestoneTitle}
+                </h4>
+                <ul className="grid gap-2.5 sm:grid-cols-2">
+                  {milestone.items.map((item) => (
+                    <li key={item.lesson.id}>
+                      <RoadmapLessonButton
+                        item={item}
+                        completed={completed}
+                        onToggleLesson={onToggleLesson}
+                        showSubject={false}
+                        showStatus
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -452,9 +447,7 @@ function RoadmapLessonButton({
         <CheckCircle2
           className={cn(
             "h-4 w-4 transition-transform",
-            isDone
-              ? "scale-110 text-emerald-600"
-              : "text-slate-300 group-hover:text-emerald-400",
+            isDone ? "scale-110 text-emerald-600" : "text-slate-300 group-hover:text-emerald-400",
           )}
         />
       </div>
