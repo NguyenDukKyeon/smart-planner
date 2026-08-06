@@ -221,36 +221,36 @@ describe("Task 3 Course Manager candidates", () => {
     ]);
   });
 
-  test.each([
-    ["source-subject", -1] as const,
-    ["third-subject", 1] as const,
-  ])("subject boundary %s/%s returns a detached no-op", (subjectId, direction) => {
-    const current = task3Snapshot();
-    const result = buildReorderSubjectCandidate({ current, subjectId, direction });
+  test.each([["source-subject", -1] as const, ["third-subject", 1] as const])(
+    "subject boundary %s/%s returns a detached no-op",
+    (subjectId, direction) => {
+      const current = task3Snapshot();
+      const result = buildReorderSubjectCandidate({ current, subjectId, direction });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.candidate).toEqual(current);
-    expect(result.candidate).not.toBe(current);
-  });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.candidate).toEqual(current);
+      expect(result.candidate).not.toBe(current);
+    },
+  );
 
-  test.each([
-    ["source-topic-a", -1] as const,
-    ["source-topic-b", 1] as const,
-  ])("topic boundary %s/%s returns a detached no-op", (topicId, direction) => {
-    const current = task3Snapshot();
-    const result = buildReorderTopicCandidate({
-      current,
-      subjectId: "source-subject",
-      topicId,
-      direction,
-    });
+  test.each([["source-topic-a", -1] as const, ["source-topic-b", 1] as const])(
+    "topic boundary %s/%s returns a detached no-op",
+    (topicId, direction) => {
+      const current = task3Snapshot();
+      const result = buildReorderTopicCandidate({
+        current,
+        subjectId: "source-subject",
+        topicId,
+        direction,
+      });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.candidate).toEqual(current);
-    expect(result.candidate).not.toBe(current);
-  });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.candidate).toEqual(current);
+      expect(result.candidate).not.toBe(current);
+    },
+  );
 
   test("topic reorder rejects a topic owned by another subject", () => {
     const current = task3Snapshot();
