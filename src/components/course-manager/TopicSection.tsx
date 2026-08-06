@@ -3,10 +3,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Lesson, Milestone } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  autoScrollDuringLessonDrag,
-  type DragLocation,
-} from "./useLessonReorder";
+import { autoScrollDuringLessonDrag, type DragLocation } from "./useLessonReorder";
 
 type Props = {
   subjectId: string;
@@ -81,10 +78,7 @@ export function TopicSection({
   };
 
   return (
-    <section
-      data-course-scroll-container
-      className="overflow-hidden rounded-2xl border bg-white"
-    >
+    <section data-course-scroll-container className="overflow-hidden rounded-2xl border bg-white">
       <header className="flex items-center gap-2 border-b bg-slate-50 px-4 py-3">
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold">{topic.title}</h3>
