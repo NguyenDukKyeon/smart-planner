@@ -76,9 +76,7 @@ function editSnapshot() {
             id: "target-topic",
             title: "Chủ đề B",
             subtitle: "1 bài học",
-            lessons: [
-              lesson("lesson-3", "Bài ba", "Môn đích", "Chủ đề B", "2030-01-03"),
-            ],
+            lessons: [lesson("lesson-3", "Bài ba", "Môn đích", "Chủ đề B", "2030-01-03")],
           },
         ],
       },
@@ -100,7 +98,9 @@ function findLesson(subjects: Subject[], lessonId: string): Lesson | undefined {
     .find((item) => item.id === lessonId);
 }
 
-function validInput(overrides: Partial<LessonEditorCandidateInput> = {}): LessonEditorCandidateInput {
+function validInput(
+  overrides: Partial<LessonEditorCandidateInput> = {},
+): LessonEditorCandidateInput {
   return {
     title: "Bài đã chỉnh",
     subjectId: "target-subject",
