@@ -100,8 +100,7 @@ export function CourseManagerModal({
   const [bulkTargetSubjectId, setBulkTargetSubjectId] = useState("");
   const [bulkTargetTopicId, setBulkTargetTopicId] = useState("");
   const [bulkDate, setBulkDate] = useState("");
-  const [bulkScheduleMode, setBulkScheduleMode] =
-    useState<LessonScheduleMode>("flexible");
+  const [bulkScheduleMode, setBulkScheduleMode] = useState<LessonScheduleMode>("flexible");
   const [bulkMinutes, setBulkMinutes] = useState(120);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [draft, setDraft] = useState<LessonEditorDraft | null>(null);
@@ -282,7 +281,10 @@ export function CourseManagerModal({
   const moveSelectedToSubject = () => {
     if (!bulkTargetSubjectId) return;
     if (
-      !confirmTimerImpact(selectedLessonIds, `chuyển ${selectedLessonIds.size} bài học sang môn khác`)
+      !confirmTimerImpact(
+        selectedLessonIds,
+        `chuyển ${selectedLessonIds.size} bài học sang môn khác`,
+      )
     ) {
       return;
     }
@@ -302,7 +304,10 @@ export function CourseManagerModal({
   const moveSelectedToTopic = () => {
     if (!selectedSubject || !bulkTargetTopicId) return;
     if (
-      !confirmTimerImpact(selectedLessonIds, `chuyển ${selectedLessonIds.size} bài học sang chủ đề khác`)
+      !confirmTimerImpact(
+        selectedLessonIds,
+        `chuyển ${selectedLessonIds.size} bài học sang chủ đề khác`,
+      )
     ) {
       return;
     }
@@ -371,9 +376,7 @@ export function CourseManagerModal({
       return;
     }
     if (
-      !window.confirm(
-        `Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`,
-      )
+      !window.confirm(`Lưu trữ ${selectedLessonIds.size} bài học? Lịch sử phiên học vẫn được giữ.`)
     ) {
       return;
     }
