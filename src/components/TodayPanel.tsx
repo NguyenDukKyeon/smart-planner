@@ -32,10 +32,7 @@ import {
   normalizeDailyStudyHours,
 } from "@/lib/study-hours";
 import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
-import {
-  deriveLessonPlacementReason,
-  deriveReviewPlacementReason,
-} from "@/lib/lesson-placement";
+import { deriveLessonPlacementReason, deriveReviewPlacementReason } from "@/lib/lesson-placement";
 
 function StudyStreakBadge({ streak }: { streak: number }) {
   return (
