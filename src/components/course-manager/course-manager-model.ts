@@ -130,9 +130,7 @@ export function filterAndSortMilestones(params: FilterAndSortParams): Milestone[
           return 0;
         }),
     }))
-    .filter(
-      (milestone) => milestone.lessons.length > 0 || (!keyword && params.filter === "all"),
-    );
+    .filter((milestone) => milestone.lessons.length > 0 || (!keyword && params.filter === "all"));
 }
 
 export function createLessonEditorDraft(params: {
