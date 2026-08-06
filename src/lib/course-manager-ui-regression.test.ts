@@ -80,12 +80,17 @@ describe("Course Manager UI transaction routing", () => {
     }
 
     expect(modalSource).toContain("const reorderEnabled");
-    expect(modalSource).toContain("buildReorderSubjectCandidate");
-    expect(modalSource).toContain('kind: "reorder-subject"');
-    expect(modalSource).toContain("buildReorderTopicCandidate");
-    expect(modalSource).toContain('kind: "reorder-topic"');
-    expect(modalSource).toContain("buildReorderLessonCandidate");
-    expect(modalSource).toContain('kind: "reorder-lesson"');
+    expect(modalSource).toMatch(
+      /buildReorderSubjectCandidate\([\s\S]*?commitReorder\(\s*built,\s*"reorder-subject"/,
+    );
+    expect(modalSource).toMatch(
+      /buildReorderTopicCandidate\([\s\S]*?commitReorder\(\s*built,\s*"reorder-topic"/,
+    );
+    expect(modalSource).toMatch(
+      /buildReorderLessonCandidate\([\s\S]*?commitReorder\(\s*built,\s*"reorder-lesson"/,
+    );
+    expect(modalSource).toContain("scheduleTransactions.executeMutation({");
+    expect(modalSource).toContain("kind,");
     expect(modalSource).not.toContain("moveLessonBeforeInTopic");
     expect(modalSource).not.toContain("reorderSubject(");
     expect(modalSource).not.toContain("reorderTopic(");
