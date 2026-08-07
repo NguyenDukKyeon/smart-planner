@@ -144,4 +144,48 @@ describe("Course Manager drag interaction", () => {
     expect(modalSource).toContain('sort === "roadmap"');
     expect(modalSource).toContain("lessonSearch.trim()");
   });
+
+  test("preserves predecessor topic and lesson presentation around transactional reorder", async () => {
+    const [modalSource, rowSource, topicSource] = await Promise.all([
+      fs.readFile(new URL("../components/CourseManagerModal.tsx", import.meta.url), "utf8"),
+      fs.readFile(new URL("../components/course-manager/LessonRow.tsx", import.meta.url), "utf8"),
+      fs.readFile(
+        new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
+        "utf8",
+      ),
+    ]);
+
+    expect(topicSource).toContain("Collapsible");
+    expect(topicSource).toContain("<Collapsible");
+    expect(topicSource).toContain("<CollapsibleTrigger");
+    expect(topicSource).toContain("<CollapsibleContent");
+    expect(topicSource).toContain("ChevronDown");
+    expect(topicSource).toContain("completedCount");
+    expect(topicSource).toContain("remainingMinutes");
+    expect(topicSource).toContain("còn lại");
+    expect(topicSource).toContain("h-0.5 bg-indigo-600");
+    expect(topicSource).toMatch(/h-0\.5 bg-indigo-600[\s\S]*?\{label\}/);
+    expect(topicSource).not.toContain('<span className="sr-only">{label}</span>');
+
+    for (const label of [
+      "Hoàn thành",
+      "Đang học",
+      "Chưa bắt đầu",
+      "Nhân bản bài học",
+      "Lưu trữ",
+      "Xóa bài học",
+    ]) {
+      expect(rowSource).toContain(label);
+    }
+    expect(rowSource).toContain("{minutes} / {lesson.plannedDurationMinutes} phút · {percent}%");
+    expect(rowSource).toContain("<DropdownMenu>");
+    expect(rowSource).toContain("onMoveToSubject");
+    expect(rowSource).toContain("Chuyển sang");
+    expect(rowSource).toContain("subjects");
+
+    expect(modalSource).toContain("const moveSingleLessonToSubject");
+    expect(modalSource).toMatch(
+      /buildMoveLessonsCandidate\(\{[\s\S]*?lessonIds: \[lessonId\][\s\S]*?targetSubjectId[\s\S]*?commitReorder\([\s\S]*?"move-lessons"/,
+    );
+  });
 });
