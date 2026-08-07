@@ -571,6 +571,26 @@ export function CourseManagerModal({
     );
   };
 
+  const moveSingleLessonToSubject = (lessonId: string, targetSubjectId: string) => {
+    const lesson = currentSubjects
+      .flatMap((subject) => subject.milestones)
+      .flatMap((topic) => topic.lessons)
+      .find((candidate) => candidate.id === lessonId);
+    const targetSubject = currentSubjects.find((subject) => subject.id === targetSubjectId);
+    if (!lesson || !targetSubject) return;
+    const built = buildMoveLessonsCandidate({
+      current: createScheduleSnapshot(currentSubjects, plannerSettings),
+      lessonIds: [lessonId],
+      targetSubjectId,
+    });
+    commitReorder(
+      built,
+      "move-lessons",
+      `Chuyển bài học ${lesson.title} sang ${targetSubject.name}`,
+      `Đã chuyển bài sang ${targetSubject.name}. Nhấn Ctrl+Z để hoàn tác thay đổi lịch.`,
+    );
+  };
+
   const moveSelectedToSubject = () => {
     if (!bulkTargetSubjectId) return;
     if (
@@ -961,6 +981,22 @@ export function CourseManagerModal({
                       key={topic.id}
                       subjectId={selectedSubject.id}
                       topic={topic}
+                      completedCount={
+                        topic.lessons.filter(
+                          (lesson) =>
+                            Boolean(progress?.completedLessons[lesson.id]) ||
+                            (minutesByLesson.get(lesson.id) ?? 0) >= lesson.plannedDurationMinutes,
+                        ).length
+                      }
+                      remainingMinutes={topic.lessons.reduce(
+                        (total, lesson) =>
+                          total +
+                          Math.max(
+                            0,
+                            lesson.plannedDurationMinutes - (minutesByLesson.get(lesson.id) ?? 0),
+                          ),
+                        0,
+                      )}
                       reorderEnabled={reorderEnabled}
                       dragOverLocation={lessonReorder.dragOverLocation}
                       canMoveTopicUp={topicIndex > 0}
@@ -982,6 +1018,12 @@ export function CourseManagerModal({
                         <LessonRow
                           lesson={lesson}
                           minutes={minutesByLesson.get(lesson.id) ?? 0}
+                          completed={
+                            Boolean(progress?.completedLessons[lesson.id]) ||
+                            (minutesByLesson.get(lesson.id) ?? 0) >= lesson.plannedDurationMinutes
+                          }
+                          subjects={currentSubjects}
+                          currentSubjectId={selectedSubject.id}
                           selected={selectedLessonIds.has(lesson.id)}
                           selectionMode={selectionMode}
                           activeTimer={activeTimerLessonId === lesson.id}
@@ -992,6 +1034,7 @@ export function CourseManagerModal({
                           canMoveDown={lessonIndex < topic.lessons.length - 1}
                           onToggleSelected={toggleLessonSelection}
                           onEdit={openLessonEdit}
+                          onMoveToSubject={moveSingleLessonToSubject}
                           onDuplicate={duplicateLesson}
                           onArchive={archiveSingleLesson}
                           onDelete={requestDeleteLesson}
