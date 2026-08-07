@@ -14,28 +14,29 @@ This record is implementation evidence only. It does not grant package acceptanc
 - Exact integrated predecessor: `main@ceeee84682c55c663d09a6b171227a1d92171046`
 - Approved design commit: `448c9ff69944a95229afc9da0fa400539f9185c3`
 - Approved implementation plan commit: `522e7a0cc3027b0f7c86d1bf20cebc5c6ab48450`
-- Literal final source HEAD covered by this evidence: `977841037bba79a53d090e2120b2498986b4a58a`
-- Source topology at final source HEAD: 56 commits ahead of predecessor, 0 behind.
+- Literal final source HEAD covered by this evidence: `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`
+- Source topology at final source HEAD: 63 commits ahead of predecessor, 0 behind.
 - Pull request: draft PR #8, open and unmerged.
 
-The evidence document itself is committed after the literal source HEAD above. Review must distinguish the docs-only evidence commit from the source HEAD whose behavior was verified.
+This evidence commit is intentionally after the literal source HEAD above. Independent review must bind runtime behavior to `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3` and then verify that the evidence-head delta is docs-only.
 
 ## Final exact-head GREEN gate
 
-GitHub Actions `Build diagnostics` run #289:
+GitHub Actions `Build diagnostics` run #296:
 
-- run id: `31137356888`
-- job id: `92739603534`
-- source head: `977841037bba79a53d090e2120b2498986b4a58a`
+- run id: `31141823263`
+- job id: `92753150350`
+- literal source head: `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`
+- checked PR merge ref: `20a05464d6e1ba1b596928bb2dde8e94b98d780d` — merge of source head into predecessor `ceeee84682c55c663d09a6b171227a1d92171046`
 - `npm install`: PASS
 - `npm run typecheck`: PASS
 - `npm run lint`: PASS — 0 errors, 7 pre-existing/nonblocking warnings
-- `npm test`: PASS — 51/51 test files, 342/342 tests
-- `npm run build`: PASS — test suite reran 51/51 and 342/342, followed by client, SSR and Nitro/Vercel production builds
+- `npm test`: PASS — 51/51 test files, 343/343 tests
+- `npm run build`: PASS — test suite reran 51/51 and 343/343, followed by client, SSR and Nitro/Vercel production builds
 - `git diff --exit-code`: PASS
 - job conclusion: SUCCESS
 
-The dead intermediate Course Manager artifact removed during Task 9 had itself contributed one lint warning. After removal, the remaining seven warnings are outside the P1D implementation surface: one existing Focus Timer hook dependency warning and six existing React fast-refresh export warnings in UI primitives.
+The remaining seven lint warnings are outside the P1D recovery surface: one existing Focus Timer hook dependency warning and six existing React fast-refresh export warnings in UI primitives.
 
 ## RED / GREEN implementation history
 
@@ -96,54 +97,66 @@ The dead intermediate Course Manager artifact removed during Task 9 had itself c
 - Formatting-only exact-head correction: `318c64d3ed08ac5c4e6a7b6c0833e6009e960aeb`.
 - Independent disposable-clone verification on `d21fc486…`: typecheck PASS, 51/51 files and 342/342 tests PASS, production build PASS and clean tracked tree; lint reported only eleven Prettier formatting errors, all subsequently corrected by `318c64d…`.
 - Vercel built exact `318c64d…`: 51/51 files and 342/342 tests PASS plus client/SSR/Nitro production build PASS.
-- GitHub Actions run #285 for `318c64d…` was initially cancelled before repository steps because the hosted runner service was unavailable. A later rerun remained queued during the incident.
-- Final official full gate is superseded by the later source-head run #289 described above after Task 9 cleanup.
+- Final official full gate is superseded by the later Task 9 source-head run #296 described above.
 
-### Task 9 — scope-audit regression cleanup
+### Task 9 — scope-audit cleanup and independent-review recovery
 
-The exact predecessor-to-head audit discovered an Important finding: `src/components/CourseManagerModalContent.tsx` was a dead intermediate copy of the old monolith, while two source-level regressions had been redirected to that dead file rather than the authoritative decomposed runtime.
+The first Task 9 scope audit found a dead intermediate `src/components/CourseManagerModalContent.tsx` copy and regressions reading that non-runtime file.
 
-- Test-only RED topology was added so authoritative drag assertions read `LessonRow.tsx`, `TopicSection.tsx` and `useLessonReorder.ts`, while build purity requires `CourseManagerModalContent.tsx` to be absent.
-- An accidental connector write created an empty root file named `NOPE` in commit `0b62d40f07ca6e2314962366ce3b10f9faa93fa2`. It was immediately removed by a normal forward commit; no rebase, amend, force-push or history rewrite occurred, and the net tree contains no `NOPE` file.
 - RED test commit after forward cleanup: `545f95f00973b5b3a6f1b3296dd10505b7eddbc6`; formatter-only correction: `00896723051ff8793ae8b0e04207bc375b0a3eec`.
 - Valid RED run #288 `31137221906`, job `92739174608`: typecheck PASS, lint PASS, 50/51 files and 341/342 tests PASS; the only failure was `build-purity-regression` because `CourseManagerModalContent.tsx` still existed.
 - GREEN cleanup: `977841037bba79a53d090e2120b2498986b4a58a`, deleting only the dead intermediate source artifact.
-- GREEN run #289 `31137356888`, job `92739603534`: full gate PASS as recorded above.
+- GREEN run #289 `31137356888`, job `92739603534`: full gate PASS at 51/51 files and 342/342 tests.
+
+A subsequent independent review then found a separate Important Task 6.4 behavior-preservation regression. The approved plan required `LessonRow` and `TopicSection` to be extracted verbatim, but the extracted runtime had lost topic collapse/completed-and-remaining summary, lesson status/progress/details/full management menu including quick move-to-subject, and visible insertion-line feedback.
+
+- Independent rejection comment: PR #8 issue comment `5211344413`.
+- A later acceptance comment `5211359682` was corrected in place after the rejection was fresh-read and independently verified; it now records `P1D IMPLEMENTED / REJECTED / NOT_MERGED`. No package acceptance is claimed by that comment.
+- Recovery RED test commit: `50cbc176da983e66b4407b3728fe72b1ff71f918`.
+- Valid RED run #291 `31141111294`, job `92751024900`: typecheck PASS, lint PASS, 50/51 files and 342/343 tests PASS; the only failing test was the new Course Manager presentation regression, first failing because authoritative `TopicSection.tsx` lacked `Collapsible`.
+- Production recovery commits:
+  - `5eeff3e8bf2f4f8436959283614ecdba7018f4ba` — restore lesson status/progress/details/full dropdown and quick-move callback surface.
+  - `5e843a4672db70bb6e5dffe4b08011a583347c5b` — restore collapsible topic summary and visible insertion line/label.
+  - `39c1238b0db506ca78ff13c4dcd064b3f41faa62` — reconnect completion/remaining data and route single-lesson quick move through `buildMoveLessonsCandidate` plus the shared `move-lessons` transaction boundary.
+- Run #294 `31141660682`, job `92752657254` proved the wiring typechecked but failed lint only on three Prettier formatting errors in the two recovered presentation files; tests/build were correctly not treated as GREEN from that run.
+- Formatting-only forward commits: `71e522b3f460db04a1d0091d39c7b11d885f3528` and `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`.
+- Final GREEN run #296 `31141823263`, job `92753150350`: typecheck PASS, lint PASS with 0 errors/7 known warnings, 51/51 files and 343/343 tests PASS, production build PASS, clean-tree PASS.
 
 ## Exact changed-file list at literal final source HEAD
 
-Compared with `ceeee84682c55c663d09a6b171227a1d92171046`, the source head changes exactly these 30 paths:
+Compared with `ceeee84682c55c663d09a6b171227a1d92171046`, the source head changes exactly these 31 paths. The evidence document is already present in source-head ancestry because recovery source commits followed the earlier evidence handoff; this commit refreshes that same path after the final source head.
 
-1. `docs/superpowers/plans/2026-08-06-smart-planner-p1d-course-manager-transactions.md`
-2. `docs/superpowers/specs/2026-08-06-smart-planner-p1d-course-manager-transactions-design.md`
-3. `src/components/CourseManagerModal.tsx`
-4. `src/components/FlexiblePlanner.tsx`
-5. `src/components/OnboardingDialog.tsx`
-6. `src/components/course-manager/BulkActionsBar.tsx`
-7. `src/components/course-manager/LessonEditorDialog.tsx`
-8. `src/components/course-manager/LessonRow.tsx`
-9. `src/components/course-manager/SubjectHeader.tsx`
-10. `src/components/course-manager/SubjectListPane.tsx`
-11. `src/components/course-manager/SubjectWorkspace.tsx`
-12. `src/components/course-manager/TopicSection.tsx`
-13. `src/components/course-manager/course-manager-model.ts`
-14. `src/components/course-manager/useLessonReorder.ts`
-15. `src/components/schedule/useScheduleTransactions.ts` — rename/move from the old Flexible Planner-owned hook path
-16. `src/lib/build-purity-regression.test.ts`
-17. `src/lib/catalog-order-drag-regression.test.ts`
-18. `src/lib/course-manager-lesson-edit-candidate.test.ts`
-19. `src/lib/course-manager-lesson-edit-integration.test.ts`
-20. `src/lib/course-manager-model.test.ts`
-21. `src/lib/course-manager-reorder-bulk-candidates.test.ts`
-22. `src/lib/course-manager-transaction-owner-regression.test.ts`
-23. `src/lib/course-manager-ui-regression.test.ts`
-24. `src/lib/flexible-planner-transactions-regression.test.ts`
-25. `src/lib/flexible-planner-ux-regression.test.ts`
-26. `src/lib/schedule-candidates.ts`
-27. `src/lib/schedule-mode-regression.test.ts`
-28. `src/lib/schedule-operations-integration.test.ts`
-29. `src/lib/schedule-transactions.ts`
-30. `src/routes/index.tsx`
+1. `docs/superpowers/evidence/2026-08-06-smart-planner-p1d-course-manager-transactions-completion.md`
+2. `docs/superpowers/plans/2026-08-06-smart-planner-p1d-course-manager-transactions.md`
+3. `docs/superpowers/specs/2026-08-06-smart-planner-p1d-course-manager-transactions-design.md`
+4. `src/components/CourseManagerModal.tsx`
+5. `src/components/FlexiblePlanner.tsx`
+6. `src/components/OnboardingDialog.tsx`
+7. `src/components/course-manager/BulkActionsBar.tsx`
+8. `src/components/course-manager/LessonEditorDialog.tsx`
+9. `src/components/course-manager/LessonRow.tsx`
+10. `src/components/course-manager/SubjectHeader.tsx`
+11. `src/components/course-manager/SubjectListPane.tsx`
+12. `src/components/course-manager/SubjectWorkspace.tsx`
+13. `src/components/course-manager/TopicSection.tsx`
+14. `src/components/course-manager/course-manager-model.ts`
+15. `src/components/course-manager/useLessonReorder.ts`
+16. `src/components/schedule/useScheduleTransactions.ts` — rename/move from the old Flexible Planner-owned hook path
+17. `src/lib/build-purity-regression.test.ts`
+18. `src/lib/catalog-order-drag-regression.test.ts`
+19. `src/lib/course-manager-lesson-edit-candidate.test.ts`
+20. `src/lib/course-manager-lesson-edit-integration.test.ts`
+21. `src/lib/course-manager-model.test.ts`
+22. `src/lib/course-manager-reorder-bulk-candidates.test.ts`
+23. `src/lib/course-manager-transaction-owner-regression.test.ts`
+24. `src/lib/course-manager-ui-regression.test.ts`
+25. `src/lib/flexible-planner-transactions-regression.test.ts`
+26. `src/lib/flexible-planner-ux-regression.test.ts`
+27. `src/lib/schedule-candidates.ts`
+28. `src/lib/schedule-mode-regression.test.ts`
+29. `src/lib/schedule-operations-integration.test.ts`
+30. `src/lib/schedule-transactions.ts`
+31. `src/routes/index.tsx`
 
 No dependency manifest, lockfile, scheduler algorithm, review algorithm, catalog/progress persistence schema, Forecast component, Roadmap implementation, CI workflow, deployment configuration or production dependency is changed.
 
@@ -155,20 +168,24 @@ The Course Manager orchestration, extracted `course-manager/*` units, shared sch
 
 ### Tests outside the plan's illustrative exact-name list
 
-`course-manager-lesson-edit-candidate.test.ts`, `course-manager-lesson-edit-integration.test.ts` and `course-manager-reorder-bulk-candidates.test.ts` were added under `src/lib` to keep TDD RED/GREEN commits small and behavior-focused while the GitHub connector lacked a safe patch editor. They test the same candidate/integration responsibilities assigned by the plan to existing schedule test modules; they add coverage rather than introduce production scope.
+`course-manager-lesson-edit-candidate.test.ts`, `course-manager-lesson-edit-integration.test.ts` and `course-manager-reorder-bulk-candidates.test.ts` were added under `src/lib` to keep TDD RED/GREEN commits small and behavior-focused while the GitHub connector lacked a patch primitive. They test responsibilities assigned by the plan to existing candidate/integration suites.
 
-`flexible-planner-ux-regression.test.ts`, `build-purity-regression.test.ts` and `schedule-mode-regression.test.ts` required narrow source-path updates because ownership and drag implementation moved to authoritative shared/extracted files. Task 9 additionally corrected the latter two so they can no longer pass by reading a dead implementation copy.
+`flexible-planner-ux-regression.test.ts`, `build-purity-regression.test.ts` and `schedule-mode-regression.test.ts` received narrow source-path updates because ownership and drag implementation moved to authoritative shared/extracted files. Task 9 also corrected source regressions so they cannot pass by reading a dead implementation copy.
 
 ### `src/components/OnboardingDialog.tsx`
 
-This path is outside the locked P1D production map. It contains a narrow compatibility shim introduced after a connector reconstruction typo changed the route prop from `canRestoreFactoryReset` to `canRestoreFactoryResetRollback`. The shim maps either name to the same boolean and changes no storage, onboarding, reset, planner or Course Manager behavior. It is explicitly disclosed here rather than silently treated as P1D functionality. Reverting it at completion time would require replacing the large route file solely to rename one prop through a connector that has no patch primitive; that reconstruction risk is greater than retaining the behavior-equivalent compatibility alias. Independent review should decide whether this separately justified incidental diff is acceptable.
+This path is outside the locked P1D production map. It contains a narrow compatibility shim introduced after a connector reconstruction typo changed the route prop from `canRestoreFactoryReset` to `canRestoreFactoryResetRollback`. The shim maps either name to the same boolean and changes no storage, onboarding, reset, planner or Course Manager behavior. It remains explicitly disclosed for independent review.
+
+### Task 9 recovery scope
+
+The recovery from the independent rejection changes only four logical paths relative to the previous evidence head `2aa145dd5247362779662308adbfc6f19f074846`: `CourseManagerModal.tsx`, `LessonRow.tsx`, `TopicSection.tsx`, and `catalog-order-drag-regression.test.ts`. The modal recovery commit itself added exactly 43 lines and deleted 0 lines, avoiding full-file transcription drift. The two final commits are formatting-only corrections demanded by the repository lint gate.
 
 ## Acceptance criteria 1–25
 
 1. **PASS — one shared controller.** `Dashboard` constructs one `useScheduleTransactions()` controller and passes that same object to Flexible Schedule and Course Manager.
 2. **PASS — Flexible Schedule has no independent transaction history/listener.** It consumes `ScheduleTransactionController` through props.
 3. **PASS — Course Manager has no independent transaction history/listener.** It consumes the same shared controller through props.
-4. **PASS — schedule-affecting Course Manager operations use the shared boundary.** Date, mode, duration, subject/topic moves and canonical reorder build validated candidates and call the shared `executeMutation`.
+4. **PASS — schedule-affecting Course Manager operations use the shared boundary.** Date, mode, duration, subject/topic moves, quick single-lesson move-to-subject and canonical reorder build validated candidates and call shared `executeMutation`.
 5. **PASS — combined editor save is atomic.** Schedule-affecting lesson edit constructs one `edit-lesson` candidate and creates at most one history entry; integration coverage proves full undo.
 6. **PASS — title-only lesson edits remain catalog-only.** Edit classification routes title-only changes through catalog persistence/backup, not schedule history.
 7. **PASS — subject/topic names and emoji remain catalog-only.** Their handlers remain in Course Manager catalog orchestration.
@@ -185,17 +202,18 @@ This path is outside the locked P1D production map. It contains a narrow compati
 18. **PASS — global undo guard retained.** The shared hook retains editable-control protection for Ctrl/Cmd+Z rather than attaching listeners per child surface.
 19. **PASS — external catalog publication invalidates stale history.** Shared-hook stale-history invalidation remains active and catalog publication is observed above both surfaces.
 20. **PASS — catalog backup is distinct from schedule undo.** UI labels are explicitly `Hoàn tác thay đổi danh mục gần nhất` versus `Hoàn tác thay đổi lịch`.
-21. **PASS — drag mechanics retained.** Dedicated handle, MIME `application/x-smart-lesson-id`, custom preview, top/bottom insertion targets, edge auto-scroll, modal scroll container and up/down fallback are asserted against authoritative extracted source.
-22. **PASS — Course Manager UX retained.** Search/filter/sort, bulk selection, archive/restore, mobile detail/back and progress statistics are protected by model/UI regressions.
+21. **PASS — drag mechanics and predecessor feedback retained.** Dedicated handle, MIME `application/x-smart-lesson-id`, custom preview, top/bottom targets, visible indigo insertion line with explicit `Chèn phía trên` / `Chèn phía dưới` feedback, edge auto-scroll, modal scroll container and up/down fallback are asserted against authoritative extracted source.
+22. **PASS — Course Manager UX retained.** Search/filter/sort, bulk selection, archive/restore, mobile detail/back, collapsible topic sections with completed/remaining summary, lesson completion/status/progress/details, full lesson management dropdown and progress statistics are protected by authoritative regressions.
 23. **PASS WITH EXPLICIT INCIDENTAL-DIFF JUSTIFICATION.** No scheduler/review/schema/Forecast/Roadmap/dependency/lockfile/workflow/deployment changes exist. `OnboardingDialog.tsx` is the sole non-P1D production-path exception and is documented above as a behavior-equivalent compatibility shim from connector reconstruction.
-24. **PASS — exact final source head quality gates.** GitHub Actions run #289 on `977841037bba79a53d090e2120b2498986b4a58a` passed typecheck, lint, 342 tests, production build and clean-tree.
-25. **PASS FOR IMPLEMENTER SELF-AUDIT / INDEPENDENT REVIEW PENDING.** The Important dead-artifact/source-regression finding discovered during Task 9 was fixed and verified GREEN. No known unresolved Critical or Important finding remains in implementer evidence. Independent reviewer acceptance is still required and may overturn this assessment.
+24. **PASS — exact final source head quality gates.** GitHub Actions run #296 on the PR merge ref for `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3` passed typecheck, lint, 343 tests, production build and clean-tree.
+25. **PASS FOR IMPLEMENTER RECOVERY AUDIT / FRESH INDEPENDENT REVIEW PENDING.** The Important behavior-preservation finding from independent review was reproduced RED and is GREEN on the exact final source head. No known unresolved Critical or Important finding remains in implementation evidence. Task 9.6 still requires a fresh independent reviewer conclusion and may overturn this assessment.
 
 ## Nonblocking observations
 
-- `npm install` reports one high-severity dependency audit item. P1D adds or changes no dependency, package manifest or lockfile; dependency remediation is outside this package and should be handled separately under explicit authorization.
-- Seven lint warnings remain on the final source head: one Focus Timer hook dependency warning and six UI primitive fast-refresh warnings. They predate or sit outside P1D and are nonblocking under the current lint gate.
-- The route test filename warning from TanStack Router (`src/routes/__root.test.tsx` does not export a Route) is existing test-layout noise and does not fail tests/build.
+- `npm install` reports one high-severity dependency audit item. P1D adds or changes no dependency, package manifest or lockfile; dependency remediation is outside this package and requires separate authorization.
+- Seven lint warnings remain on the final source head: one Focus Timer hook dependency warning and six UI primitive fast-refresh warnings. They predate or sit outside P1D and are nonblocking under the configured gate.
+- The TanStack Router warning that `src/routes/__root.test.tsx` does not export a Route is existing test-layout noise and does not fail tests/build.
+- Post-job checkout cleanup still warns that `smart-study-habit-planner-deploy` has no URL in `.gitmodules`; repository verification steps themselves completed successfully.
 - GitHub Actions experienced a service incident during Task 8; the final source head later received a normal hosted runner and completed the entire official workflow successfully.
 
 ## Governance record
@@ -203,15 +221,16 @@ This path is outside the locked P1D production map. It contains a narrow compati
 - `main` remains the exact predecessor during implementation; no merge was performed by this package workflow.
 - PR #8 remains draft and unmerged at evidence creation time.
 - No rebase, amend, squash, force-push, branch-history rewrite or auto-merge was used.
-- The accidental empty `NOPE` commit is preserved in history and neutralized by a forward cleanup commit, consistent with the no-history-rewrite rule.
+- The accidental empty `NOPE` commit from the earlier Task 9 audit remains preserved in history and neutralized by a forward cleanup commit.
 - The dead `CourseManagerModalContent.tsx` artifact was removed only after a valid RED regression demonstrated the defect.
+- The independent behavior-preservation rejection was not dismissed: it was reproduced with a new authoritative RED regression before production recovery.
 - This evidence does not self-accept P1D.
 
 ## Review handoff
 
-Independent review must fresh-read GitHub, bind the review to the exact evidence head and literal source head above, inspect predecessor-to-head scope, verify the final successful workflow, and independently decide one of:
+Independent review must fresh-read GitHub, bind the review to the exact evidence head and literal source head `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`, inspect predecessor-to-head scope and the recovery delta from `2aa145dd5247362779662308adbfc6f19f074846`, verify final workflow run #296, read existing PR review/comment history including the corrected rejection record, and independently decide one of:
 
 - `P1D IMPLEMENTED / ACCEPTED / NOT_MERGED`, or
 - `P1D IMPLEMENTED / REJECTED / NOT_MERGED`.
 
-Merge requires a separate explicit authorization after acceptance.
+No merge occurs in Task 9. Merge requires separate explicit authorization after acceptance.
