@@ -154,7 +154,9 @@ export function LessonRow({
         </div>
         <p className="mt-1 break-words text-sm font-semibold text-slate-900">{lesson.title}</p>
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
-          <span>{minutes} / {lesson.plannedDurationMinutes} phút · {percent}%</span>
+          <span>
+            {minutes} / {lesson.plannedDurationMinutes} phút · {percent}%
+          </span>
           <span>
             {lesson.scheduledDate
               ? `${lesson.scheduleMode === "fixed" ? "Cố định" : "Từ"} ${lesson.scheduledDate}`
