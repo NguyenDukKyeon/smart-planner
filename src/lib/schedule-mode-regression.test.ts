@@ -172,7 +172,10 @@ describe("Course Manager drag interaction", () => {
   test("uses authoritative extracted drag units for handle, boundaries and auto-scroll", async () => {
     const [rowSource, topicSource, reorderSource] = await Promise.all([
       fs.readFile(new URL("../components/course-manager/LessonRow.tsx", import.meta.url), "utf8"),
-      fs.readFile(new URL("../components/course-manager/TopicSection.tsx", import.meta.url), "utf8"),
+      fs.readFile(
+        new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
+        "utf8",
+      ),
       fs.readFile(
         new URL("../components/course-manager/useLessonReorder.ts", import.meta.url),
         "utf8",
