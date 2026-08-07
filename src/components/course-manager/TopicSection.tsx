@@ -124,7 +124,8 @@ export function TopicSection({
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-semibold text-slate-900">{topic.title}</h3>
                 <p className="text-[11px] text-slate-500">
-                  {completedCount} / {topic.lessons.length} bài · {formatMinutes(remainingMinutes)} còn lại
+                  {completedCount} / {topic.lessons.length} bài · {formatMinutes(remainingMinutes)}{" "}
+                  còn lại
                 </p>
               </div>
             </button>
@@ -162,10 +163,7 @@ export function TopicSection({
               </DropdownMenuItem>
               {onDeleteTopic ? <DropdownMenuSeparator /> : null}
               {onDeleteTopic ? (
-                <DropdownMenuItem
-                  onSelect={() => onDeleteTopic(topic.id)}
-                  className="text-red-700"
-                >
+                <DropdownMenuItem onSelect={() => onDeleteTopic(topic.id)} className="text-red-700">
                   <Trash2 className="mr-2 h-4 w-4" /> Xóa chủ đề
                 </DropdownMenuItem>
               ) : null}
