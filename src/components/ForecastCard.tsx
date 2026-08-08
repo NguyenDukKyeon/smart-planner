@@ -12,10 +12,7 @@ import {
   normalizeDailyStudyHours,
 } from "@/lib/study-hours";
 import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
-import {
-  selectForecastViewModel,
-  type ForecastHorizonWeeks,
-} from "@/lib/forecast-view-model";
+import { selectForecastViewModel, type ForecastHorizonWeeks } from "@/lib/forecast-view-model";
 
 type Props = {
   state: ProgressState;
