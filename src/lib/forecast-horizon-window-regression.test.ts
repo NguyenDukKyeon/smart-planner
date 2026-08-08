@@ -126,9 +126,11 @@ describe("Forecast horizon window", () => {
     const subjects = makeSubjects({ count: 40 });
     const state = makeState(4);
     const fromISO = "2026-08-08";
-
-    const twoWeeks = selectForecastViewModel({ subjects, state, horizonWeeks: 2, fromISO });
-    const twelveWeeks = selectForecastViewModel({ subjects, state, horizonWeeks: 12, fromISO });
+    const horizons: HorizonWeeks[] = [2, 4, 8, 12];
+    const views = horizons.map((horizonWeeks) =>
+      selectForecastViewModel({ subjects, state, horizonWeeks, fromISO }),
+    );
+    const [twoWeeks, , , twelveWeeks] = views;
 
     expect(twoWeeks.totalRemainingLessons).toBe(40);
     expect(twoWeeks.horizonScheduledLessons).toBeLessThan(40);
@@ -137,7 +139,9 @@ describe("Forecast horizon window", () => {
     );
     expect(twelveWeeks.horizonNewHours).toBeGreaterThanOrEqual(twoWeeks.horizonNewHours);
     expect(twelveWeeks.outsideHorizonLessons).toBeLessThanOrEqual(twoWeeks.outsideHorizonLessons);
-    expect(twelveWeeks.completion).toEqual(twoWeeks.completion);
+    for (const view of views) {
+      expect(view.completion).toEqual(twoWeeks.completion);
+    }
 
     const visiblePlan = buildFlexiblePlan({
       subjects,
