@@ -161,15 +161,16 @@ describe("ForecastCard runtime clarity", () => {
     expect(html).toContain("Tất cả bài chưa hoàn thành đều nằm trong phạm vi 2 tuần đang xem.");
   });
 
-  it("removes the obsolete shiftedDates prop from Forecast without changing Roadmap ownership", async () => {
+  it("keeps shifted dates as a compatibility-only Forecast prop while Roadmap remains their owner", async () => {
     const [cardSource, routeSource] = await Promise.all([
       fs.readFile(new URL("../components/ForecastCard.tsx", import.meta.url), "utf8"),
       fs.readFile(new URL("../routes/index.tsx", import.meta.url), "utf8"),
     ]);
 
-    expect(cardSource).not.toContain("shiftedDates?: Record<string, string>");
-    const forecastCall = routeSource.match(/<ForecastCard[\s\S]*?\/>/)?.[0] ?? "";
-    expect(forecastCall).not.toContain("shiftedDates={shiftedDates}");
+    expect(cardSource).toContain("Compatibility-only");
+    expect(cardSource).toContain("shiftedDates?: Record<string, string>");
+    const forecastSignature = cardSource.match(/export function ForecastCard\(([^)]*)\)/)?.[1] ?? "";
+    expect(forecastSignature).not.toContain("shiftedDates");
     expect(routeSource).toContain("<LearningRoadmap");
     expect(routeSource).toContain("shiftedDates={shiftedDates}");
   });
