@@ -18,6 +18,7 @@ type Props = {
   state: ProgressState;
   subjects?: Subject[];
   onSetDefaultDailyHours?: (hours: number) => void;
+  // Compatibility-only: the route still owns shifted dates for Roadmap. Forecast never reads them.
   shiftedDates?: Record<string, string>;
 };
 
@@ -37,7 +38,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
     () => selectForecastViewModel({ subjects, state, horizonWeeks }),
     [subjects, state, horizonWeeks],
   );
-  const hours = vm.hoursPerDay;
+  const hours = vm.defaultDailyHours;
 
   const handleHoursChange = (h: number) => {
     if (onSetDefaultDailyHours) {
@@ -63,25 +64,27 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
     high: "Độ tin cậy cao",
   }[vm.confidence];
 
-  const basisLabel = {
-    planned: "thời lượng kế hoạch",
-    mixed: "kế hoạch và phiên học thực tế",
-    actual: "các phiên học thực tế",
-  }[vm.basis];
-
   const planCompletionText =
     vm.completion.kind === "complete"
       ? "Đã hoàn thành tất cả! 🎉"
-      : vm.completion.kind === "no-capacity"
-        ? "Chưa có quỹ giờ để dự báo"
-        : vm.completion.kind === "date"
-          ? displayDate(vm.completion.startISO)
-          : `${displayDate(vm.completion.startISO)} – ${displayDate(vm.completion.endISO)}`;
+      : vm.completion.kind === "date"
+        ? displayDate(vm.completion.dateISO)
+        : "Chưa thể xác định ngày hoàn thành";
 
   const outsideHorizonText =
     vm.outsideHorizonLessons > 0
       ? `Có ${vm.outsideHorizonLessons} bài chưa hoàn thành nằm ngoài phạm vi ${vm.horizonWeeks} tuần đang xem.`
       : `Tất cả bài chưa hoàn thành đều nằm trong phạm vi ${vm.horizonWeeks} tuần đang xem.`;
+
+  const capacityText = `Theo lịch công suất hiện tại · mặc định ${formatHours(vm.defaultDailyHours)} giờ/ngày · Chủ nhật nghỉ nếu không đặt riêng.`;
+  const capacityOverrideText =
+    vm.explicitCapacityOverrideCount > 0
+      ? ` Có ${vm.explicitCapacityOverrideCount} ngày đặt công suất riêng được tính vào dự báo.`
+      : "";
+  const evidenceText =
+    vm.basis === "planned-with-study-evidence"
+      ? `Khối lượng dựa trên thời lượng kế hoạch. Độ tin cậy dựa trên ${vm.evidenceLessonCount} bài đã hoàn thành có dữ liệu học thực tế.`
+      : "Khối lượng dựa trên thời lượng kế hoạch. Chưa đủ bài hoàn thành có dữ liệu học để đánh giá độ tin cậy.";
 
   return (
     <section className="min-w-0 space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs sm:p-4.5">
@@ -91,7 +94,8 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
             <span>Dự báo hoàn thành theo kế hoạch</span>
           </h2>
           <p className="text-[11px] text-slate-500 sm:text-xs">
-            Tính toán theo vận tốc học đều {hours} giờ/ngày (6 ngày/tuần, nghỉ CN).
+            {capacityText}
+            {capacityOverrideText}
           </p>
         </div>
 
@@ -114,7 +118,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
           </label>
 
           <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-1.5">
-            <span className="text-xs font-semibold text-slate-700">Học đều</span>
+            <span className="text-xs font-semibold text-slate-700">Mặc định</span>
             <Slider
               className="w-24 sm:w-32"
               value={[hours]}
@@ -149,7 +153,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
           <span className="shrink-0 text-base">🎯</span>
           <div className="min-w-0">
             <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Dự kiến hoàn thành
+              Mốc học hết bài mới theo lịch hiện tại
             </div>
             <div className="truncate text-xs font-bold text-emerald-700 sm:text-sm">
               {planCompletionText}
@@ -203,7 +207,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
           <span className="shrink-0 text-base">⏳</span>
           <div className="min-w-0">
             <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Quỹ giờ giả định
+              Công suất mặc định
             </div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
               {formatHours(hours)} giờ/ngày
@@ -282,9 +286,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
         </div>
       </div>
 
-      <div className="pt-0.5 text-right text-[10px] italic text-slate-400">
-        Ước tính dựa trên {basisLabel} (~{vm.meanMinutes}p/bài).
-      </div>
+      <div className="pt-0.5 text-right text-[10px] italic text-slate-400">{evidenceText}</div>
     </section>
   );
 }

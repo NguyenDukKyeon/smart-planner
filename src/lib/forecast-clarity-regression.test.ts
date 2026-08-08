@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -50,5 +51,13 @@ describe("Forecast clarity regression", () => {
     );
 
     expect(html).not.toContain(displayDate(shiftedDate));
+  });
+
+  it("keeps the Forecast read model independent from the legacy arithmetic forecast helper", async () => {
+    const source = await fs.readFile(new URL("./forecast-view-model.ts", import.meta.url), "utf8");
+
+    expect(source).not.toMatch(/\bforecast\s*\(/);
+    expect(source).toContain("buildScheduleProjection");
+    expect(source).toContain("selectStudyDurationEvidence");
   });
 });
