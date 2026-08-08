@@ -15,7 +15,10 @@ describe("P1D Course Manager behavior-preservation coverage", () => {
 
   test("requires a runtime TopicSection collapse interaction regression", async () => {
     const interactionSuite = await fs
-      .readFile(new URL("./course-manager-topic-collapse-interaction.test.ts", import.meta.url), "utf8")
+      .readFile(
+        new URL("./course-manager-topic-collapse-interaction.test.ts", import.meta.url),
+        "utf8",
+      )
       .catch(() => "");
 
     expect(interactionSuite).toContain("renderToStaticMarkup");
