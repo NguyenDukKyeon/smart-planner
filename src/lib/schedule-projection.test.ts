@@ -146,6 +146,30 @@ describe("canonical full schedule projection", () => {
     expect(result.datesByLesson).toEqual({});
   });
 
+  it("classifies an unfinished fixed lesson whose exact date is already past as unplaced fixed", async () => {
+    const buildScheduleProjection = await loadProjectionBuilder();
+    expect(buildScheduleProjection).toBeTypeOf("function");
+    if (!buildScheduleProjection) return;
+
+    const result = buildScheduleProjection({
+      subjects: subjectWith([
+        { id: "fixed-in-the-past", scheduledDate: "2026-08-07", scheduleMode: "fixed" },
+      ]),
+      completed: {},
+      meta: DEFAULT_STUDY_META,
+      settings: { ...DEFAULT_PLANNER_SETTINGS, todayHours: 8, defaultDailyHours: 8 },
+      fromISO: "2026-08-08",
+      currentDateISO: "2026-08-08",
+      maxDays: 2,
+    });
+
+    expect(result.projectionComplete).toBe(false);
+    expect(result.unplacedFixedLessonIds).toEqual(["fixed-in-the-past"]);
+    expect(result.unprojectedLessonIds).toEqual([]);
+    expect(result.datesByLesson).toEqual({});
+    expect(result.lastScheduledLessonDate).toBeUndefined();
+  });
+
   it("reports work left after the defensive bound", async () => {
     const buildScheduleProjection = await loadProjectionBuilder();
     expect(buildScheduleProjection).toBeTypeOf("function");
