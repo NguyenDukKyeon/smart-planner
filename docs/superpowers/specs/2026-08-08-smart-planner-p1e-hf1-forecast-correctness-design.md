@@ -15,7 +15,7 @@ P1E-HF1 is a bounded post-acceptance correctness hotfix for Forecast and the sch
 
 The hotfix exists because two independent data-model errors can make the current completion estimate materially earlier than the schedule can actually realize:
 
-1. Focus sessions are currently treated as if each session were a complete lesson-duration sample.
+1. individual study sessions are currently treated as if each session were a complete lesson-duration sample;
 2. Forecast computes a completion date independently from the capacity scheduler, while Roadmap uses a day-by-day scheduler projection.
 
 The result can be internally contradictory: Forecast may report completion in late August while the same current catalog and capacity settings produce a Roadmap that extends into September.
@@ -59,7 +59,7 @@ The full personal CSV will not be committed to the repository. Tests will use de
 
 ## 3. Root cause A — session-level evidence is being interpreted as lesson-level duration
 
-`ProgressState.studySessions` stores individual Focus sessions. A lesson can have many sessions.
+`ProgressState.studySessions` stores individual study sessions. A lesson can have many sessions.
 
 Current persistence also appends every session duration into `studyMeta.actualMinutes[lessonId]`. Existing Forecast code flattens those values and treats their arithmetic mean as the estimated duration of one lesson.
 
@@ -103,9 +103,10 @@ src/lib/study-duration-evidence.ts
 It must:
 
 - ignore every session with `reviewTaskId`;
-- group non-review sessions by `lessonId`;
+- accept both `focus-timer` and `manual` non-review study-session sources;
+- group qualifying non-review sessions by `lessonId`;
 - use only lessons that are completed and still resolvable in the current catalog;
-- sum all qualifying Focus-session duration for each evidence lesson;
+- sum all qualifying study-session duration for each evidence lesson;
 - produce one evidence record per completed lesson, not one record per session;
 - retain the lesson's planned duration alongside observed total duration;
 - expose the number of evidence lessons separately from raw session count;
@@ -117,7 +118,7 @@ No schema migration is authorized. `studyMeta.actualMinutes` remains readable fo
 
 ## 4. Root cause B — scheduler placement must use planned lesson duration
 
-The current scheduler calls an estimator that can substitute the average Focus-session duration for `lesson.plannedDurationMinutes`. This lets a partially studied 120-minute lesson appear to require only a short session-sized amount of capacity.
+The current scheduler calls an estimator that can substitute the average study-session duration for `lesson.plannedDurationMinutes`. This lets a partially studied 120-minute lesson appear to require only a short session-sized amount of capacity.
 
 P1E-HF1 restores deterministic schedule semantics:
 
@@ -126,7 +127,7 @@ capacity cost of an unfinished ordinary lesson
 = lesson.plannedDurationMinutes
 ```
 
-Actual Focus history does not silently rewrite schedule capacity.
+Actual study-session history does not silently rewrite schedule capacity.
 
 This rule applies to:
 
@@ -147,7 +148,7 @@ Current Forecast copy says the plan studies six days per week and rests on Sunda
 
 Introduce one pure daily-capacity resolver used by every scheduler/projection path.
 
-Proposed semantics:
+Required semantics:
 
 ```text
 if date is the real/current planning day:
@@ -238,7 +239,7 @@ totalNewMinutes
 It must not be calculated as:
 
 ```text
-remainingLessonCount × global average Focus-session duration
+remainingLessonCount × global average study-session duration
 ```
 
 The existing review-workload approximation may remain for continuity in this hotfix:
@@ -254,10 +255,30 @@ The UI must distinguish:
 - planned new-learning workload;
 - estimated review workload;
 - total displayed workload;
-- daily capacity assumption;
+- default daily capacity;
+- whether current-day or per-date overrides affect projection;
+- Sunday-rest semantics;
 - selected visibility horizon;
 - work outside that visibility horizon;
 - current schedule-projected new-learning completion.
+
+### Capacity copy must remain truthful
+
+The corrected projection uses the complete planner settings, not a fictional constant speed. Therefore `ForecastCard` must not continue to say only:
+
+```text
+Tính toán theo vận tốc học đều X giờ/ngày
+```
+
+when `todayHours`, `dailyHours`, or Sunday-rest semantics can make actual projected capacity differ by date.
+
+Recommended wording:
+
+```text
+Theo lịch công suất hiện tại · mặc định X giờ/ngày · Chủ nhật nghỉ nếu không đặt riêng
+```
+
+If one or more explicit per-date overrides affect the projection, the UI must indicate that date-specific capacities are included. The exact compact presentation may be chosen in implementation, but it must not imply that every study day uses the same value.
 
 ---
 
@@ -298,12 +319,12 @@ The review chain remains separate from the date on which all current new-learnin
 
 ## 9. Confidence semantics
 
-Confidence must describe the quality of lesson-level planned-versus-actual evidence. It must never count Focus sessions as independent lesson samples.
+Confidence must describe the quality of lesson-level planned-versus-actual evidence. It must never count study sessions as independent lesson samples.
 
 For each evidence lesson:
 
 ```text
-ratio = observed non-review Focus minutes / plannedDurationMinutes
+ratio = observed non-review study minutes / plannedDurationMinutes
 ```
 
 Let `n` be the number of completed lessons with usable evidence and let `CV` be the coefficient of variation of those ratios when `n >= 2`.
@@ -320,7 +341,7 @@ n >= 20 and CV > 0.35    → medium
 
 This prevents many short sessions from creating false high confidence and prevents highly inconsistent completed-lesson evidence from being labeled high confidence solely because the user has many samples.
 
-The UI basis text must say that confidence is based on completed lessons with Focus evidence, not raw Focus-session count.
+The UI basis text must say that confidence is based on completed lessons with non-review study evidence, not raw session count.
 
 P1E-HF1 does not use this ratio to automatically rescale planned workload. Actual-versus-planned calibration of future workload is deliberately deferred until it can be designed and validated independently.
 
@@ -349,8 +370,8 @@ Required regression assertions:
 1. The full fixture reports exactly 699.5 planned new-learning hours.
 2. After any deterministic set of eleven lessons is marked complete, exactly 341 remain.
 3. The remaining planned workload is never below 677.5 hours.
-4. The result can never regress to approximately 210.3 hours merely because historical Focus sessions average roughly 37 minutes.
-5. Multiple Focus sessions for one completed lesson count as one evidence lesson with summed minutes.
+4. The result can never regress to approximately 210.3 hours merely because historical study sessions average roughly 37 minutes.
+5. Multiple study sessions for one completed lesson count as one evidence lesson with summed minutes.
 6. Review sessions do not contribute to new-learning duration evidence.
 7. Twenty or more sessions from one or two lessons cannot produce high confidence.
 8. The projected Forecast completion date equals the canonical projection's last scheduled lesson date when complete.
@@ -372,7 +393,8 @@ At minimum it needs:
 - planned new-learning hours;
 - estimated review hours;
 - total workload hours;
-- normalized daily-capacity assumption;
+- normalized default daily capacity;
+- a flag/count describing explicit capacity overrides that affect projection;
 - visibility horizon and outside-horizon count;
 - schedule-projected completion state;
 - evidence lesson count;
@@ -386,6 +408,7 @@ Runtime tests must render the production `ForecastCard` and prove that:
 - the displayed completion date is the canonical projection date;
 - no contradictory earlier statistical date/range is rendered;
 - unresolved projections display a truthful no-date state;
+- capacity copy does not claim a constant speed when explicit date overrides affect projection;
 - confidence copy cannot claim high confidence from repeated sessions on too few lessons.
 
 ---
@@ -395,7 +418,7 @@ Runtime tests must render the production `ForecastCard` and prove that:
 ### In scope
 
 - planned-duration semantics for unfinished ordinary lesson placement;
-- lesson-level aggregation of non-review Focus evidence;
+- lesson-level aggregation of non-review study evidence;
 - confidence correction;
 - canonical Sunday/default-capacity resolution;
 - shared schedule projection;
@@ -470,12 +493,13 @@ Minimum RED proofs:
 
 1. session aggregation: three 20-minute sessions on one completed lesson must fail until represented as one 60-minute lesson-level sample;
 2. review exclusion: review sessions must fail until excluded from evidence;
-3. planned scheduler duration: a 120-minute lesson with a short Focus history must still consume 120 minutes of ordinary-lesson capacity;
+3. planned scheduler duration: a 120-minute lesson with a short study-session history must still consume 120 minutes of ordinary-lesson capacity;
 4. Sunday consistency: default Sunday must resolve to zero across projection and visible scheduler, while an explicit Sunday override remains honored;
 5. real-roadmap workload: the 352/341 synthetic fixture must fail under the old 210.3-hour-style estimator and pass with direct planned-workload summation;
 6. projection completion: Forecast must fail until it uses the canonical projected last lesson date;
 7. incomplete projection: Forecast must fail until unresolved work suppresses a fake completion date;
-8. confidence: many sessions from too few completed lessons must fail to produce high confidence.
+8. confidence: many sessions from too few completed lessons must fail to produce high confidence;
+9. capacity copy: an explicit date override must fail until runtime UI stops implying constant X-hours-per-day projection.
 
 Full exact-head gate:
 
@@ -496,26 +520,28 @@ Natural GitHub Actions remains executable CI evidence. Formatting/lint failures 
 P1E-HF1 is implementation-complete only when all of the following are true:
 
 1. Unfinished ordinary lessons consume their planned duration in scheduler placement.
-2. A Focus session is never interpreted as an independent completed-lesson duration sample.
-3. Multiple non-review Focus sessions for one completed lesson are summed into one lesson-level evidence record.
-4. Review sessions are excluded from new-learning evidence.
-5. Confidence sample count is the number of evidence lessons, not session count.
-6. High confidence requires at least 20 evidence lessons and ratio CV <= 0.35.
-7. The canonical daily-capacity resolver applies the same Sunday/default/override semantics everywhere.
-8. Sunday defaults to zero capacity unless todayHours or an explicit date override applies.
-9. `buildShiftedSchedule()` and Forecast use the same projection semantics.
-10. Forecast new-learning workload is the direct sum of unfinished planned lesson minutes.
-11. The verified 352-lesson fixture produces 699.5 planned hours before completions.
-12. A 341-remaining fixture derived from that roadmap cannot report less than 677.5 planned new-learning hours.
-13. The 210.3-hour screenshot regression is impossible under the corrected workload path.
-14. Forecast completion equals the canonical projection's last new-learning lesson date when projection is complete.
-15. Forecast does not manufacture a completion date when unscheduled or unplaced ordinary work remains.
-16. The visibility horizon remains separate from full completion projection.
-17. Review workload remains explicitly separate from new-learning workload and completion date.
-18. No progress-storage schema migration is introduced.
-19. No dependency, workflow, deployment, Weekly Summary or P2 change is included.
-20. Targeted tests, full tests, typecheck, lint, production build and clean-tree checks pass on the exact candidate head.
-21. Independent review verifies the exact source/test head and exact evidence head before merge authorization.
+2. A study session is never interpreted as an independent completed-lesson duration sample.
+3. Multiple non-review study sessions for one completed lesson are summed into one lesson-level evidence record.
+4. Both `focus-timer` and `manual` non-review sessions may contribute to that lesson-level record.
+5. Review sessions are excluded from new-learning evidence.
+6. Confidence sample count is the number of evidence lessons, not session count.
+7. High confidence requires at least 20 evidence lessons and ratio CV <= 0.35.
+8. The canonical daily-capacity resolver applies the same Sunday/default/override semantics everywhere.
+9. Sunday defaults to zero capacity unless todayHours or an explicit date override applies.
+10. `buildShiftedSchedule()` and Forecast use the same projection semantics.
+11. Forecast new-learning workload is the direct sum of unfinished planned lesson minutes.
+12. The verified 352-lesson fixture produces 699.5 planned hours before completions.
+13. A 341-remaining fixture derived from that roadmap cannot report less than 677.5 planned new-learning hours.
+14. The 210.3-hour screenshot regression is impossible under the corrected workload path.
+15. Forecast completion equals the canonical projection's last new-learning lesson date when projection is complete.
+16. Forecast does not manufacture a completion date when unscheduled or unplaced ordinary work remains.
+17. Forecast capacity copy truthfully reflects default capacity, Sunday rest and explicit per-date/current-day overrides.
+18. The visibility horizon remains separate from full completion projection.
+19. Review workload remains explicitly separate from new-learning workload and completion date.
+20. No progress-storage schema migration is introduced.
+21. No dependency, workflow, deployment, Weekly Summary or P2 change is included.
+22. Targeted tests, full tests, typecheck, lint, production build and clean-tree checks pass on the exact candidate head.
+23. Independent review verifies the exact source/test head and exact evidence head before merge authorization.
 
 ---
 
