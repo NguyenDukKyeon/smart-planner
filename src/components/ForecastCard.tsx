@@ -18,6 +18,8 @@ type Props = {
   state: ProgressState;
   subjects?: Subject[];
   onSetDefaultDailyHours?: (hours: number) => void;
+  // Compatibility-only: the route still owns shifted dates for Roadmap. Forecast never reads them.
+  shiftedDates?: Record<string, string>;
 };
 
 const HOUR_FORMATTER = new Intl.NumberFormat("vi-VN", {
