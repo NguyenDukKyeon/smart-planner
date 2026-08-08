@@ -169,7 +169,8 @@ describe("ForecastCard runtime clarity", () => {
 
     expect(cardSource).toContain("Compatibility-only");
     expect(cardSource).toContain("shiftedDates?: Record<string, string>");
-    const forecastSignature = cardSource.match(/export function ForecastCard\(([^)]*)\)/)?.[1] ?? "";
+    const forecastSignature =
+      cardSource.match(/export function ForecastCard\(([^)]*)\)/)?.[1] ?? "";
     expect(forecastSignature).not.toContain("shiftedDates");
     expect(routeSource).toContain("<LearningRoadmap");
     expect(routeSource).toContain("shiftedDates={shiftedDates}");
