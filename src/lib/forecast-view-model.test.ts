@@ -168,8 +168,9 @@ function completeLessonsWithStudyEvidence(params: {
   state.studyMeta.actualMinutes = Object.fromEntries(
     lessons.map((lesson, lessonIndex) => [
       lesson.id,
-      Array.from({ length: sessionsPerLesson }, () =>
-        params.minutesForIndex(lessonIndex) / sessionsPerLesson,
+      Array.from(
+        { length: sessionsPerLesson },
+        () => params.minutesForIndex(lessonIndex) / sessionsPerLesson,
       ),
     ]),
   );
