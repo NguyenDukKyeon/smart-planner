@@ -5,9 +5,9 @@ import { ForecastCard } from "@/components/ForecastCard";
 import { displayDate } from "./date-utils";
 import { selectForecastViewModel } from "./forecast-view-model";
 import type { Subject } from "./mock-data";
-import { createInitialProgressState } from "./progress-store";
+import { createInitialProgressState, todayISO } from "./progress-store";
 
-function makeSubjects(count: number): Subject[] {
+function makeSubjects(count: number, scheduledDate = ""): Subject[] {
   return [
     {
       id: "math",
@@ -23,7 +23,7 @@ function makeSubjects(count: number): Subject[] {
             title: `Bài ${index + 1}`,
             xp: 10,
             plannedDurationMinutes: 60,
-            scheduledDate: "",
+            scheduledDate,
             scheduleMode: "flexible" as const,
             weekday: "T2",
             sourceSubject: "Toán",
@@ -70,7 +70,7 @@ describe("ForecastCard runtime clarity", () => {
   });
 
   it("renders truthful non-warning copy when all unfinished work fits the horizon", () => {
-    const subjects = makeSubjects(1);
+    const subjects = makeSubjects(1, todayISO());
     const state = createInitialProgressState(false);
     state.plannerSettings.defaultDailyHours = 2;
     state.plannerSettings.todayHours = 2;
