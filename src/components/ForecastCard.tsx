@@ -64,19 +64,18 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
   }[vm.confidence];
 
   const basisLabel = {
-    planned: "thời lượng kế hoạch",
-    mixed: "kế hoạch và phiên học thực tế",
-    actual: "các phiên học thực tế",
+    "planned-only": "thời lượng kế hoạch",
+    "planned-with-study-evidence": "thời lượng kế hoạch và dữ liệu học thực tế",
   }[vm.basis];
 
   const planCompletionText =
     vm.completion.kind === "complete"
       ? "Đã hoàn thành tất cả! 🎉"
-      : vm.completion.kind === "no-capacity"
-        ? "Chưa có quỹ giờ để dự báo"
-        : vm.completion.kind === "date"
-          ? displayDate(vm.completion.startISO)
-          : `${displayDate(vm.completion.startISO)} – ${displayDate(vm.completion.endISO)}`;
+      : vm.completion.kind === "date"
+        ? displayDate(vm.completion.dateISO)
+        : vm.completion.reason === "no-capacity"
+          ? "Chưa có quỹ giờ để dự báo"
+          : "Chưa thể xác định ngày hoàn thành";
 
   const outsideHorizonText =
     vm.outsideHorizonLessons > 0
