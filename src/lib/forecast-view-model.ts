@@ -1,6 +1,8 @@
+import { addDaysISO, todayISO } from "./date-utils";
 import type { Subject } from "./mock-data";
-import { allRemainingLessonIds, forecast } from "./planner";
+import { allRemainingLessonIds, buildFlexiblePlan, forecast } from "./planner";
 import type { ProgressState } from "./progress-store";
+import { summarizeUnscheduledWork } from "./schedule-visibility";
 import { normalizeDailyStudyHours } from "./study-hours";
 
 export type ForecastCompletion =
@@ -8,6 +10,32 @@ export type ForecastCompletion =
   | { kind: "no-capacity" }
   | { kind: "date"; startISO: string; endISO: string }
   | { kind: "range"; startISO: string; endISO: string };
+
+export type ForecastHorizonWeeks = 2 | 4 | 8 | 12;
+
+export type ForecastViewModel = {
+  hoursPerDay: number;
+  horizonWeeks: ForecastHorizonWeeks;
+  horizonDays: 14 | 28 | 56 | 84;
+  horizonEndISO: string;
+  remainingLessons: number;
+  visibleScheduledLessons: number;
+  outsideHorizonLessons: number;
+  totalNewHours: number;
+  totalReviewHours: number;
+  totalWorkloadHours: number;
+  meanMinutes: number;
+  confidence: "insufficient" | "low" | "medium" | "high";
+  basis: "planned" | "mixed" | "actual";
+  completion: ForecastCompletion;
+};
+
+const HORIZON_DAYS: Record<ForecastHorizonWeeks, 14 | 28 | 56 | 84> = {
+  2: 14,
+  4: 28,
+  8: 56,
+  12: 84,
+};
 
 export function selectForecastCompletion(params: {
   subjects: Subject[];
@@ -51,5 +79,39 @@ export function selectForecastCompletion(params: {
     meanMinutes: result.meanMinutes,
     confidence: result.confidence,
     basis: result.basis,
+  };
+}
+
+export function selectForecastViewModel(params: {
+  subjects: Subject[];
+  state: ProgressState;
+  horizonWeeks: ForecastHorizonWeeks;
+  fromISO?: string;
+}): ForecastViewModel {
+  const base = selectForecastCompletion(params);
+  const startISO = params.fromISO ?? todayISO();
+  const horizonDays = HORIZON_DAYS[params.horizonWeeks];
+  const visiblePlan = buildFlexiblePlan({
+    subjects: params.subjects,
+    completed: params.state.completedLessons,
+    reviewCompletions: params.state.reviewCompletions,
+    meta: params.state.studyMeta,
+    settings: params.state.plannerSettings,
+    fromISO: startISO,
+    horizonDays,
+  });
+  const visibility = summarizeUnscheduledWork({
+    subjects: params.subjects,
+    completed: params.state.completedLessons,
+    visiblePlan,
+  });
+
+  return {
+    ...base,
+    horizonWeeks: params.horizonWeeks,
+    horizonDays,
+    horizonEndISO: addDaysISO(startISO, horizonDays - 1),
+    visibleScheduledLessons: visibility.visibleScheduledCount,
+    outsideHorizonLessons: visibility.outsideHorizonCount,
   };
 }
