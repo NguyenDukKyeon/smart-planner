@@ -81,8 +81,6 @@ describe("ForecastCard runtime clarity", () => {
     const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
 
     expect(html).toContain("Trong phạm vi");
-    expect(html).toContain(
-      "Tất cả bài chưa hoàn thành đều nằm trong phạm vi 2 tuần đang xem.",
-    );
+    expect(html).toContain("Tất cả bài chưa hoàn thành đều nằm trong phạm vi 2 tuần đang xem.");
   });
 });
