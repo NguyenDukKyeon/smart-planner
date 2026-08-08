@@ -26,9 +26,9 @@ type Selector = (params: {
   fromISO?: string;
 }) => HorizonViewModel;
 
-const selectForecastViewModel = (
-  forecastModule as unknown as { selectForecastViewModel: Selector }
-).selectForecastViewModel;
+const selectForecastViewModel = (forecastModule as unknown as {
+  selectForecastViewModel: Selector;
+}).selectForecastViewModel;
 
 function makeSubjects(params: {
   count: number;
