@@ -4,7 +4,7 @@
 
 **Goal:** Correct Forecast workload, confidence, calendar capacity, and completion-date semantics so Forecast and Roadmap are driven by the same planned-duration schedule projection and cannot report an impossible early completion.
 
-**Architecture:** Separate the hotfix into four pure boundaries: lesson-level study-duration evidence, canonical daily-capacity resolution, a shared full schedule projection, and a Forecast read model that composes those boundaries. The existing day scheduler remains the placement engine; Forecast stops owning an independent arithmetic completion clock. React only renders semantic read-model fields.
+**Architecture:** Introduce three pure boundaries—lesson-level study evidence, canonical daily capacity, and a full bounded schedule projection—then make the Forecast read model compose them. `pickDayQueue()` remains the placement engine. React only renders semantic view-model fields; it never owns schedule arithmetic.
 
 **Tech Stack:** TypeScript, React, Vitest, existing planner/date/progress modules, GitHub Actions.
 
@@ -12,63 +12,102 @@
 
 - Exact predecessor: `main@78f042255fe46e9bbc69193e6ef47158442cdf03`.
 - Branch: `fix/p1e-hf1-forecast-correctness`.
-- No history rewriting: no amend, rebase, squash, or force-push.
-- No persistence-schema migration and no deletion of historical `studyMeta.actualMinutes` data.
-- No new dependency.
-- Weekly Summary raw-ID work is out of scope.
-- P2 work is out of scope.
-- Unfinished ordinary lessons consume `lesson.plannedDurationMinutes`; study-session history must not silently change scheduler capacity cost.
-- Study-duration evidence accepts non-review `focus-timer` and `manual` sessions, groups by completed current-catalog lesson, and sums sessions per lesson.
-- Review sessions (`reviewTaskId`) never contribute to new-learning evidence.
-- Sunday default capacity is `0`; an explicit per-date Sunday override is honored; current-day `todayHours` has highest precedence.
+- No amend, rebase, squash, force-push, dependency change, CI change, or persistence-schema migration.
+- Weekly Summary raw-ID work and all P2 work are out of scope.
+- Unfinished ordinary lessons consume `lesson.plannedDurationMinutes`.
+- Non-review `focus-timer` and `manual` sessions may contribute to evidence only after grouping by completed current-catalog lesson.
+- Review sessions carrying `reviewTaskId` never contribute to new-learning evidence.
+- Sunday default capacity is `0`; explicit per-date Sunday capacity is honored; current-day `todayHours` has highest precedence.
 - Forecast new-learning workload is the sum of planned minutes for unfinished current-catalog lessons.
-- Forecast completion is the last lesson date from the canonical full schedule projection only when that projection is complete.
-- An incomplete projection must render a truthful no-date state.
-- The uploaded personal CSV is evidence only and must not be committed; tests use deterministic synthetic fixtures preserving its verified workload invariants.
+- Forecast completion is the canonical projection's last scheduled lesson date only when projection is complete.
+- An incomplete projection renders a no-date state.
+- The uploaded personal CSV is evidence only and is never committed. Synthetic tests preserve its verified counts and duration distribution.
 - Natural GitHub Actions on exact PR heads is executable RED/GREEN evidence.
-- Final gate: typecheck + lint + full tests + production build + clean-tree on the exact source/test head and again on the docs-only evidence head.
+- Final exact-head gate: typecheck + lint + all tests + production build + clean-tree.
 
 ---
 
-## File map
+## File Map
 
 ### Create
 
-- `src/lib/study-duration-evidence.ts` — aggregate non-review study sessions into one evidence record per completed lesson and derive confidence.
-- `src/lib/study-duration-evidence.test.ts` — unit coverage for aggregation, review exclusion, source handling, and confidence.
-- `src/lib/daily-capacity.ts` — one canonical daily-capacity resolver.
-- `src/lib/daily-capacity.test.ts` — precedence and Sunday-policy coverage.
-- `src/lib/schedule-projection.ts` — full bounded projection composed from `pickDayQueue()`.
-- `src/lib/schedule-projection.test.ts` — projection completion, unresolved work, date equality, and bound coverage.
+- `src/lib/study-duration-evidence.ts`
+- `src/lib/study-duration-evidence.test.ts`
+- `src/lib/daily-capacity.ts`
+- `src/lib/daily-capacity.test.ts`
+- `src/lib/schedule-projection.ts`
+- `src/lib/schedule-projection.test.ts`
 
 ### Modify
 
-- `src/lib/planner.ts` — ordinary placement uses planned lesson duration; `buildFlexiblePlan()` and `buildShiftedSchedule()` consume canonical capacity/projection boundaries; legacy `forecast()` is removed from authoritative Forecast call paths and narrowed or deprecated without leaving a live wrong authority.
-- `src/lib/planner.test.ts` — planned-duration scheduler regression and Sunday consistency integration.
-- `src/lib/forecast-view-model.ts` — compose planned workload, evidence, projection, and horizon visibility.
-- `src/lib/forecast-view-model.test.ts` — real-roadmap synthetic workload, completion, unresolved state, override metadata, confidence.
-- `src/components/ForecastCard.tsx` — truthful schedule-projection copy, workload labels, confidence basis, and unresolved completion state.
-- `src/lib/forecast-card-runtime.test.ts` — render production component and verify user-visible corrected semantics.
-- `src/lib/forecast-clarity-regression.test.ts` — protect against reintroducing the old independent arithmetic date or `shiftedDates` override.
-- `src/routes/index.tsx` — only remove the obsolete `shiftedDates` Forecast prop if it remains unused; no other route behavior change.
+- `src/lib/planner.ts`
+- `src/lib/planner.test.ts`
+- `src/lib/forecast-view-model.ts`
+- `src/lib/forecast-view-model.test.ts`
+- `src/lib/forecast-card-runtime.test.ts`
+- `src/lib/forecast-clarity-regression.test.ts`
+- `src/components/ForecastCard.tsx`
+- `src/routes/index.tsx` only to remove the obsolete Forecast `shiftedDates` prop; Roadmap use remains unchanged.
 
-### Preserve unless exact callsite inspection proves removal safe
+### Preserve
 
 - `StudyMeta.actualMinutes` persisted shape.
-- `forecast()` export compatibility for any unrelated caller; if retained, annotate it as non-authoritative and ensure Forecast UI/read-model has zero callsites to it.
-- existing review task generation and 15-minute review-item scheduling semantics.
+- review interval generation and review-item minute semantics.
+- public `forecast()` export unless exact source search proves there is no caller; Forecast UI/read-model must have zero callsites to it after Task 4.
 
 ---
 
-### Task 1: Lesson-level study-duration evidence
+## Shared Test Fixtures
+
+Each affected test file may define a local copy of these deterministic helpers instead of introducing a shared test utility.
+
+```ts
+function lesson(id: string, overrides: Partial<Lesson> = {}): Lesson {
+  return {
+    id,
+    title: id,
+    xp: 10,
+    plannedDurationMinutes: 120,
+    scheduledDate: "2026-08-08",
+    scheduleMode: "flexible",
+    weekday: "T7",
+    sourceSubject: "Toán",
+    week: 1,
+    initialDone: false,
+    ...overrides,
+  };
+}
+
+function subjectsWith(lessons: Lesson[]): Subject[] {
+  return [
+    {
+      id: "math",
+      name: "Toán",
+      emoji: "📐",
+      milestones: [
+        {
+          id: "topic",
+          title: "Chủ đề",
+          subtitle: "",
+          lessons,
+        },
+      ],
+    },
+  ];
+}
+```
+
+For study sessions, use the existing `createStudySession()` helper with fixed `endedAt` timestamps so tests are deterministic.
+
+---
+
+### Task 1: Lesson-Level Study-Duration Evidence
 
 **Files:**
 - Create: `src/lib/study-duration-evidence.test.ts`
 - Create: `src/lib/study-duration-evidence.ts`
 
-**Interfaces:**
-
-Produces:
+**Produces:**
 
 ```ts
 export type LessonDurationEvidence = {
@@ -96,7 +135,7 @@ export function selectStudyDurationEvidence(params: {
 }): StudyDurationEvidenceSummary;
 ```
 
-Confidence rules:
+Confidence is fixed to:
 
 ```text
 n < 3                    => insufficient
@@ -106,91 +145,97 @@ n >= 20 and CV <= 0.35   => high
 n >= 20 and CV > 0.35    => medium
 ```
 
-- [ ] **Step 1: Add RED aggregation tests**
+- [ ] **Step 1: Write RED aggregation tests**
 
-Test these concrete cases:
+Use this exact first regression:
 
 ```ts
-it("aggregates three non-review sessions into one completed-lesson sample", () => {
-  // completed lesson-1, planned 120m; sessions 20m + 20m + 20m
-  const result = selectStudyDurationEvidence(...);
-  expect(result.lessonCount).toBe(1);
-  expect(result.sessionCount).toBe(3);
-  expect(result.lessons[0]).toMatchObject({
+const subjects = subjectsWith([lesson("lesson-1")]);
+const studySessions = [
+  createStudySession({
+    id: "s1",
+    lessonId: "lesson-1",
+    endedAt: "2026-08-08T01:20:00.000Z",
+    durationSeconds: 20 * 60,
+    source: "focus-timer",
+  }),
+  createStudySession({
+    id: "s2",
+    lessonId: "lesson-1",
+    endedAt: "2026-08-08T02:20:00.000Z",
+    durationSeconds: 20 * 60,
+    source: "focus-timer",
+  }),
+  createStudySession({
+    id: "s3",
+    lessonId: "lesson-1",
+    endedAt: "2026-08-08T03:20:00.000Z",
+    durationSeconds: 20 * 60,
+    source: "focus-timer",
+  }),
+];
+
+const result = selectStudyDurationEvidence({
+  subjects,
+  completedLessons: { "lesson-1": "2026-08-08" },
+  studySessions,
+});
+
+expect(result.lessonCount).toBe(1);
+expect(result.sessionCount).toBe(3);
+expect(result.lessons).toEqual([
+  {
     lessonId: "lesson-1",
     plannedMinutes: 120,
     observedMinutes: 60,
     ratio: 0.5,
     sessionCount: 3,
-  });
-});
-
-it("excludes review sessions and accepts manual non-review sessions", () => {
-  // one focus-timer 20m, one manual 10m, one review 15m on same completed lesson
-  expect(result.lessons[0].observedMinutes).toBe(30);
-  expect(result.lessons[0].sessionCount).toBe(2);
-});
-
-it("ignores incomplete and deleted-catalog lessons as confidence evidence", () => {
-  expect(result.lessonCount).toBe(0);
-});
+  },
+]);
 ```
+
+Add a second test with one 20-minute `focus-timer`, one 10-minute `manual`, and one 15-minute session carrying `reviewTaskId: "review:lesson-1:2026-08-08"`. Expected evidence is 30 observed minutes and two qualifying sessions.
+
+Add a third test proving sessions for an incomplete current lesson and a completed deleted-catalog lesson produce zero evidence lessons.
 
 - [ ] **Step 2: Commit test-only RED**
 
-Commit message:
+Commit `test: expose lesson-level forecast evidence bug`. Create the Draft PR before waiting for CI. Valid RED requires install/typecheck/lint to pass and only the intended evidence behavior to fail.
 
-```text
-test: expose lesson-level forecast evidence bug
-```
+- [ ] **Step 3: Implement the pure selector**
 
-Open a Draft PR if one does not yet exist. Wait for natural `pull_request` GitHub Actions. Valid RED requires install/typecheck/lint to pass and the intended new evidence tests to fail because `selectStudyDurationEvidence` does not exist or does not implement the required semantics.
-
-- [ ] **Step 3: Implement the minimal pure selector**
-
-Implementation rules:
+Use a live lesson map and a grouped accumulator:
 
 ```ts
 const liveLessons = new Map(
-  subjects.flatMap((subject) =>
+  params.subjects.flatMap((subject) =>
     subject.milestones.flatMap((milestone) =>
-      milestone.lessons.map((lesson) => [lesson.id, lesson] as const),
+      milestone.lessons.map((item) => [item.id, item] as const),
     ),
   ),
 );
 
-// Include only current-catalog + completed + non-review sessions.
-// Group seconds by lessonId, sum seconds, convert once to minutes.
-// Keep raw qualifying session count separately.
+const grouped = new Map<string, { seconds: number; sessionCount: number }>();
+for (const session of params.studySessions) {
+  if (session.reviewTaskId) continue;
+  if (!params.completedLessons[session.lessonId]) continue;
+  if (!liveLessons.has(session.lessonId)) continue;
+  const current = grouped.get(session.lessonId) ?? { seconds: 0, sessionCount: 0 };
+  current.seconds += session.durationSeconds;
+  current.sessionCount += 1;
+  grouped.set(session.lessonId, current);
+}
 ```
 
-CV calculation for ratios `r1..rn`:
+Convert seconds to minutes once per lesson. Compute population CV over `observedMinutes / plannedMinutes`; return `null` when fewer than two ratios or mean ratio is zero. Do not read `studyMeta.actualMinutes`.
 
-```ts
-const mean = ratios.reduce((sum, value) => sum + value, 0) / ratios.length;
-const variance = ratios.reduce((sum, value) => sum + (value - mean) ** 2, 0) / ratios.length;
-const cv = mean > 0 ? Math.sqrt(variance) / mean : null;
-```
+- [ ] **Step 4: Validate exact-head GREEN**
 
-Do not read `studyMeta.actualMinutes`.
-
-- [ ] **Step 4: Obtain exact-head GREEN**
-
-Natural CI must show the new evidence tests passing plus the full existing suite/build/clean-tree.
-
-- [ ] **Step 5: Commit semantics if formatting-only corrections are needed**
-
-Use forward-only commits such as:
-
-```text
-style: format forecast evidence selector
-```
-
-Never count a lint-blocked run as GREEN.
+Natural CI must pass the new tests and the full existing suite/build/clean-tree. Formatting-only corrections use forward commits and do not count as GREEN until a new exact-head run passes.
 
 ---
 
-### Task 2: Planned ordinary-lesson duration and canonical daily capacity
+### Task 2: Planned Lesson Cost and Canonical Daily Capacity
 
 **Files:**
 - Create: `src/lib/daily-capacity.test.ts`
@@ -198,9 +243,7 @@ Never count a lint-blocked run as GREEN.
 - Modify: `src/lib/planner.test.ts`
 - Modify: `src/lib/planner.ts`
 
-**Interfaces:**
-
-Produces:
+**Produces:**
 
 ```ts
 export function resolveDailyCapacityHours(params: {
@@ -210,75 +253,86 @@ export function resolveDailyCapacityHours(params: {
 }): number;
 ```
 
-Required precedence:
+- [ ] **Step 1: Write RED daily-capacity tests**
+
+Given `currentDateISO = "2026-08-08"`, assert all five cases:
 
 ```ts
-if (dateISO === currentDateISO) return settings.todayHours;
-if (Object.prototype.hasOwnProperty.call(settings.dailyHours, dateISO)) {
-  return settings.dailyHours[dateISO];
+expect(resolveDailyCapacityHours({
+  dateISO: "2026-08-08",
+  currentDateISO: "2026-08-08",
+  settings: { ...DEFAULT_PLANNER_SETTINGS, todayHours: 3, dailyHours: { "2026-08-08": 9 } },
+})).toBe(3);
+
+expect(resolveDailyCapacityHours({
+  dateISO: "2026-08-09",
+  currentDateISO: "2026-08-08",
+  settings: { ...DEFAULT_PLANNER_SETTINGS, dailyHours: { "2026-08-09": 4 } },
+})).toBe(4);
+
+expect(resolveDailyCapacityHours({
+  dateISO: "2026-08-09",
+  currentDateISO: "2026-08-08",
+  settings: { ...DEFAULT_PLANNER_SETTINGS, defaultDailyHours: 6, dailyHours: {} },
+})).toBe(0);
+
+expect(resolveDailyCapacityHours({
+  dateISO: "2026-08-10",
+  currentDateISO: "2026-08-08",
+  settings: { ...DEFAULT_PLANNER_SETTINGS, defaultDailyHours: 6, dailyHours: {} },
+})).toBe(6);
+
+expect(resolveDailyCapacityHours({
+  dateISO: "2026-08-10",
+  currentDateISO: "2026-08-08",
+  settings: { ...DEFAULT_PLANNER_SETTINGS, defaultDailyHours: 6, dailyHours: { "2026-08-10": 0 } },
+})).toBe(0);
+```
+
+- [ ] **Step 2: Write RED planned-duration scheduler test**
+
+Build one 120-minute flexible lesson with `meta.actualMinutes = { "lesson-1": [20, 20, 20] }`. With `hoursOverride: 1`, assert `queue.newLessons` is empty. With `hoursOverride: 2`, assert the lesson is placed and `queue.newMinutes === 120`.
+
+- [ ] **Step 3: Commit test-only RED**
+
+Commit `test: expose scheduler capacity semantics bug`. Valid RED must reach tests; lint/typecheck failures are not behavioral RED.
+
+- [ ] **Step 4: Implement capacity resolver**
+
+```ts
+export function resolveDailyCapacityHours({ dateISO, currentDateISO, settings }: Params): number {
+  if (dateISO === currentDateISO) return settings.todayHours;
+  if (Object.prototype.hasOwnProperty.call(settings.dailyHours, dateISO)) {
+    return settings.dailyHours[dateISO];
+  }
+  if (isSundayISO(dateISO)) return 0;
+  return settings.defaultDailyHours;
 }
-if (isSundayISO(dateISO)) return 0;
-return settings.defaultDailyHours;
 ```
 
-- [ ] **Step 1: Add RED daily-capacity tests**
+- [ ] **Step 5: Replace ordinary placement estimates with planned duration**
 
-Cover:
+Inside `pickDayQueue()`, use `lesson.plannedDurationMinutes` for pinned ordinary lessons, fixed candidates, flexible candidates, and unplaced fixed minute totals. Keep review-item minutes unchanged. `estimateLessonMinutes()` may remain exported, but `pickDayQueue()` must no longer call it.
 
-```text
-current day wins over an explicit dailyHours entry
-explicit non-current Sunday override is honored
-non-current Sunday without override is 0
-ordinary weekday without override uses defaultDailyHours
-explicit weekday 0 is preserved
+- [ ] **Step 6: Route bounded planning through the capacity resolver**
+
+`buildFlexiblePlan()` resolves each day with:
+
+```ts
+const hours = resolveDailyCapacityHours({
+  dateISO,
+  currentDateISO: todayISO(),
+  settings: args.settings,
+});
 ```
 
-- [ ] **Step 2: Add RED scheduler-duration regression**
+- [ ] **Step 7: Validate exact-head GREEN**
 
-Use a 120-minute flexible lesson with `studyMeta.actualMinutes[lessonId] = [20, 20, 20]` and only 60 minutes of capacity. Assert it is not placed as a 20-minute/short lesson and remains outside `queue.newLessons`.
-
-Also assert a 120-minute lesson fits when capacity is exactly 120 minutes.
-
-- [ ] **Step 3: Commit test-only RED and validate natural CI**
-
-Commit:
-
-```text
-test: expose scheduler capacity semantics bug
-```
-
-Valid RED must reach tests; formatting/type errors do not count.
-
-- [ ] **Step 4: Implement `resolveDailyCapacityHours()`**
-
-Keep it pure and normalize neither storage nor UI values; planner settings are already normalized by the existing study-hours boundary.
-
-- [ ] **Step 5: Make ordinary lesson placement consume planned duration**
-
-In `pickDayQueue()` use `lesson.plannedDurationMinutes` for:
-
-```text
-pinned completed ordinary lessons
-fixed candidates
-flexible candidates
-unplaced fixed minute totals
-```
-
-Do not change review item minutes.
-
-If `estimateLessonMinutes()` remains exported for compatibility, do not call it from ordinary placement after this step.
-
-- [ ] **Step 6: Make `buildFlexiblePlan()` use canonical daily capacity**
-
-Replace its inline `todayHours / dailyHours / defaultDailyHours` branch with `resolveDailyCapacityHours({ dateISO, currentDateISO: todayISO(), settings })`.
-
-- [ ] **Step 7: Obtain exact-head GREEN**
-
-Require all Task 2 tests and full suite/build/clean-tree PASS.
+Require all Task 2 tests plus the full suite/build/clean-tree.
 
 ---
 
-### Task 3: Shared full schedule projection and Roadmap compatibility
+### Task 3: Canonical Full Schedule Projection
 
 **Files:**
 - Create: `src/lib/schedule-projection.test.ts`
@@ -286,9 +340,7 @@ Require all Task 2 tests and full suite/build/clean-tree PASS.
 - Modify: `src/lib/planner.ts`
 - Modify: `src/lib/planner.test.ts`
 
-**Interfaces:**
-
-Produces:
+**Produces:**
 
 ```ts
 export type ScheduleProjection = {
@@ -300,6 +352,7 @@ export type ScheduleProjection = {
   unprojectedLessonIds: string[];
   projectionDays: number;
   projectionComplete: boolean;
+  positiveCapacityDays: number;
 };
 
 export function buildScheduleProjection(params: {
@@ -314,99 +367,79 @@ export function buildScheduleProjection(params: {
 }): ScheduleProjection;
 ```
 
-Default defensive bound:
+- [ ] **Step 1: Write RED projection tests**
+
+Use fixed small fixtures to prove:
+
+1. Two schedulable 120-minute flexible lessons under 2 hours/day project completely and `lastScheduledLessonDate` equals the latest value in `datesByLesson`.
+2. A lesson with `scheduledDate: ""` is listed in `unscheduledLessonIds` and makes projection incomplete.
+3. A 120-minute fixed lesson on a 60-minute day is listed in `unplacedFixedLessonIds` and makes projection incomplete.
+4. A flexible lesson with `maxDays: 1` and zero capacity is listed in `unprojectedLessonIds`.
+5. A default Sunday contributes no capacity; an explicit Sunday override contributes capacity.
+
+- [ ] **Step 2: Write RED Roadmap compatibility test**
+
+Define one `args` object containing the same subjects/completed/meta/settings/fromISO and assert:
 
 ```ts
-const minimumBound = Math.max(
-  365,
-  daysNeededToReachLatestEligibility + unfinishedCount * 2,
-);
+const projection = buildScheduleProjection(args);
+expect(buildShiftedSchedule(args)).toEqual(projection.datesByLesson);
+```
+
+- [ ] **Step 3: Commit test-only RED**
+
+Commit `test: require one canonical schedule projection` and validate natural behavioral RED.
+
+- [ ] **Step 4: Implement bounded projection**
+
+Collect unfinished ordinary lessons, classify empty `scheduledDate` values before the day loop, and iterate using one shared `consumed` set. For each day call `resolveDailyCapacityHours()` and then `pickDayQueue()`. Record placed dates and unplaced fixed IDs. Count days where resolved capacity is greater than zero in `positiveCapacityDays`.
+
+The default bound is:
+
+```ts
+const daysToLatestEligibility = Math.max(0, daysBetweenISO(fromISO, latestEligibilityISO));
+const minimumBound = Math.max(365, daysToLatestEligibility + unfinishedCount * 2);
 const bound = Math.min(3660, params.maxDays ?? minimumBound);
 ```
 
-- [ ] **Step 1: Add RED projection tests**
+After the loop, every schedulable unfinished ID not placed is `unprojected`. `projectionComplete` is true only when unscheduled, unplaced-fixed, and unprojected arrays are all empty. Emit `lastScheduledLessonDate` only when complete and at least one unfinished lesson was projected.
 
-Cases:
+- [ ] **Step 5: Convert `buildShiftedSchedule()` into a wrapper**
 
-```text
-all schedulable lessons => projectionComplete true and lastScheduledLessonDate equals latest datesByLesson value
-unscheduled ordinary lesson => projectionComplete false and ID in unscheduledLessonIds
-fixed lesson that cannot fit exact-day capacity => projectionComplete false and ID in unplacedFixedLessonIds
-bound reached with remaining flexible work => projectionComplete false and ID in unprojectedLessonIds
-Sunday default rest and explicit Sunday override match daily-capacity tests
-```
-
-- [ ] **Step 2: Add RED Roadmap compatibility test**
-
-For a deterministic schedulable fixture:
+Its body becomes:
 
 ```ts
-expect(buildShiftedSchedule(args)).toEqual(buildScheduleProjection(args).datesByLesson);
+return buildScheduleProjection({
+  subjects: args.subjects,
+  completed: args.completed,
+  meta: args.meta,
+  settings: args.settings,
+  fromISO: args.fromISO,
+}).datesByLesson;
 ```
 
-- [ ] **Step 3: Commit test-only RED and validate natural CI**
+Preserve its public return type.
 
-Commit:
+- [ ] **Step 6: Validate exact-head GREEN**
 
-```text
-test: require one canonical schedule projection
-```
-
-- [ ] **Step 4: Implement bounded projection by composing `pickDayQueue()`**
-
-Algorithm:
-
-```text
-collect unfinished ordinary lessons
-classify empty scheduledDate as unscheduled before loop
-for each day within bound:
-  resolve canonical capacity
-  call pickDayQueue() with shared consumed set
-  collect queue.newLessons dates
-  collect unplacedFixedLessons IDs
-stop early only when every schedulable unfinished lesson is either placed or definitively unplaceable
-remaining schedulable IDs after bound => unprojectedLessonIds
-projectionComplete = no unscheduled + no unplacedFixed + no unprojected
-lastScheduledLessonDate only when projectionComplete and at least one unfinished lesson was projected
-```
-
-Deduplicate all ID arrays.
-
-- [ ] **Step 5: Convert `buildShiftedSchedule()` into a compatibility wrapper**
-
-It must return exactly:
-
-```ts
-return buildScheduleProjection(args).datesByLesson;
-```
-
-Preserve its current public return type.
-
-- [ ] **Step 6: Obtain exact-head GREEN**
-
-Require projection tests, planner tests, full suite/build/clean-tree PASS.
+Require projection/planner tests plus full suite/build/clean-tree.
 
 ---
 
-### Task 4: Forecast read model — real planned workload, projection completion, and corrected confidence
+### Task 4: Forecast Read Model — Planned Workload, Projection Date, Confidence
 
 **Files:**
 - Modify: `src/lib/forecast-view-model.test.ts`
 - Modify: `src/lib/forecast-view-model.ts`
 - Modify: `src/lib/forecast-clarity-regression.test.ts`
-- Modify: `src/lib/planner.ts` only if required to remove/deprecate the last authoritative `forecast()` call path
+- Modify: `src/lib/planner.ts` only to deprecate or remove the last old authoritative Forecast call path.
 
-**Interfaces:**
-
-Replace the old completion range with:
+**Produces:**
 
 ```ts
 export type ForecastCompletion =
   | { kind: "complete" }
-  | {
-      kind: "date";
-      dateISO: string;
-    }
+  | { kind: "date"; dateISO: string }
   | {
       kind: "unresolved";
       reason: "no-capacity" | "unscheduled" | "unplaced-fixed" | "projection-bound";
@@ -414,11 +447,7 @@ export type ForecastCompletion =
       unplacedFixedLessons: number;
       unprojectedLessons: number;
     };
-```
 
-Forecast view model must expose:
-
-```ts
 export type ForecastEvidenceBasis = "planned-only" | "planned-with-study-evidence";
 
 export type ForecastViewModel = {
@@ -442,273 +471,226 @@ export type ForecastViewModel = {
 };
 ```
 
-- [ ] **Step 1: Add RED real-roadmap synthetic fixture**
+- [ ] **Step 1: Write RED real-roadmap synthetic workload test**
 
-Fixture generator must create exactly:
+Generate exactly 352 unique lessons distributed 160/116/69/7 across Toán/Hóa/Lý/Tiếng Anh. Assign 345 lessons 120 minutes, 6 lessons 90 minutes, and 1 lesson 30 minutes. Assert full workload is `699.5` hours.
 
-```text
-352 unique lessons
-160 Toán
-116 Hóa học
-69 Vật lý
-7 Tiếng Anh
-345 × 120 minutes
-6 × 90 minutes
-1 × 30 minutes
-41,970 total minutes
-```
-
-Assertions:
+Mark the first 11 deterministic lessons complete and assert:
 
 ```ts
-expect(full.totalNewHours).toBe(699.5);
-
-// Mark deterministic 11 lessons complete.
-expect(partial.remainingLessons).toBe(341);
-expect(partial.totalNewHours).toBeGreaterThanOrEqual(677.5);
+expect(result.remainingLessons).toBe(341);
+expect(result.totalNewHours).toBeGreaterThanOrEqual(677.5);
+expect(result.totalNewHours).not.toBeCloseTo(210.3, 1);
 ```
 
-Add historical session data averaging roughly 37 minutes and assert it does not reduce planned new-learning workload toward `210.3` hours.
+Add short historical sessions to completed lessons; the workload assertions remain unchanged.
 
-- [ ] **Step 2: Add RED evidence/confidence integration tests**
+- [ ] **Step 2: Write RED evidence/confidence integration tests**
+
+Assert these exact outcomes:
+
+```text
+22 sessions across only 2 completed lessons => insufficient
+20 completed lessons with ratios all between 0.9 and 1.1 => high
+20 completed lessons alternating ratios 0.25 and 1.75 => medium
+0 evidence lessons => planned-only
+1 or more evidence lessons => planned-with-study-evidence
+```
+
+- [ ] **Step 3: Write RED completion-state tests**
 
 Assert:
-
-```text
-20+ sessions belonging to only 2 completed lessons => confidence insufficient
-20 completed lessons with stable ratios CV <= .35 => confidence high
-20 completed lessons with unstable ratios CV > .35 => confidence medium
-basis planned-only when evidenceLessonCount=0
-basis planned-with-study-evidence when evidenceLessonCount>0
-```
-
-- [ ] **Step 3: Add RED projection completion tests**
-
-Assert:
-
-```text
-complete projection => completion.kind=date and dateISO equals buildScheduleProjection(...).lastScheduledLessonDate
-no remaining lessons => complete
-zero effective future capacity => unresolved/no-capacity
-unscheduled work => unresolved/unscheduled
-unplaceable fixed work => unresolved/unplaced-fixed
-projection bound => unresolved/projection-bound
-```
-
-- [ ] **Step 4: Add RED capacity-metadata test**
-
-Provide explicit `dailyHours` overrides and assert `explicitCapacityOverrideCount` reports the number of explicit future/current-date entries that lie within the projection span and are relevant to the projected schedule. At minimum, a single explicit override in the projected period must yield a non-zero count.
-
-- [ ] **Step 5: Commit test-only RED and validate natural CI**
-
-Commit:
-
-```text
-test: expose impossible forecast workload and completion
-```
-
-- [ ] **Step 6: Rewrite `selectForecastViewModel()` composition**
-
-Compute unfinished lessons directly from current catalog/completed map, then:
-
-```ts
-const totalNewMinutes = unfinishedLessons.reduce(
-  (sum, lesson) => sum + lesson.plannedDurationMinutes,
-  0,
-);
-const totalReviewMinutes = Math.round(totalNewMinutes * 0.35);
-const evidence = selectStudyDurationEvidence(...);
-const projection = buildScheduleProjection(...);
-```
-
-Do not call legacy `forecast()` for workload, date, or confidence.
-
-Keep `buildFlexiblePlan()` + `summarizeUnscheduledWork()` only for bounded visible-horizon accounting.
-
-- [ ] **Step 7: Resolve completion deterministically**
-
-Priority:
 
 ```text
 no unfinished lessons => complete
-projectionComplete + lastScheduledLessonDate => date
+complete projection => date equal to buildScheduleProjection().lastScheduledLessonDate
+positiveCapacityDays === 0 with unfinished work => unresolved/no-capacity
 unscheduled IDs present => unresolved/unscheduled
 unplaced fixed IDs present => unresolved/unplaced-fixed
-unprojected IDs present => unresolved/projection-bound
-otherwise no usable capacity => unresolved/no-capacity
+unprojected IDs present with positiveCapacityDays > 0 => unresolved/projection-bound
 ```
 
-If multiple blockers exist, return the first priority reason above but include all blocking counts.
+This ordering removes the former zero-capacity/projection-bound ambiguity.
 
-- [ ] **Step 8: Remove the old authoritative forecast call path**
+- [ ] **Step 4: Write RED capacity metadata test**
 
-Search changed/current source for `forecast(`. `ForecastCard` and `forecast-view-model` must have no call to the old arithmetic estimator. If `forecast()` is retained for compatibility, add a deprecation comment and tests proving Forecast completion does not depend on it.
+With `dailyHours: { "2026-08-10": 4 }` and a projection spanning that date, assert `explicitCapacityOverrideCount >= 1`.
 
-- [ ] **Step 9: Obtain exact-head GREEN**
+- [ ] **Step 5: Commit test-only RED**
 
-Require all view-model/regression tests and full suite/build/clean-tree PASS.
+Commit `test: expose impossible forecast workload and completion` and validate natural RED.
+
+- [ ] **Step 6: Rewrite selector composition**
+
+Flatten unfinished current-catalog lessons and compute:
+
+```ts
+const totalNewMinutes = unfinishedLessons.reduce(
+  (sum, item) => sum + item.plannedDurationMinutes,
+  0,
+);
+const totalReviewMinutes = Math.round(totalNewMinutes * 0.35);
+const evidence = selectStudyDurationEvidence({
+  subjects: params.subjects,
+  completedLessons: params.state.completedLessons,
+  studySessions: params.state.studySessions,
+});
+const projection = buildScheduleProjection({
+  subjects: params.subjects,
+  completed: params.state.completedLessons,
+  reviewCompletions: params.state.reviewCompletions,
+  meta: params.state.studyMeta,
+  settings: params.state.plannerSettings,
+  fromISO: startISO,
+});
+```
+
+Use `buildFlexiblePlan()` plus `summarizeUnscheduledWork()` only for bounded horizon visibility.
+
+- [ ] **Step 7: Resolve completion with fixed priority**
+
+```text
+remainingLessons === 0                         => complete
+projectionComplete + lastScheduledLessonDate  => date
+projection.positiveCapacityDays === 0          => unresolved/no-capacity
+unscheduled IDs present                        => unresolved/unscheduled
+unplaced fixed IDs present                     => unresolved/unplaced-fixed
+unprojected IDs present                        => unresolved/projection-bound
+```
+
+Always include all three blocker counts in unresolved output.
+
+- [ ] **Step 8: Remove old Forecast authority**
+
+Search source for calls to `forecast(`. `src/lib/forecast-view-model.ts` and `src/components/ForecastCard.tsx` must contain none. If the function remains exported, add a deprecation comment stating that schedule completion/confidence must use `selectForecastViewModel()`.
+
+- [ ] **Step 9: Validate exact-head GREEN**
+
+Require all Task 4 tests plus full suite/build/clean-tree.
 
 ---
 
-### Task 5: ForecastCard truthful presentation
+### Task 5: Truthful ForecastCard Presentation
 
 **Files:**
 - Modify: `src/lib/forecast-card-runtime.test.ts`
 - Modify: `src/components/ForecastCard.tsx`
-- Modify: `src/routes/index.tsx` only if removing the unused `shiftedDates` prop
+- Modify: `src/routes/index.tsx` to remove only the unused Forecast `shiftedDates` prop.
 
-**Interfaces:**
-- Consumes the Task 4 `ForecastViewModel` only.
-- Does not call scheduler, projection, persistence, or study-session selectors directly.
+**Consumes:** Task 4 `ForecastViewModel` only.
 
-- [ ] **Step 1: Add RED runtime workload test**
+- [ ] **Step 1: Write RED runtime workload test**
 
-Render production `ForecastCard` with a deterministic high-duration fixture and assert the displayed `Bài mới` value is derived from planned workload rather than short historical sessions.
+Render production `ForecastCard` with two unfinished 120-minute lessons and short unrelated study sessions. Assert the `Bài mới` metric renders `4 giờ`.
 
-- [ ] **Step 2: Add RED runtime completion test**
+- [ ] **Step 2: Write RED runtime completion test**
 
-Render a schedulable fixture and assert the displayed completion date equals the canonical projection date. Assert the old independent range text is absent.
+Render a schedulable fixture and independently call `buildScheduleProjection()` with the same inputs. Assert the component contains `displayDate(projection.lastScheduledLessonDate)` and does not render an independent earlier range.
 
-- [ ] **Step 3: Add RED unresolved-state test**
+- [ ] **Step 3: Write RED unresolved-state test**
 
-Render a fixture with an unscheduled or unplaceable ordinary lesson and assert:
+Render one unfinished lesson with `scheduledDate: ""`. Assert `Chưa thể xác định ngày hoàn thành` is visible and no fabricated completion date is present.
 
-```text
-Chưa thể xác định ngày hoàn thành
-```
+- [ ] **Step 4: Write RED confidence-copy test**
 
-is visible and no fake completion date/range is shown.
+Render 22 sessions belonging to only two completed lessons. Assert `Độ tin cậy cao` is absent and the evidence copy refers to completed lessons rather than raw session count.
 
-- [ ] **Step 4: Add RED confidence-copy test**
+- [ ] **Step 5: Write RED capacity-copy test**
 
-Repeated sessions from too few completed lessons must not render `Độ tin cậy cao`. Basis copy must mention completed lessons with study evidence, not raw session count.
+With one explicit future `dailyHours` override, assert the old sentence beginning `Tính toán theo vận tốc học đều` is absent. Assert the replacement contains `Theo lịch công suất hiện tại`, the normalized default hours, `Chủ nhật nghỉ nếu không đặt riêng`, and text indicating date-specific capacity is included.
 
-- [ ] **Step 5: Add RED capacity-copy test**
+- [ ] **Step 6: Commit test-only RED**
 
-With an explicit per-date override, assert the component does not contain:
+Commit `test: require truthful forecast presentation` and validate natural RED.
 
-```text
-Tính toán theo vận tốc học đều X giờ/ngày
-```
+- [ ] **Step 7: Implement minimal UI changes**
 
-and does contain truthful copy equivalent to:
+Use these labels:
 
 ```text
-Theo lịch công suất hiện tại · mặc định X giờ/ngày · Chủ nhật nghỉ nếu không đặt riêng
+Dự kiến hoàn thành       -> Mốc học hết bài mới theo lịch hiện tại
+Quỹ giờ giả định         -> Công suất mặc định
 ```
 
-plus an indication that date-specific capacity overrides are included.
-
-- [ ] **Step 6: Commit test-only RED and validate natural CI**
-
-Commit:
+Completion text:
 
 ```text
-test: require truthful forecast presentation
+complete    -> Đã hoàn thành tất cả! 🎉
+date        -> displayDate(dateISO)
+unresolved  -> Chưa thể xác định ngày hoàn thành
 ```
 
-- [ ] **Step 7: Implement minimal presentation changes**
-
-Required visible semantics:
+Capacity summary:
 
 ```text
-Dự kiến hoàn thành -> Mốc học hết bài mới theo lịch hiện tại
-Quỹ giờ giả định -> Công suất mặc định
+Theo lịch công suất hiện tại · mặc định X giờ/ngày · Chủ nhật nghỉ nếu không đặt riêng.
 ```
 
-Completion:
+Append `Có N ngày đặt công suất riêng được tính vào dự báo.` when `explicitCapacityOverrideCount > 0`.
+
+Basis copy:
 
 ```text
-complete => Đã hoàn thành tất cả! 🎉
-date => displayDate(dateISO)
-unresolved => Chưa thể xác định ngày hoàn thành
+planned-only -> Khối lượng dựa trên thời lượng kế hoạch. Chưa đủ bài hoàn thành có dữ liệu học để đánh giá độ tin cậy.
+planned-with-study-evidence -> Khối lượng dựa trên thời lượng kế hoạch. Độ tin cậy dựa trên N bài đã hoàn thành có dữ liệu học thực tế.
 ```
 
-Footer/basis:
+Remove the old global `~meanMinutes/bài` authority.
 
-```text
-planned-only => Khối lượng dựa trên thời lượng kế hoạch. Chưa đủ bài hoàn thành có dữ liệu học để đánh giá độ tin cậy.
-planned-with-study-evidence => Khối lượng dựa trên thời lượng kế hoạch. Độ tin cậy dựa trên N bài đã hoàn thành có dữ liệu học thực tế.
-```
+- [ ] **Step 8: Remove obsolete Forecast prop**
 
-Do not display the removed global `~meanMinutes/bài` as Forecast authority.
+Delete `shiftedDates?: Record<string, string>` from `ForecastCard` props and remove only `shiftedDates={shiftedDates}` from the ForecastCard route call. Do not alter the Roadmap prop.
 
-- [ ] **Step 8: Remove obsolete Forecast prop only if unused**
+- [ ] **Step 9: Validate exact-head GREEN**
 
-If `shiftedDates` remains declared but unused, remove it from `ForecastCard` props and its route call. Do not change Roadmap's `shiftedDates` usage.
-
-- [ ] **Step 9: Obtain exact-head GREEN**
-
-Require runtime tests plus full suite/build/clean-tree PASS.
+Require runtime tests plus full suite/build/clean-tree.
 
 ---
 
-### Task 6: Final regression audit, evidence, and review handoff
+### Task 6: Final Audit, Evidence, and Review Handoff
 
 **Files:**
 - Create: `docs/superpowers/evidence/2026-08-08-smart-planner-p1e-hf1-forecast-correctness-completion.md`
-- Modify tests only if audit reveals a proof gap; production code stays frozen once Task 5 exact-head GREEN is established.
 
 - [ ] **Step 1: Freeze literal source/test head**
 
-Record the exact commit SHA after the last source/test change. No production changes after this point without reopening RED/GREEN.
+Record the exact SHA after Task 5 GREEN. Production code stays frozen unless a new behavioral gap requires reopening RED/GREEN.
 
-- [ ] **Step 2: Scope audit predecessor → source/test head**
+- [ ] **Step 2: Scope-audit predecessor to source/test head**
 
-Expected changed paths are limited to the spec/plan plus the Task 1–5 files listed above. Reject unrelated source, dependency, CI, deployment, Weekly Summary, or P2 changes.
+Only the spec, plan, Task 1–5 source/test files, and the optional one-line Forecast route prop removal are allowed. Reject Weekly Summary, dependency, CI, deployment, or P2 changes.
 
-- [ ] **Step 3: Verify real-roadmap invariant in tests**
+- [ ] **Step 3: Record regression evidence**
 
-Evidence must name the passing tests proving:
+The evidence document must name passing tests proving all of:
 
 ```text
 352 lessons = 699.5 planned hours
 341 remaining after 11 completions >= 677.5 planned hours
-short study sessions cannot collapse workload to ~210.3h
+short sessions cannot collapse workload toward 210.3 hours
+one completed lesson with three sessions counts as one evidence lesson
+review sessions are excluded
+Sunday default rest and explicit Sunday override agree across scheduler/projection
+Forecast completion equals canonical projection last date
+buildShiftedSchedule output equals projection datesByLesson
+incomplete projection emits no fake date
+many sessions from too few lessons cannot yield high confidence
 ```
 
-The evidence document may cite the user-provided CSV facts but must not add the CSV to git.
+- [ ] **Step 4: Create docs-only evidence commit**
 
-- [ ] **Step 4: Verify scheduler/Forecast convergence**
+Record exact predecessor SHA, spec commits, final plan commit, valid RED/GREEN run IDs/jobs/merge refs per task, invalid formatting runs separately, literal source/test head, changed-file scope, and out-of-scope limitations. Commit `docs: record P1E-HF1 forecast correctness evidence`.
 
-Evidence must name the test proving `Forecast completion date === canonical schedule projection last date` and the test proving `buildShiftedSchedule() === projection.datesByLesson` for the same fixture.
+- [ ] **Step 5: Validate evidence-head CI**
 
-- [ ] **Step 5: Verify confidence and calendar policy**
+Natural CI on the evidence head must pass typecheck, lint, all tests, build, and clean-tree.
 
-Evidence must name passing tests for lesson-level sample count, review exclusion, unstable-CV confidence downgrade, Sunday default rest, explicit Sunday override, and truthful capacity copy.
+- [ ] **Step 6: Independent review handoff**
 
-- [ ] **Step 6: Create docs-only evidence commit**
-
-Evidence document records:
-
-```text
-exact predecessor SHA
-spec commits
-plan commit
-valid RED run IDs/jobs/merge refs per task
-invalid lint/type runs separately, if any
-GREEN source/test run IDs/jobs/merge refs
-literal source/test head
-changed-file scope
-known limitations/out-of-scope
-```
-
-Commit:
-
-```text
-docs: record P1E-HF1 forecast correctness evidence
-```
-
-- [ ] **Step 7: Validate evidence-head CI**
-
-Natural CI on the docs-only evidence head must PASS typecheck, lint, all tests, build, and clean-tree.
-
-- [ ] **Step 8: Independent review handoff**
-
-Keep PR Draft/open/unmerged. Mark disposition for review as:
+Keep the PR Draft/open/unmerged and post:
 
 ```text
 P1E-HF1 IMPLEMENTED / REVIEW_PENDING / NOT_MERGED
 ```
 
-Independent review must fresh-read exact evidence head, predecessor, spec, plan, source/tests, CI, changed-file scope, and unresolved review threads before acceptance.
+Independent review must fresh-read the exact evidence head, predecessor, spec, plan, source/tests, CI, scope, and review threads before acceptance.
