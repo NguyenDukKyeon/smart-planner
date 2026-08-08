@@ -2,7 +2,7 @@
 
 Date: 2026-08-08
 
-Package disposition before independent review:
+Current disposition before final independent re-review:
 
 ```text
 SUNDAY DEFAULT CAPACITY IMPLEMENTED / REVIEW_PENDING / NOT_MERGED
@@ -24,30 +24,30 @@ Exact predecessor:
 main@c7d82ec6a07a7fab2b6465456d53a0e1b9919498
 ```
 
-Branch:
+Branch / PR:
 
 ```text
 fix/sunday-default-capacity
-```
-
-PR:
-
-```text
-#11 Sunday: use default study capacity
+PR #11 Sunday: use default study capacity
 Draft / open / unmerged
 ```
 
-## 2. Implemented policy
+## 2. Final canonical policy
 
-`resolveDailyCapacityHours()` now resolves capacity with this exact precedence:
+`resolveDailyCapacityHours()` resolves capacity in this exact order:
 
 1. current date => `todayHours`;
 2. exact-date entry in `dailyHours` => that value, including `0`;
 3. otherwise => `defaultDailyHours` on every day of the week, including Sunday.
 
-There is no implicit Sunday-rest rule.
+There is no implicit Sunday-rest rule in the canonical scheduler or remaining public Forecast compatibility surfaces.
 
-Forecast user-visible capacity copy now states that the default applies to all seven days and no longer claims Sunday rests automatically.
+The final package also guarantees:
+
+- Forecast, Roadmap and Flexible Schedule consume the canonical seven-day capacity behavior;
+- Forecast UI says the default applies to all seven days;
+- `ForecastViewModel.sundayRestByDefault` is `false`;
+- exported legacy `forecast()` counts Sunday as a normal calendar study day instead of skipping it.
 
 ## 3. Task 1 TDD — canonical Sunday capacity
 
@@ -76,32 +76,24 @@ expected 6
 received 0
 ```
 
-This proves the old resolver still imposed Sunday zero-capacity.
+### Minimal resolver implementation
 
-### Minimal implementation
-
-Source commit:
+Commit:
 
 ```text
 ed7c6bbf9091f3c0f4e263c3186730b9b556d76a
 ```
 
-The implementation removed only the `isSundayISO()` zero-capacity branch and unused import. Function signature and today/exact-date/default precedence remain unchanged.
+`src/lib/daily-capacity.ts` removed only the `isSundayISO()` import and implicit Sunday `return 0` branch.
 
-### First implementation run — not GREEN
+### Run #364 — not GREEN
 
 ```text
-workflow   Build diagnostics #364
-run        31255436229
-job        93097999103
+run 31255436229
+job 93097999103
 ```
 
-Typecheck/lint PASS. Two existing assertions in `schedule-projection.test.ts` failed because they explicitly encoded the superseded Sunday-rest product policy:
-
-- flexible work expected to skip Sunday and land Monday;
-- a test explicitly expected Sunday to have zero capacity by default.
-
-This run is not counted as GREEN and did not show a production resolver defect. The two policy assertions were updated to the approved seven-day semantics; no projection production code changed.
+Typecheck/lint PASS. Two existing `schedule-projection.test.ts` assertions encoded the superseded Sunday-rest policy. They were changed to state the approved seven-day policy; no projection production code changed.
 
 ### Valid Task 1 GREEN
 
@@ -113,8 +105,6 @@ job        93098274345
 merge ref  467cabc59b21140013973b83c7c37ce2373a8fb3
 ```
 
-Full gate PASS:
-
 ```text
 61/61 test files
 391/391 tests
@@ -124,17 +114,9 @@ build PASS
 clean-tree PASS
 ```
 
-Regression proof includes:
+Proof includes Sunday default capacity, positive/zero exact-date overrides, current-Sunday `todayHours` precedence, Sunday scheduling in canonical projection, and Roadmap compatibility with that projection.
 
-- Sunday no override => default capacity;
-- Sunday positive exact-date override wins;
-- Sunday explicit zero override wins;
-- current Sunday uses `todayHours` before same-date override;
-- weekdays retain default/override semantics;
-- canonical schedule projection can place flexible work on Sunday;
-- Roadmap shifted dates remain identical to the canonical projection.
-
-## 4. Task 2 TDD — truthful Forecast copy
+## 4. Task 2 TDD — truthful Forecast runtime copy
 
 ### Valid RED
 
@@ -153,15 +135,13 @@ Typecheck/lint PASS. Test result:
 390/391 tests PASS
 ```
 
-Sole failure was the real rendered `ForecastCard` runtime assertion. Rendered HTML still contained:
+Sole failure proved the real rendered ForecastCard still stated:
 
 ```text
 Chủ nhật nghỉ nếu không đặt riêng
 ```
 
-and did not contain the required seven-day default-capacity wording.
-
-### Minimal presentation implementation / literal final source-test head
+### Initial presentation GREEN
 
 ```text
 head       76263f770d51665a62dac10898dbd31502c5fc88
@@ -171,65 +151,202 @@ job        93098869135
 merge ref  9cff2d427305d25c430b00635c9a7321a790c71e
 ```
 
-The production change is exactly one `ForecastCard` capacity-copy line:
+The production UI change is one capacity-copy line:
 
 ```text
 Theo lịch công suất hiện tại · mặc định <N> giờ/ngày cho cả 7 ngày.
 ```
 
-Full gate PASS:
-
 ```text
 61/61 test files
 391/391 tests
+full gate PASS
+```
+
+## 5. Initial evidence head and Independent Review rejection
+
+Initial docs-only evidence head:
+
+```text
+head       7a9d68c684a3e2884b9533e6a7baf4afe00840f7
+workflow   Build diagnostics #368
+run        31255933926
+job        93099160002
+61/61 test files
+391/391 tests
+full gate PASS
+```
+
+A fresh Independent Review rejected that candidate in PR comment `5225997437`.
+
+Important finding: two public compatibility surfaces still encoded the old Sunday-rest semantics even though active scheduler/UI behavior was correct:
+
+1. `ForecastViewModel.sundayRestByDefault` was typed and returned as literal `true`, and an existing test asserted `true`;
+2. exported legacy `forecast()` still used `advanceStudyDays()` that skipped Sundays via `isSundayISO()`.
+
+Disposition at that point:
+
+```text
+SUNDAY DEFAULT CAPACITY IMPLEMENTED / REJECTED / NOT_MERGED
+```
+
+## 6. Independent-review correction TDD
+
+### Valid correction RED
+
+A dedicated regression file was added:
+
+`src/lib/sunday-capacity-compatibility-regression.test.ts`
+
+Exact RED:
+
+```text
+head       fd67713b1081110be8608d6b7a0040be34da0bad
+workflow   Build diagnostics #369
+run        31256187773
+job        93099766774
+merge ref  da995ad15d24b7f7a4a2fbdc038ab5a848582a85
+```
+
+Typecheck/lint PASS.
+
+```text
+61/62 test files PASS
+391/393 tests PASS
+```
+
+Exactly two intended failures:
+
+- one legacy `forecast()` study day beginning Saturday ended Monday instead of Sunday;
+- Forecast ViewModel reported `sundayRestByDefault === true` instead of `false`.
+
+### Minimal production corrections
+
+Forecast ViewModel commit:
+
+```text
+447b794eef910df0db1e67a3586a2539b59bdb4d
+```
+
+Changes only:
+
+```text
+sundayRestByDefault: true  -> false
+```
+
+Legacy Forecast commit:
+
+```text
+5fbdddac2343bd1105838aacd79d5c8738f2d197
+```
+
+Exact `planner.ts` patch contains only two hunks:
+
+- remove `isSundayISO` from the date-utils import;
+- replace Sunday-skipping `advanceStudyDays()` loop with `addDaysISO(fromISO, studyDays)`.
+
+The active canonical projection/scheduler code was not changed by this correction.
+
+### Run #371 — not GREEN
+
+```text
+workflow   Build diagnostics #371
+run        31256388630
+job        93100236026
+```
+
+Typecheck/lint PASS. Both new compatibility regressions PASS. One stale existing test still asserted `sundayRestByDefault === true`:
+
+```text
+61/62 test files PASS
+392/393 tests PASS
+```
+
+That old test contract was aligned to `false`; no production code changed after `5fbdddac2343bd1105838aacd79d5c8738f2d197`.
+
+### Final correction GREEN / literal final source-test head
+
+```text
+head       26da22544435972dab0d2e3528af9c720c908edf
+workflow   Build diagnostics #372
+run        31256507652
+job        93100534067
+PR merge ref at exact head 9510ca7c5e428daac260b23a97d14c6d76d20989
+```
+
+Full gate PASS:
+
+```text
+62/62 test files
+393/393 tests
 typecheck PASS
 lint PASS
 build PASS
 clean-tree PASS
 ```
 
-Runtime proof requires the seven-day wording and rejects the old Sunday-rest wording.
+Both compatibility regressions are GREEN, and the original Forecast/Roadmap/Flexible Schedule suites remain GREEN.
 
-## 5. Final source/test scope audit
+## 7. Final source/test scope and transcription audit
 
 Comparison:
 
 ```text
 c7d82ec6a07a7fab2b6465456d53a0e1b9919498
 ..
-76263f770d51665a62dac10898dbd31502c5fc88
+26da22544435972dab0d2e3528af9c720c908edf
 ```
 
-is ahead-only with no base drift.
-
-Final source/test diff contains exactly these authorized paths:
+is:
 
 ```text
+ahead 16
+behind 0
+merge base = exact predecessor
+```
+
+Final predecessor-to-source/test tree contains these package paths:
+
+```text
+docs/superpowers/evidence/2026-08-08-smart-planner-sunday-default-capacity-completion.md
 docs/superpowers/plans/2026-08-08-smart-planner-sunday-default-capacity.md
 docs/superpowers/specs/2026-08-08-smart-planner-sunday-default-capacity-design.md
 src/components/ForecastCard.tsx
 src/lib/daily-capacity.test.ts
 src/lib/daily-capacity.ts
 src/lib/forecast-card-runtime.test.ts
+src/lib/forecast-view-model.test.ts
+src/lib/forecast-view-model.ts
+src/lib/planner.ts
 src/lib/schedule-projection.test.ts
+src/lib/sunday-capacity-compatibility-regression.test.ts
 ```
 
-Production scope is only:
+Production diffs are bounded to:
 
 ```text
-src/lib/daily-capacity.ts       remove implicit Sunday-zero branch
-src/components/ForecastCard.tsx update one truthful capacity-copy line
+src/lib/daily-capacity.ts
+  remove implicit Sunday-zero branch
+
+src/components/ForecastCard.tsx
+  one truthful seven-day capacity-copy line
+
+src/lib/forecast-view-model.ts
+  compatibility flag true -> false
+
+src/lib/planner.ts
+  legacy Forecast date advancement no longer skips Sunday
 ```
 
-The projection test changes only align assertions with the approved policy; `planner.ts`, `schedule-projection.ts`, persistence, dependencies, CI/deployment, Weekly Summary and P2 are untouched.
+`planner.ts` transcription audit confirms only `+2/-8` across the two intended hunks. `forecast-view-model.ts` is only `+2/-2`. No persistence, dependency, workflow, deployment, Weekly Summary, P2, or canonical projection production file changed.
 
-## 6. Execution-history note
+## 8. Execution-history note
 
-While preparing the Draft PR, two accidental temporary files (`tmp` and `__probe__`) were created by connector mis-selection and immediately removed by forward commits. No amend/rebase/force-push/history rewrite was used. Neither path exists in the predecessor-to-final-source diff and neither affects the implementation tree.
+While preparing the Draft PR, two accidental temporary files (`tmp` and `__probe__`) were created by connector mis-selection and immediately removed by forward commits. No amend/rebase/force-push/history rewrite was used. Neither path exists in the final diff or implementation tree.
 
-## 7. Pre-existing nonblocking diagnostics
+## 9. External / pre-existing nonblocking diagnostics
 
-The exact-head CI still reports existing repository diagnostics that are outside this package:
+GitHub Actions continue to report the known repository diagnostics outside this package:
 
 - one high-severity `npm audit` item;
 - seven lint warnings;
@@ -238,19 +355,29 @@ The exact-head CI still reports existing repository diagnostics that are outside
 - `.gitmodules` cleanup warning;
 - Node action deprecation warning.
 
-No new dependency, workflow or deployment change was made.
+Vercel bot comments on PR #11 also report preview deployment failure because the Free-plan project exceeded the daily deployment limit (`api-deployments-free-per-day`, >100 deployments). This is an external quota condition, not a compile/test failure; deployment changes are outside this package. GitHub Actions are the authorized executable CI evidence.
 
-## 8. Independent-review handoff
+## 10. Final re-review handoff
 
-Literal source/test head is frozen at:
+Literal final source/test head is frozen at:
 
 ```text
-76263f770d51665a62dac10898dbd31502c5fc88
+26da22544435972dab0d2e3528af9c720c908edf
 ```
 
-This evidence document must be the only change after that source/test head. A natural exact-head PR CI run must be GREEN on the resulting evidence head. Independent review must fresh-check predecessor/base, final diff, canonical capacity precedence, Sunday scheduling behavior, Forecast runtime wording, exact CI evidence, and PR state before acceptance.
+This refresh must be exactly one docs-only evidence commit after that head. Natural exact-head PR CI must be GREEN on the refreshed evidence head. A fresh Independent Re-Review must verify:
 
-Target accepted disposition:
+- `main` still equals exact predecessor `c7d82ec6a07a7fab2b6465456d53a0e1b9919498`;
+- PR #11 remains Draft/open/unmerged on that base;
+- final diff stays within the package paths above;
+- resolver precedence is today -> exact-date override -> default seven-day capacity;
+- active schedule projection places work on Sunday when capacity allows;
+- `ForecastViewModel.sundayRestByDefault` is false;
+- legacy `forecast()` does not skip Sunday;
+- Forecast runtime copy contains the seven-day wording and no Sunday-rest claim;
+- exact-head CI is GREEN.
+
+Target disposition after a clean fresh re-review:
 
 ```text
 SUNDAY DEFAULT CAPACITY IMPLEMENTED / ACCEPTED / NOT_MERGED
