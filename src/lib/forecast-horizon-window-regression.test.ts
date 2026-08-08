@@ -222,9 +222,14 @@ describe("Forecast horizon window", () => {
       horizonWeeks: 2,
       fromISO: "2026-08-08",
     });
-    expect(pending.horizonReviewHours).toBe(0.3);
+    expect(pending.horizonReviewHours).toBe(1);
 
-    state.reviewCompletions = { "review:lesson-1:2026-08-08": "2026-08-08" };
+    state.reviewCompletions = {
+      "review:lesson-1:2026-08-08": "2026-08-08",
+      "review:lesson-1:2026-08-10": "2026-08-10",
+      "review:lesson-1:2026-08-14": "2026-08-14",
+      "review:lesson-1:2026-08-21": "2026-08-21",
+    };
     const completed = selectForecastViewModel({
       subjects,
       state,
