@@ -17,10 +17,7 @@ export function selectForecastCompletion(params: {
   const hoursPerDay = Number.isFinite(params.state.plannerSettings.defaultDailyHours)
     ? normalizeDailyStudyHours(params.state.plannerSettings.defaultDailyHours)
     : 2;
-  const remainingLessonIds = allRemainingLessonIds(
-    params.subjects,
-    params.state.completedLessons,
-  );
+  const remainingLessonIds = allRemainingLessonIds(params.subjects, params.state.completedLessons);
   const result = forecast({
     remainingLessonIds,
     meta: params.state.studyMeta,
