@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ForecastCard } from "@/components/ForecastCard";
+import { displayDate } from "./date-utils";
 import { selectForecastViewModel } from "./forecast-view-model";
 import type { Subject } from "./mock-data";
 import { createInitialProgressState } from "./progress-store";
@@ -36,7 +37,7 @@ function makeSubjects(count: number): Subject[] {
 }
 
 describe("ForecastCard runtime clarity", () => {
-  it("renders workload, capacity, horizon, visibility, confidence, and basis from production UI", () => {
+  it("renders workload, capacity, horizon, visibility, confidence, basis, and completion value", () => {
     const subjects = makeSubjects(20);
     const state = createInitialProgressState(false);
     state.plannerSettings.defaultDailyHours = 1;
@@ -48,6 +49,14 @@ describe("ForecastCard runtime clarity", () => {
     const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
 
     expect(html).toContain("Dự kiến hoàn thành");
+    if (expected.completion.kind === "date" || expected.completion.kind === "range") {
+      expect(html).toContain(displayDate(expected.completion.startISO));
+      if (expected.completion.kind === "range") {
+        expect(html).toContain(displayDate(expected.completion.endISO));
+      }
+    } else {
+      throw new Error(`Expected a dated Forecast completion, got ${expected.completion.kind}`);
+    }
     expect(html).toContain("Bài mới");
     expect(html).toContain("Ôn tập");
     expect(html).toContain("Tổng khối lượng");
@@ -58,5 +67,22 @@ describe("ForecastCard runtime clarity", () => {
     expect(html).toContain(`${expected.outsideHorizonLessons} bài chưa hoàn thành`);
     expect(html).toContain("Mức tin cậy");
     expect(html).toContain("Ước tính dựa trên");
+  });
+
+  it("renders truthful non-warning copy when all unfinished work fits the horizon", () => {
+    const subjects = makeSubjects(1);
+    const state = createInitialProgressState(false);
+    state.plannerSettings.defaultDailyHours = 2;
+    state.plannerSettings.todayHours = 2;
+    const expected = selectForecastViewModel({ subjects, state, horizonWeeks: 2 });
+
+    expect(expected.outsideHorizonLessons).toBe(0);
+
+    const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
+
+    expect(html).toContain("Trong phạm vi");
+    expect(html).toContain(
+      "Tất cả bài chưa hoàn thành đều nằm trong phạm vi 2 tuần đang xem.",
+    );
   });
 });
