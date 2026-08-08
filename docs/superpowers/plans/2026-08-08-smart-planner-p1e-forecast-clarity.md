@@ -6,22 +6,23 @@
 
 **Architecture:** Add one pure `selectForecastViewModel()` module that composes existing `forecast()`, `buildFlexiblePlan()`, and `summarizeUnscheduledWork()` outputs. Keep Forecast horizon state transient inside `ForecastCard`; do not hoist P1B state or modify persistence/scheduler semantics. Production changes are limited to the Forecast card plus the new selector unless a valid RED test proves `planner.forecast()` itself violates the approved spec.
 
-**Tech Stack:** React 19, TypeScript, Vitest, ReactDOM server rendering, TanStack application shell, existing planner/schedule helpers, Tailwind/Radix primitives.
+**Tech Stack:** React 19, TypeScript, Vitest, ReactDOM server rendering, existing planner/schedule helpers, Tailwind/Radix primitives.
 
 ## Global Constraints
 
 - Exact predecessor: `main@b981b8250adef717c1e9c9f4259a265316327b9a`.
 - Working branch: `improve/p1e-forecast-clarity`.
-- Design authority: `docs/superpowers/specs/2026-08-08-smart-planner-p1e-forecast-clarity-design.md` at commit `7a0e4d3d34ab00a708245cbce6d0b1f98f6d3708`.
-- Forecast horizon options are exactly `2 | 4 | 8 | 12` weeks, represented as rolling `14 | 28 | 56 | 84` days from `fromISO` inclusive of the first day in the `buildFlexiblePlan()` request count.
-- Default Forecast horizon is `2` weeks / `14` days.
-- Forecast horizon is transient component state; no browser-storage or URL-schema field is added.
+- Design authority: `docs/superpowers/specs/2026-08-08-smart-planner-p1e-forecast-clarity-design.md` at `7a0e4d3d34ab00a708245cbce6d0b1f98f6d3708`.
+- This plan's final self-review correction commit is the implementation-plan authority and must be bound verbatim in the Draft PR body before the first RED commit.
+- Forecast horizon options are exactly `2 | 4 | 8 | 12` weeks, represented as rolling `14 | 28 | 56 | 84` days.
+- Default Forecast horizon is 2 weeks / 14 days.
+- Forecast horizon is transient component state; no storage or URL-schema field is added.
 - `forecast()` remains authoritative for completion date/range unless a valid focused RED proves a defect against this plan.
-- `buildFlexiblePlan()` + `summarizeUnscheduledWork()` remain authoritative for outside-horizon accounting.
+- `buildFlexiblePlan()` plus `summarizeUnscheduledWork()` remain authoritative for outside-horizon accounting.
 - `latestShiftedDate` must not override Forecast completion prediction.
-- Existing `normalizeDailyStudyHours()` and `onSetDefaultDailyHours()` remain the only Forecast-hours normalization/mutation path.
+- `normalizeDailyStudyHours()` and `onSetDefaultDailyHours()` remain the Forecast-hours normalization/mutation boundary.
 - No new dependency, package/lockfile change, workflow change, deployment change, persistence-schema change, transaction change, Roadmap change, Course Manager change, or Flexible Planner state hoist.
-- Use forward-only commits. Do not amend, rebase, squash, force-push, or rewrite published history.
+- Use forward-only commits; do not amend, rebase, squash, force-push, or rewrite published history.
 - Keep the PR Draft and unmerged through implementation and independent review.
 
 ---
@@ -30,61 +31,45 @@
 
 ### Production
 
-- Create `src/lib/forecast-view-model.ts` — pure Forecast presentation selector; owns horizon-plan composition, workload aggregation, completion-state classification, and visibility summary.
-- Modify `src/components/ForecastCard.tsx` — owns transient horizon selection, formatting, existing daily-hours input, and rendering only.
+- Create `src/lib/forecast-view-model.ts` — pure Forecast selector for completion classification, workload aggregation, horizon plan, and outside-horizon visibility.
+- Modify `src/components/ForecastCard.tsx` — transient horizon state, formatting, existing daily-hours input, and rendering.
 
 ### Tests
 
-- Create `src/lib/forecast-clarity-regression.test.ts` — first RED contract proving shifted schedule data cannot replace Forecast completion semantics.
-- Create `src/lib/forecast-view-model.test.ts` — pure selector behavior, horizon, workload, completion-state, and deterministic-date coverage.
-- Create `src/lib/forecast-card-runtime.test.ts` — actual production component runtime/static-render coverage for the user-visible Forecast contract.
+- Create `src/lib/forecast-clarity-regression.test.ts` — first RED proving shifted schedule data cannot replace Forecast completion semantics.
+- Create `src/lib/forecast-view-model.test.ts` — pure selector behavior and horizon coverage.
+- Create `src/lib/forecast-card-runtime.test.ts` — actual production component runtime/static-render coverage.
 
 ### Evidence
 
 - Create `docs/superpowers/evidence/2026-08-08-smart-planner-p1e-forecast-clarity-completion.md` only after exact-head GREEN verification.
 
-`src/lib/planner.ts` is excluded unless a focused RED proves a specific approved Forecast calculation defect before any edit to that file.
+`src/lib/planner.ts` is excluded unless a focused RED proves a specific approved calculation defect before any edit to that file.
 
 ---
 
-### Task 1: Establish the Forecast-completion RED and introduce the read-model boundary
+### Task 1: RED — Forecast completion must ignore shifted schedule dates
 
 **Files:**
 - Create: `src/lib/forecast-clarity-regression.test.ts`
-- Create: `src/lib/forecast-view-model.ts`
-- Modify: `src/components/ForecastCard.tsx`
+- Later create: `src/lib/forecast-view-model.ts`
+- Later modify: `src/components/ForecastCard.tsx`
 
 **Interfaces:**
-- Consumes: existing `forecast()`, `allRemainingLessonIds()`, `normalizeDailyStudyHours()`, `Subject`, and `ProgressState`.
-- Produces initially:
+- Consumes: existing `forecast()`, `allRemainingLessonIds()`, `normalizeDailyStudyHours()`, `Subject`, `ProgressState`.
+- Produces: `ForecastCompletion` plus completion/workload selector data used by Task 2.
 
-```ts
-export type ForecastCompletion =
-  | { kind: "complete" }
-  | { kind: "no-capacity" }
-  | { kind: "date"; startISO: string; endISO: string }
-  | { kind: "range"; startISO: string; endISO: string };
+- [ ] **Step 1: Create the Draft PR before the RED commit**
 
-export function selectForecastCompletion(params: {
-  subjects: Subject[];
-  state: ProgressState;
-  fromISO?: string;
-}): {
-  completion: ForecastCompletion;
-  remainingLessons: number;
-  hoursPerDay: number;
-  totalNewHours: number;
-  totalReviewHours: number;
-  totalWorkloadHours: number;
-  meanMinutes: number;
-  confidence: "insufficient" | "low" | "medium" | "high";
-  basis: "planned" | "mixed" | "actual";
-};
+Create a Draft PR from `improve/p1e-forecast-clarity` to `main`. Bind exact predecessor, design commit, and the exact commit SHA produced by this no-placeholder plan revision. Set status:
+
+```text
+P1E IMPLEMENTING / NOT_ACCEPTED / NOT_MERGED
 ```
 
-- [ ] **Step 1: Write the first failing regression against current `ForecastCard` behavior**
+- [ ] **Step 2: Write the first failing runtime regression**
 
-Create `src/lib/forecast-clarity-regression.test.ts` with an actual production render. Use existing React/ReactDOM only.
+Create `src/lib/forecast-clarity-regression.test.ts`:
 
 ```ts
 import { createElement } from "react";
@@ -92,21 +77,22 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ForecastCard } from "@/components/ForecastCard";
 import { createInitialProgressState } from "./progress-store";
+import { displayDate } from "./date-utils";
 import type { Subject } from "./mock-data";
 
-const SUBJECTS: Subject[] = [
+const subjects: Subject[] = [
   {
     id: "math",
     name: "Toán",
     emoji: "📐",
     milestones: [
       {
-        id: "m1",
+        id: "topic-1",
         title: "Chủ đề 1",
         subtitle: "",
         lessons: [
           {
-            id: "l1",
+            id: "lesson-1",
             title: "Bài 1",
             xp: 10,
             plannedDurationMinutes: 60,
@@ -124,37 +110,23 @@ const SUBJECTS: Subject[] = [
 ];
 
 describe("Forecast clarity regression", () => {
-  it("does not let shifted schedule dates replace the forecast completion estimate", () => {
+  it("does not let a shifted schedule date replace Forecast completion", () => {
     const state = createInitialProgressState(false);
     state.plannerSettings.defaultDailyHours = 2;
+    const shiftedDate = "2035-12-31";
 
     const html = renderToStaticMarkup(
       createElement(ForecastCard, {
         state,
-        subjects: SUBJECTS,
-        shiftedDates: { l1: "2035-12-31" },
+        subjects,
+        shiftedDates: { "lesson-1": shiftedDate },
       }),
     );
 
-    expect(html).not.toContain("31/12/2035");
+    expect(html).not.toContain(displayDate(shiftedDate));
   });
 });
 ```
-
-If `displayDate()` produces a different localized literal in the runtime, use that helper in the test rather than hard-coding formatting; the semantic assertion remains that the far-future shifted date is absent.
-
-- [ ] **Step 2: Create the Draft PR before running RED**
-
-Create a Draft PR from `improve/p1e-forecast-clarity` to `main`. The body must bind:
-
-```text
-Exact predecessor: b981b8250adef717c1e9c9f4259a265316327b9a
-Design commit: 7a0e4d3d34ab00a708245cbce6d0b1f98f6d3708
-Plan commit: <current plan commit>
-Status: P1E IMPLEMENTING / NOT_ACCEPTED / NOT_MERGED
-```
-
-Keep it Draft throughout implementation.
 
 - [ ] **Step 3: Commit only the RED test**
 
@@ -165,82 +137,95 @@ git commit -m "test: require forecast completion independent of shifted schedule
 
 - [ ] **Step 4: Verify natural RED**
 
-Use the natural `pull_request / synchronize` GitHub Actions run. Valid RED requires:
+Use the natural `pull_request / synchronize` GitHub Actions run. Valid RED requires install, typecheck, and lint to reach the test gate; existing tests remain green; the new regression fails because predecessor Forecast renders the far-future shifted date. Record exact RED head, run ID, job ID, checked merge ref, and failure.
 
-- install/typecheck/lint reach the test gate successfully;
-- the existing suite remains green;
-- the new regression fails specifically because the predecessor renders the shifted far-future date as Forecast completion;
-- no unrelated failure is accepted as RED.
+- [ ] **Step 5: Implement the minimal completion read-model boundary**
 
-Record exact RED head, run ID, job ID, checked merge ref, and sole expected failure.
-
-- [ ] **Step 5: Implement the smallest read-model completion boundary**
-
-Create `src/lib/forecast-view-model.ts` with `selectForecastCompletion()`.
-
-Implementation rules:
+Create `src/lib/forecast-view-model.ts`:
 
 ```ts
-const hoursPerDay = Number.isFinite(state.plannerSettings.defaultDailyHours)
-  ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)
-  : 2;
+import type { Subject } from "./mock-data";
+import { allRemainingLessonIds, forecast } from "./planner";
+import type { ProgressState } from "./progress-store";
+import { normalizeDailyStudyHours } from "./study-hours";
 
-const remainingLessonIds = allRemainingLessonIds(subjects, state.completedLessons);
-const result = forecast({
-  remainingLessonIds,
-  meta: state.studyMeta,
-  subjects,
-  hoursPerDay,
-  fromISO,
-});
-```
+export type ForecastCompletion =
+  | { kind: "complete" }
+  | { kind: "no-capacity" }
+  | { kind: "date"; startISO: string; endISO: string }
+  | { kind: "range"; startISO: string; endISO: string };
 
-Classify completion exactly:
+export function selectForecastCompletion(params: {
+  subjects: Subject[];
+  state: ProgressState;
+  fromISO?: string;
+}) {
+  const hoursPerDay = Number.isFinite(params.state.plannerSettings.defaultDailyHours)
+    ? normalizeDailyStudyHours(params.state.plannerSettings.defaultDailyHours)
+    : 2;
+  const remainingLessonIds = allRemainingLessonIds(
+    params.subjects,
+    params.state.completedLessons,
+  );
+  const result = forecast({
+    remainingLessonIds,
+    meta: params.state.studyMeta,
+    subjects: params.subjects,
+    hoursPerDay,
+    fromISO: params.fromISO,
+  });
 
-```ts
-if (result.remaining === 0) completion = { kind: "complete" };
-else if (hoursPerDay <= 0) completion = { kind: "no-capacity" };
-else if (result.earliestEndDateISO === result.latestEndDateISO) {
-  completion = {
-    kind: "date",
-    startISO: result.endDateISO,
-    endISO: result.endDateISO,
-  };
-} else {
-  completion = {
-    kind: "range",
-    startISO: result.earliestEndDateISO,
-    endISO: result.latestEndDateISO,
+  let completion: ForecastCompletion;
+  if (result.remaining === 0) completion = { kind: "complete" };
+  else if (hoursPerDay <= 0) completion = { kind: "no-capacity" };
+  else if (result.earliestEndDateISO === result.latestEndDateISO) {
+    completion = { kind: "date", startISO: result.endDateISO, endISO: result.endDateISO };
+  } else {
+    completion = {
+      kind: "range",
+      startISO: result.earliestEndDateISO,
+      endISO: result.latestEndDateISO,
+    };
+  }
+
+  return {
+    completion,
+    remainingLessons: result.remaining,
+    hoursPerDay,
+    totalNewHours: result.totalNewHours,
+    totalReviewHours: result.totalReviewHours,
+    totalWorkloadHours: Math.round((result.totalNewHours + result.totalReviewHours) * 10) / 10,
+    meanMinutes: result.meanMinutes,
+    confidence: result.confidence,
+    basis: result.basis,
   };
 }
 ```
 
-Return `totalWorkloadHours` rounded to one decimal from `result.totalNewHours + result.totalReviewHours`.
+Modify `ForecastCard.tsx` so completion text comes only from this selector. Remove the `latestShiftedDate` calculation. Keep the optional `shiftedDates` prop only if removing it would force a route edit; it must not influence Forecast output.
 
-Modify `ForecastCard.tsx` so its completion text uses only this selector. Remove all `latestShiftedDate` calculation and do not read `shiftedDates` to form completion text. Preserve the prop temporarily only if needed to avoid a route-scope edit; an unused optional prop may be removed only if the route already compiles without changes.
-
-- [ ] **Step 6: Verify focused GREEN**
-
-Natural GitHub Actions must show the new regression passing and no new failures. Do not call this package-complete yet.
-
-- [ ] **Step 7: Commit the Task 1 production change**
+- [ ] **Step 6: Commit Task 1 implementation**
 
 ```bash
 git add src/lib/forecast-view-model.ts src/components/ForecastCard.tsx
 git commit -m "feat: separate forecast completion from schedule projection"
 ```
 
+- [ ] **Step 7: Verify focused GREEN**
+
+Require the Task 1 regression to pass in natural GitHub Actions with no new failures before moving to Task 2.
+
 ---
 
-### Task 2: Add pure horizon visibility and workload semantics
+### Task 2: RED/GREEN — Pure horizon visibility and workload semantics
 
 **Files:**
 - Create: `src/lib/forecast-view-model.test.ts`
 - Modify: `src/lib/forecast-view-model.ts`
 
 **Interfaces:**
-- Consumes: Task 1 `selectForecastCompletion()` behavior, `buildFlexiblePlan()`, `summarizeUnscheduledWork()`, `addDaysISO()`.
-- Produces final public interface:
+- Consumes: Task 1 completion selector, `buildFlexiblePlan()`, `summarizeUnscheduledWork()`, `addDaysISO()`, `todayISO()`.
+- Produces:
 
 ```ts
 export type ForecastHorizonWeeks = 2 | 4 | 8 | 12;
@@ -261,46 +246,64 @@ export type ForecastViewModel = {
   basis: "planned" | "mixed" | "actual";
   completion: ForecastCompletion;
 };
-
-export function selectForecastViewModel(params: {
-  subjects: Subject[];
-  state: ProgressState;
-  horizonWeeks: ForecastHorizonWeeks;
-  fromISO?: string;
-}): ForecastViewModel;
 ```
 
-- [ ] **Step 1: Write pure failing tests for horizon semantics**
+- [ ] **Step 1: Write pure failing tests**
 
-Use a fixture helper that creates flexible lessons with deterministic IDs and dates. Start from `createInitialProgressState(false)` and set planner values directly inside the test object.
-
-Required tests:
+Create `src/lib/forecast-view-model.test.ts`. Use a deterministic fixture generator:
 
 ```ts
-it("maps 2/4/8/12 weeks to 14/28/56/84 rolling days", ...)
-it("counts unfinished lessons outside the selected horizon from the real flexible plan", ...)
-it("reports zero outside-horizon work when all unfinished lessons fit", ...)
-it("keeps new-learning, review, and total workload internally consistent", ...)
-it("distinguishes complete from zero-capacity completion", ...)
-it("is deterministic when fromISO is supplied", ...)
+function makeSubjects(count: number): Subject[] {
+  return [
+    {
+      id: "math",
+      name: "Toán",
+      emoji: "📐",
+      milestones: [
+        {
+          id: "topic-1",
+          title: "Chủ đề 1",
+          subtitle: "",
+          lessons: Array.from({ length: count }, (_, index) => ({
+            id: `lesson-${index + 1}`,
+            title: `Bài ${index + 1}`,
+            xp: 10,
+            plannedDurationMinutes: 60,
+            scheduledDate: "2026-08-08",
+            scheduleMode: "flexible" as const,
+            weekday: "T7",
+            sourceSubject: "Toán",
+            week: 1,
+            initialDone: false,
+          })),
+        },
+      ],
+    },
+  ];
+}
 ```
 
-The outside-horizon fixture must contain enough 60-minute flexible lessons and a deliberately small daily capacity that a 14-day horizon cannot place all lessons, while a longer horizon can place more. Assertions should compare counts rather than source strings.
+Write six concrete tests:
 
-- [ ] **Step 2: Commit only the Task 2 tests**
+1. `horizonWeeks=2/4/8/12` returns `14/28/56/84` days and `horizonEndISO = addDaysISO(fromISO, horizonDays - 1)`.
+2. With 20 one-hour flexible lessons and `defaultDailyHours = 1`, 14 days reports at least one outside-horizon lesson.
+3. The same fixture at 84 days reports no more outside-horizon lessons than the 14-day view.
+4. `totalWorkloadHours` equals the one-decimal sum of `totalNewHours + totalReviewHours`.
+5. All lessons completed produces `completion.kind === "complete"`; unfinished work with zero hours produces `"no-capacity"`.
+6. Repeating the selector with the same `fromISO` produces identical horizon/completion output.
+
+- [ ] **Step 2: Commit only Task 2 tests and verify RED**
 
 ```bash
 git add src/lib/forecast-view-model.test.ts
 git commit -m "test: define forecast horizon visibility semantics"
 ```
 
-- [ ] **Step 3: Verify valid RED**
+Valid RED must reach the test gate and fail because the current selector lacks the final horizon/view-model semantics; unrelated failures are invalid RED.
 
-The natural PR run must fail only because the current selector lacks the horizon/view-model fields or produces incorrect horizon counts. Existing tests must remain green.
+- [ ] **Step 3: Implement final `selectForecastViewModel()`**
 
-- [ ] **Step 4: Implement the final pure selector**
-
-In `src/lib/forecast-view-model.ts`:
+Add imports for `addDaysISO`, `todayISO`, `buildFlexiblePlan`, and `summarizeUnscheduledWork`. Add:
 
 ```ts
 const HORIZON_DAYS: Record<ForecastHorizonWeeks, 14 | 28 | 56 | 84> = {
@@ -311,68 +314,63 @@ const HORIZON_DAYS: Record<ForecastHorizonWeeks, 14 | 28 | 56 | 84> = {
 };
 ```
 
-Build the visible plan with exactly:
+Build visibility using only authoritative helpers:
 
 ```ts
+const startISO = params.fromISO ?? todayISO();
+const horizonDays = HORIZON_DAYS[params.horizonWeeks];
 const visiblePlan = buildFlexiblePlan({
-  subjects,
-  completed: state.completedLessons,
-  reviewCompletions: state.reviewCompletions,
-  meta: state.studyMeta,
-  settings: state.plannerSettings,
-  fromISO,
+  subjects: params.subjects,
+  completed: params.state.completedLessons,
+  reviewCompletions: params.state.reviewCompletions,
+  meta: params.state.studyMeta,
+  settings: params.state.plannerSettings,
+  fromISO: startISO,
   horizonDays,
 });
-```
-
-Then derive:
-
-```ts
 const visibility = summarizeUnscheduledWork({
-  subjects,
-  completed: state.completedLessons,
+  subjects: params.subjects,
+  completed: params.state.completedLessons,
   visiblePlan,
 });
 ```
 
-Set:
+Return:
 
 ```ts
-horizonEndISO = addDaysISO(fromISO ?? todayISO(), horizonDays - 1);
-visibleScheduledLessons = visibility.visibleScheduledCount;
-outsideHorizonLessons = visibility.outsideHorizonCount;
+horizonWeeks: params.horizonWeeks,
+horizonDays,
+horizonEndISO: addDaysISO(startISO, horizonDays - 1),
+visibleScheduledLessons: visibility.visibleScheduledCount,
+outsideHorizonLessons: visibility.outsideHorizonCount,
 ```
 
-Do not duplicate lesson-scanning or capacity rules already owned by these helpers.
+Preserve Task 1 completion/workload fields. Do not duplicate scheduler rules.
 
-- [ ] **Step 5: Verify Task 2 GREEN**
-
-Require the pure selector suite plus the Task 1 regression to pass in the natural GitHub Actions run.
-
-- [ ] **Step 6: Commit Task 2 implementation**
+- [ ] **Step 4: Commit Task 2 implementation and verify GREEN**
 
 ```bash
 git add src/lib/forecast-view-model.ts
 git commit -m "feat: derive forecast horizon visibility"
 ```
 
+Require Task 1 regression plus all pure selector tests to pass in the natural PR run.
+
 ---
 
-### Task 3: Render the full Forecast clarity contract
+### Task 3: RED/GREEN — User-visible Forecast clarity contract
 
 **Files:**
 - Create: `src/lib/forecast-card-runtime.test.ts`
 - Modify: `src/components/ForecastCard.tsx`
 
 **Interfaces:**
-- Consumes: `selectForecastViewModel()` and `ForecastHorizonWeeks` from Task 2.
-- Produces: user-visible Forecast horizon control and explicit clarity metrics without new persistence.
+- Consumes: `selectForecastViewModel()` and `ForecastHorizonWeeks`.
+- Produces: visible horizon control and explicit workload/visibility/capacity/confidence information.
 
-- [ ] **Step 1: Write the runtime RED test against actual `ForecastCard`**
+- [ ] **Step 1: Write the runtime failing test**
 
-Use `renderToStaticMarkup(createElement(ForecastCard, ...))` with existing dependencies. The fixture must produce at least one outside-horizon lesson at the 2-week default.
-
-Assert user-visible semantics, not implementation strings:
+Create `src/lib/forecast-card-runtime.test.ts` with the same fixture pattern as Task 2 and actual `ForecastCard` rendering. Compute expected visibility with `selectForecastViewModel({ subjects, state, horizonWeeks: 2, fromISO: "2026-08-08" })` in a separate pure assertion test; for the component render, assert these visible labels:
 
 ```ts
 expect(html).toContain("Bài mới");
@@ -385,22 +383,20 @@ expect(html).toContain("Ngoài phạm vi");
 expect(html).toContain("Mức tin cậy");
 ```
 
-Also assert the exact expected outside-horizon count from `selectForecastViewModel()` appears in the rendered explanation.
+Also assert the rendered outside-horizon explanation includes the exact count returned by the selector for the default 2-week horizon.
 
-- [ ] **Step 2: Commit only the runtime RED test**
+- [ ] **Step 2: Commit only the runtime test and verify RED**
 
 ```bash
 git add src/lib/forecast-card-runtime.test.ts
 git commit -m "test: require user-visible forecast clarity metrics"
 ```
 
-- [ ] **Step 3: Verify valid RED**
+Valid RED must fail the new runtime assertions at the test gate; lint/typecheck failure is not accepted as RED.
 
-The natural PR run must reach tests and fail the new runtime test because the current component lacks the full clarity presentation/horizon control. Do not accept formatting/lint failure as RED.
+- [ ] **Step 3: Implement transient Forecast horizon UI**
 
-- [ ] **Step 4: Implement transient Forecast horizon UI**
-
-In `ForecastCard.tsx`:
+In `ForecastCard.tsx`, import `useState`, `selectForecastViewModel`, and `ForecastHorizonWeeks`. Add:
 
 ```ts
 const [horizonWeeks, setHorizonWeeks] = useState<ForecastHorizonWeeks>(2);
@@ -410,7 +406,7 @@ const vm = useMemo(
 );
 ```
 
-Render an accessible bounded control using an existing native/select pattern. Options must be exactly:
+Use an existing accessible native/select pattern with exactly four options:
 
 ```text
 2 tuần
@@ -419,27 +415,31 @@ Render an accessible bounded control using an existing native/select pattern. Op
 12 tuần
 ```
 
-The horizon change handler only calls `setHorizonWeeks`; it must not call `onSetDefaultDailyHours` or any persistence function.
+The horizon handler only updates `setHorizonWeeks`; it must not call persistence.
 
-- [ ] **Step 5: Replace ad-hoc Forecast calculations with read-model fields**
+- [ ] **Step 4: Render the full clarity metrics**
 
-Render the existing completion card from `vm.completion`:
+Completion copy:
 
 ```ts
-complete -> "Đã hoàn thành tất cả! 🎉"
-no-capacity -> "Chưa có quỹ giờ để dự báo"
-date -> displayDate(vm.completion.startISO)
-range -> `${displayDate(startISO)} – ${displayDate(endISO)}`
+const completionText =
+  vm.completion.kind === "complete"
+    ? "Đã hoàn thành tất cả! 🎉"
+    : vm.completion.kind === "no-capacity"
+      ? "Chưa có quỹ giờ để dự báo"
+      : vm.completion.kind === "date"
+        ? displayDate(vm.completion.startISO)
+        : `${displayDate(vm.completion.startISO)} – ${displayDate(vm.completion.endISO)}`;
 ```
 
-Render separate metrics:
+Show separately:
 
 ```text
-Bài mới: <totalNewHours> giờ
-Ôn tập: <totalReviewHours> giờ
-Tổng khối lượng: <totalWorkloadHours> giờ
-Quỹ giờ giả định: <hoursPerDay> giờ/ngày
-Phạm vi đang xem: <horizonWeeks> tuần
+Bài mới: <hours> giờ
+Ôn tập: <hours> giờ
+Tổng khối lượng: <hours> giờ
+Quỹ giờ giả định: <hours> giờ/ngày
+Phạm vi đang xem: <weeks> tuần
 ```
 
 Visibility copy:
@@ -450,46 +450,28 @@ vm.outsideHorizonLessons > 0
   : `Tất cả bài chưa hoàn thành đều nằm trong phạm vi ${vm.horizonWeeks} tuần đang xem.`
 ```
 
-Keep confidence and basis labels explicit. Preserve existing per-subject progress unless layout pressure requires only local rearrangement; do not remove the capability.
+Keep confidence, evidence basis, high-hours note, existing hours slider/input, and per-subject progress. Do not remove existing user capability.
 
-- [ ] **Step 6: Verify runtime GREEN**
-
-Natural GitHub Actions must show:
-
-- Task 1 regression PASS;
-- pure selector suite PASS;
-- Forecast runtime suite PASS;
-- no unrelated regressions.
-
-- [ ] **Step 7: Commit Task 3 implementation**
+- [ ] **Step 5: Commit Task 3 implementation and verify GREEN**
 
 ```bash
 git add src/components/ForecastCard.tsx
 git commit -m "feat: clarify forecast workload and horizon"
 ```
 
+Require the Task 1 regression, selector suite, runtime suite, and all existing tests to pass in natural CI before final scope verification.
+
 ---
 
-### Task 4: Exact-scope audit, full verification, and completion evidence
+### Task 4: Exact-scope verification and completion evidence
 
 **Files:**
 - Create: `docs/superpowers/evidence/2026-08-08-smart-planner-p1e-forecast-clarity-completion.md`
-- Read/verify all files changed since predecessor.
+- Verify: all changed files from predecessor through the exact Task 3 source/test head.
 
-**Interfaces:**
-- Consumes: Tasks 1–3 exact commits and GitHub Actions evidence.
-- Produces: one independently auditable completion record; no production behavior.
+- [ ] **Step 1: Compare predecessor to exact Task 3 source/test head**
 
-- [ ] **Step 1: Compare exact predecessor to candidate source/test head**
-
-Use GitHub compare:
-
-```text
-base = b981b8250adef717c1e9c9f4259a265316327b9a
-head = <candidate source/test head>
-```
-
-Expected changed paths are limited to:
+Use GitHub compare with base `b981b8250adef717c1e9c9f4259a265316327b9a` and head equal to the exact SHA returned by the Task 3 implementation commit. Expected paths only:
 
 ```text
 docs/superpowers/specs/2026-08-08-smart-planner-p1e-forecast-clarity-design.md
@@ -501,52 +483,44 @@ src/lib/forecast-view-model.test.ts
 src/lib/forecast-card-runtime.test.ts
 ```
 
-If any other path changed, classify it before proceeding; do not silently broaden scope.
+If another path appears, classify it before proceeding; do not broaden scope silently.
 
-- [ ] **Step 2: Verify exact-head full natural CI**
+- [ ] **Step 2: Fresh-read exact-head full CI**
 
-Fresh-read the exact workflow job logs/steps. Require:
+Require one natural PR run on the exact Task 3 source/test head with all gates PASS:
 
 ```text
-npm install: PASS
-npm run typecheck: PASS
-npm run lint: PASS
-npm test: PASS
-npm run build: PASS
-git diff --exit-code: PASS
-job conclusion: SUCCESS
+npm install
+npm run typecheck
+npm run lint
+npm test
+npm run build
+git diff --exit-code
 ```
 
-Record exact run ID, job ID, checked PR merge ref, test file/test counts, and known pre-existing warnings separately.
+Record exact run ID, job ID, checked merge ref, test file/test counts, and known pre-existing warnings.
 
-- [ ] **Step 3: Re-read all 20 design acceptance criteria**
+- [ ] **Step 3: Re-audit all 20 design acceptance criteria**
 
-For each criterion, bind it to one of:
+Bind every criterion to source, focused test evidence, CI evidence, or exact-scope evidence. Do not infer acceptance from a green build alone.
 
-- exact source location;
-- focused test evidence;
-- natural CI evidence;
-- exact changed-file scope evidence.
+- [ ] **Step 4: Write the evidence document**
 
-Do not mark criteria PASS from implementer assertion alone.
-
-- [ ] **Step 4: Write completion evidence**
-
-The evidence document must contain:
+It must contain:
 
 ```text
-Status: P1E IMPLEMENTED / REVIEW_PENDING / NOT_ACCEPTED / NOT_MERGED
-Exact predecessor
-Design commit
-Plan commit
-Valid RED head/run/job
+P1E IMPLEMENTED / REVIEW_PENDING / NOT_ACCEPTED / NOT_MERGED
+exact predecessor
+design commit
+final plan commit
+valid RED head/run/job
 Task GREEN checkpoints
-Literal final source/test head
-Exact changed-file list
-Full final CI run/job/merge-ref
-Acceptance-criteria matrix 1–20
-Known nonblocking repository observations
-Independent reviewer instructions
+literal final source/test head
+exact changed-file list
+full final CI run/job/merge-ref
+acceptance criteria 1–20 evidence matrix
+known nonblocking repository observations
+independent reviewer instructions
 ```
 
 Do not state `ACCEPTED`.
@@ -558,47 +532,47 @@ git add docs/superpowers/evidence/2026-08-08-smart-planner-p1e-forecast-clarity-
 git commit -m "docs: add P1E forecast clarity completion evidence"
 ```
 
-- [ ] **Step 6: Verify evidence-head CI and topology**
+- [ ] **Step 6: Verify evidence-head topology and CI**
 
-Require the evidence head to be exactly one docs-only commit after the literal final source/test head, and require its natural PR CI to pass the same full gate.
+The evidence head must be exactly one docs-only commit after the literal final source/test head. Its natural PR CI must pass the same full gate.
 
-- [ ] **Step 7: Update Draft PR body for independent review**
+- [ ] **Step 7: Update the Draft PR for independent review**
 
-Set status to:
+Set status:
 
 ```text
 P1E IMPLEMENTED / REVIEW_PENDING / NOT_ACCEPTED / NOT_MERGED
 ```
 
-Bind exact predecessor, design, plan, RED, source/test GREEN, evidence head, CI runs/jobs, and changed-file scope. Explicitly instruct the Independent Reviewer to return exactly one of:
+Bind exact predecessor, design, final plan, valid RED, source/test GREEN, evidence head, CI run/job IDs, and changed-file scope. Instruct a fresh Independent Reviewer to return exactly one of:
 
 ```text
 P1E IMPLEMENTED / ACCEPTED / NOT_MERGED
 P1E IMPLEMENTED / REJECTED / NOT_MERGED
 ```
 
-Do not mark the PR ready and do not merge.
+Do not mark ready and do not merge.
 
 ---
 
 ## Independent Review Checklist
 
-The reviewer must fresh-read the exact PR head and independently verify:
+The reviewer must independently verify:
 
-1. exact predecessor is still `b981b8250adef717c1e9c9f4259a265316327b9a`;
-2. no base drift invalidated the candidate;
-3. Forecast completion no longer consumes `latestShiftedDate` as prediction output;
-4. `selectForecastViewModel()` composes existing authoritative helpers instead of duplicating scheduler rules;
+1. predecessor remains `b981b8250adef717c1e9c9f4259a265316327b9a`;
+2. no base drift invalidates the candidate;
+3. Forecast completion no longer consumes shifted schedule dates as prediction output;
+4. the read model composes existing authoritative helpers rather than duplicating scheduler rules;
 5. 2/4/8/12 weeks map exactly to 14/28/56/84 rolling days;
-6. outside-horizon count comes from real `buildFlexiblePlan()` + `summarizeUnscheduledWork()` behavior;
+6. outside-horizon count comes from real `buildFlexiblePlan()` plus `summarizeUnscheduledWork()` behavior;
 7. horizon selection is transient and does not call persistence;
-8. daily-hours changes still use the existing normalization/persistence callback;
+8. daily-hours changes still use canonical normalization/persistence;
 9. zero-capacity and complete states are distinct;
-10. workload categories and total are truthful;
-11. runtime test renders actual production `ForecastCard`;
-12. no new dependency/schema/workflow/deployment or adjacent P2 work exists;
-13. valid RED was observed before production implementation;
+10. new/review/total workload values are truthful;
+11. runtime coverage renders actual production `ForecastCard`;
+12. no dependency/schema/workflow/deployment or adjacent P2 scope exists;
+13. valid RED preceded production implementation;
 14. exact-head full CI is GREEN;
-15. all 20 design criteria are satisfied with no unresolved Critical/Important finding.
+15. all 20 design criteria are satisfied with no unresolved Critical or Important finding.
 
 Merge remains a separate authorization after acceptance.
