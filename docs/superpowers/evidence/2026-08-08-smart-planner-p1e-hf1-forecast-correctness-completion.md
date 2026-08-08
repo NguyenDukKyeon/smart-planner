@@ -6,7 +6,7 @@
 **PR:** #10  
 **Branch:** `fix/p1e-hf1-forecast-correctness`  
 **Exact predecessor:** `main@78f042255fe46e9bbc69193e6ef47158442cdf03`  
-**Literal final source/test head:** `c5c2cc25ab6e8090b4368ddcf261778cc2279b62`  
+**Literal final source/test head:** `a6326d13b438d6cc93c59925740b293711f802fb`  
 **Disposition at refresh:** `IMPLEMENTED / REVIEW_PENDING / NOT_MERGED`
 
 ---
@@ -44,7 +44,7 @@ After eleven deterministic 120-minute completions:
 40,650 planned minutes remain = 677.5 hours
 ```
 
-Therefore the former production value near `210.3` new-learning hours for 341 remaining lessons was incompatible with the catalog itself.
+The former production value near `210.3` new-learning hours for 341 remaining lessons was therefore incompatible with the current catalog itself.
 
 ---
 
@@ -64,7 +64,7 @@ Typecheck/lint PASS. 57/58 files and 360/363 tests passed. The three intended fa
 
 ### Invalid intermediate
 
-Build diagnostics #329 was blocked by one Prettier error before tests; it is not GREEN evidence.
+Build diagnostics #329 was blocked by one Prettier error before tests and is not GREEN evidence.
 
 ### Valid GREEN
 
@@ -80,7 +80,7 @@ merge ref  7a707c4a38a3aa90d760f2c1b7965ad8bc455e57
 
 Locked behavior:
 
-- repeated sessions on one completed lesson become one evidence lesson;
+- repeated study sessions on one completed lesson become one evidence lesson;
 - non-review `focus-timer` and `manual` sessions are accepted;
 - review sessions are excluded;
 - incomplete/deleted-catalog lessons are excluded from confidence evidence;
@@ -255,7 +255,7 @@ job        93090684473
 merge ref  4235f405ed19f82c228e921e01cd447f767e933d
 ```
 
-60/60 files, 387/387 tests, typecheck/lint/build/clean-tree PASS.
+60/60 files, 387/387 tests, full gate PASS.
 
 Production runtime tests lock:
 
@@ -268,7 +268,7 @@ Production runtime tests lock:
 
 ---
 
-## 7. Independent-review rejection and correction
+## 7. First Independent Review rejection and correction
 
 ### First evidence-head GREEN
 
@@ -282,17 +282,11 @@ merge ref  c55cfbdc1df3ce030cbbbad09564d33194c9c2bd
 
 60/60 files, 387/387 tests, full gate PASS.
 
-### Independent Review rejection
+### Rejection
 
 Review comment: `5225689439`.
 
-Finding: an unfinished fixed lesson with `scheduledDate < fromISO` could never be encountered by the day loop and was eventually classified as `unprojected` / `projection-bound`, contradicting the approved exact-date fixed semantics requiring a definitively missed fixed lesson to be `unplaced-fixed`.
-
-Disposition at that head:
-
-```text
-P1E-HF1 IMPLEMENTED / REVIEW_REJECTED / NOT_MERGED
-```
+Finding: an unfinished fixed lesson with `scheduledDate < fromISO` could never be encountered by the day loop and was eventually classified as `unprojected` / `projection-bound`, contradicting fixed exact-date semantics.
 
 ### Valid correction RED
 
@@ -304,19 +298,9 @@ job        93091383056
 merge ref  a9dc0785861f06166d03eb2b90d852e2dd735421
 ```
 
-Typecheck/lint PASS. 59/60 files and 387/388 tests passed. Sole intended failure:
+Typecheck/lint PASS. 59/60 files and 387/388 tests passed. Sole intended failure: a past fixed exact-date lesson was missing from `unplacedFixedLessonIds`.
 
-```text
-past fixed exact-date lesson
-expected unplacedFixedLessonIds = ["fixed-in-the-past"]
-received []
-```
-
-### Correction implementation
-
-The public canonical `schedule-projection.ts` boundary now preclassifies unfinished fixed lessons whose exact date is before `fromISO`, removes them from the day-loop input, and returns them as `unplacedFixedLessonIds`. Forecast imports this canonical public boundary. No scheduler placement, persistence, workload calculation, confidence rule or UI behavior was broadened.
-
-### Valid correction GREEN / literal final source-test head
+### Correction GREEN
 
 ```text
 head       c5c2cc25ab6e8090b4368ddcf261778cc2279b62
@@ -326,30 +310,94 @@ job        93091702868
 merge ref  4854fbcaa85f2a3fbda9967e788588135296d020
 ```
 
-60/60 test files PASS. 388/388 tests PASS. Typecheck/lint/build/clean-tree PASS.
+60/60 files, 388/388 tests, full gate PASS.
 
-Additional proof now locked:
+Correction proof:
 
-- a past exact-date fixed lesson is `unplaced-fixed`, not `projection-bound`;
-- it receives no fabricated projected date;
+- past exact-date fixed work is `unplaced-fixed`, not `projection-bound`;
+- no fabricated projected date is emitted;
 - it is removed from `unprojectedLessonIds`;
 - Forecast consumes the corrected public projection boundary.
 
 ---
 
-## 8. Final source/test scope audit
+## 8. Second Independent Re-Review rejection and correction
+
+### Refreshed evidence-head GREEN before second rejection
+
+```text
+head       e16367ae5e5957a2ee5ccbb219fba66f4e8f2938
+workflow   Build diagnostics #357
+run        31252949413
+job        93092009426
+merge ref  c44c81c01449a9ea2afa31f8123bc5f55a5d0557
+```
+
+60/60 files, 388/388 tests, full gate PASS.
+
+### Rejection
+
+Review comment: `5225724386`.
+
+Finding: after the first correction, a workspace whose only unfinished work is a past fixed lesson correctly returned `unplacedFixedLessonIds`, but the Forecast ViewModel still counted that lesson as schedulable merely because `scheduledDate` was non-empty. Because the public projection performed no day loop for this definitively missed fixed work, `positiveCapacityDays === 0`, causing the primary Forecast blocker to be misreported as `no-capacity` rather than `unplaced-fixed` even when planner capacity was positive.
+
+### Valid second correction RED
+
+```text
+head       6c2b4b0d2377070a83784f01df5689251b56d9bf
+workflow   Build diagnostics #358
+run        31253078967
+job        93092335864
+```
+
+Typecheck/lint PASS. 60/61 test files and 388/389 tests passed. Sole intended failure:
+
+```text
+past fixed-only workspace with positive 8h capacity
+expected reason: unplaced-fixed
+received reason: no-capacity
+```
+
+### Second correction implementation
+
+`selectForecastCompletion()` now excludes IDs already classified by the canonical projection as `unplacedFixedLessonIds` from the count used to decide whether projectable work has zero usable capacity. This is intentionally narrower than reordering all blocker priorities.
+
+Consequences locked by existing and new tests:
+
+- past fixed-only + positive capacity => `unplaced-fixed`;
+- current/future fixed work that is definitively unplaced => `unplaced-fixed`;
+- genuinely projectable flexible work under zero capacity => remains `no-capacity`;
+- mixed blocker counts remain present in the unresolved result.
+
+### Valid second correction GREEN / literal final source-test head
+
+```text
+head       a6326d13b438d6cc93c59925740b293711f802fb
+workflow   Build diagnostics #359
+run        31253203971
+job        93092640783
+PR merge ref at exact head  f159abef5befd12fa79dcd543996d0d71a76eae6
+```
+
+61/61 test files PASS. 389/389 tests PASS. Typecheck/lint/build/clean-tree PASS.
+
+The new regression file `src/lib/forecast-past-fixed-regression.test.ts` proves the exact second-review finding is closed without weakening zero-capacity behavior already covered by `forecast-view-model.test.ts`.
+
+---
+
+## 9. Final source/test scope audit
 
 Comparison:
 
 ```text
 78f042255fe46e9bbc69193e6ef47158442cdf03
 ..
-c5c2cc25ab6e8090b4368ddcf261778cc2279b62
+a6326d13b438d6cc93c59925740b293711f802fb
 ```
 
-must remain ahead-only with no base drift.
+is ahead-only with no base drift. At source/test freeze, `main` remains `78f042255fe46e9bbc69193e6ef47158442cdf03`; PR #10 remains Draft/open/unmerged with that exact base.
 
-Authorized changed paths before this refreshed evidence commit:
+Authorized changed paths before this final evidence refresh:
 
 ```text
 docs/superpowers/plans/2026-08-08-smart-planner-p1e-hf1-forecast-correctness.md
@@ -359,6 +407,7 @@ src/lib/daily-capacity.test.ts
 src/lib/daily-capacity.ts
 src/lib/forecast-card-runtime.test.ts
 src/lib/forecast-clarity-regression.test.ts
+src/lib/forecast-past-fixed-regression.test.ts
 src/lib/forecast-view-model.test.ts
 src/lib/forecast-view-model.ts
 src/lib/planner.test.ts
@@ -373,11 +422,11 @@ src/lib/study-duration-evidence.ts
 
 The two existing scheduler regression files are fixture-only adjustments needed to make their intended behavior independent from the canonical Sunday-rest rule.
 
-No Weekly Summary file, dependency manifest, workflow, deployment configuration, persistence schema or P2 implementation file is authorized by this package.
+No Weekly Summary file, dependency manifest, workflow, deployment configuration, persistence schema or P2 implementation file changed.
 
 ---
 
-## 9. Known limitations / deferred work
+## 10. Known limitations / deferred work
 
 - `studyMeta.actualMinutes` remains persisted for backward compatibility but is not Forecast authority.
 - legacy `forecast()` may remain exported for compatibility; Forecast ViewModel/Card do not use it for workload/completion/confidence.
@@ -389,19 +438,19 @@ No Weekly Summary file, dependency manifest, workflow, deployment configuration,
 
 ---
 
-## 10. Re-review handoff
+## 11. Final re-review handoff
 
-Fresh expected handoff state after this docs-only refresh:
+Expected state after this docs-only refresh:
 
 ```text
 main = 78f042255fe46e9bbc69193e6ef47158442cdf03
 PR #10 = Draft / open / unmerged
 base SHA = 78f042255fe46e9bbc69193e6ef47158442cdf03
-literal source/test head = c5c2cc25ab6e8090b4368ddcf261778cc2279b62
-source/test CI #356 = GREEN
+literal source/test head = a6326d13b438d6cc93c59925740b293711f802fb
+source/test CI #359 = GREEN
 ```
 
-This evidence refresh must be exactly docs-only relative to `c5c2cc25ab6e8090b4368ddcf261778cc2279b62`, followed by one natural exact-head CI run. Fresh independent re-review must then inspect the exact evidence head rather than reusing the prior rejected verdict.
+This evidence refresh must be exactly docs-only relative to `a6326d13b438d6cc93c59925740b293711f802fb`, followed by one natural exact-head CI run. A fresh Independent Review must inspect the resulting evidence head and must not reuse either prior rejected verdict.
 
 Target disposition:
 
