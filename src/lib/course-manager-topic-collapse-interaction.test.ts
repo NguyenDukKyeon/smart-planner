@@ -16,7 +16,7 @@ const collapsibleHarness = vi.hoisted(() => ({
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
-  const useState = (<T,>(initialState: T | (() => T)) => {
+  const useState = (<T>(initialState: T | (() => T)) => {
     const initialValue =
       typeof initialState === "function" ? (initialState as () => T)() : initialState;
 
@@ -24,8 +24,7 @@ vi.mock("react", async (importOriginal) => {
       topicStateHarness.interceptNextState = false;
       const setState = (next: T | ((previous: T) => T)) => {
         const current = topicStateHarness.open as T;
-        const resolved =
-          typeof next === "function" ? (next as (previous: T) => T)(current) : next;
+        const resolved = typeof next === "function" ? (next as (previous: T) => T)(current) : next;
         topicStateHarness.open = Boolean(resolved);
       };
       return [topicStateHarness.open as T, setState];
