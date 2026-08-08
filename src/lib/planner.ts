@@ -579,9 +579,137 @@ export function findLessonById(id: string, subjects: Subject[] = SUBJECTS): Less
   return null;
 }
 
-// For "Lịch gốc": returns lessonId -> shifted ISO date. Uncompleted lessons across
-// all weeks are scheduled continuously starting from today, respecting the daily hours budget
-// (skipping Sundays) and automatically adapting when daily target hours change.
+export type ScheduleProjection = {
+  datesByLesson: Record<string, string>;
+  lastScheduledLessonDate?: string;
+  placedLessonIds: string[];
+  unplacedFixedLessonIds: string[];
+  unscheduledLessonIds: string[];
+  unprojectedLessonIds: string[];
+  projectionDays: number;
+  projectionComplete: boolean;
+  positiveCapacityDays: number;
+};
+
+export function buildScheduleProjection(args: {
+  subjects: Subject[];
+  completed: Record<string, string>;
+  reviewCompletions?: Record<string, string>;
+  meta: StudyMeta;
+  settings: PlannerSettings;
+  fromISO?: string;
+  currentDateISO?: string;
+  maxDays?: number;
+}): ScheduleProjection {
+  const fromISO = args.fromISO ?? todayISO();
+  const currentDateISO = args.currentDateISO ?? todayISO();
+  const unfinished = args.subjects.flatMap((subject) =>
+    subject.milestones.flatMap((milestone) =>
+      milestone.lessons.filter((lesson) => !args.completed[lesson.id]),
+    ),
+  );
+  const unscheduledLessonIds = unfinished
+    .filter((lesson) => !lesson.scheduledDate)
+    .map((lesson) => lesson.id)
+    .sort();
+  const schedulable = unfinished.filter((lesson) => Boolean(lesson.scheduledDate));
+  const schedulableIds = new Set(schedulable.map((lesson) => lesson.id));
+
+  if (schedulable.length === 0) {
+    return {
+      datesByLesson: {},
+      placedLessonIds: [],
+      unplacedFixedLessonIds: [],
+      unscheduledLessonIds,
+      unprojectedLessonIds: [],
+      projectionDays: 0,
+      projectionComplete: unscheduledLessonIds.length === 0,
+      positiveCapacityDays: 0,
+    };
+  }
+
+  const latestEligibilityISO = schedulable.reduce(
+    (latest, lesson) => (lesson.scheduledDate > latest ? lesson.scheduledDate : latest),
+    fromISO,
+  );
+  const daysToLatestEligibility = Math.max(0, daysBetweenISO(fromISO, latestEligibilityISO));
+  const minimumBound = Math.max(365, daysToLatestEligibility + unfinished.length * 2);
+  const bound = Math.min(3660, Math.max(0, args.maxDays ?? minimumBound));
+
+  const datesByLesson: Record<string, string> = {};
+  const consumed = new Set<string>();
+  const unplacedFixed = new Set<string>();
+  let projectionDays = 0;
+  let positiveCapacityDays = 0;
+
+  for (let dayOffset = 0; dayOffset < bound; dayOffset += 1) {
+    const dateISO = addDaysISO(fromISO, dayOffset);
+    const hours = resolveDailyCapacityHours({
+      dateISO,
+      currentDateISO,
+      settings: args.settings,
+    });
+    if (hours > 0) positiveCapacityDays += 1;
+
+    const queue = pickDayQueue({
+      subjects: args.subjects,
+      completed: args.completed,
+      reviewCompletions: args.reviewCompletions,
+      consumed,
+      meta: args.meta,
+      settings: args.settings,
+      dateISO,
+      hoursOverride: hours,
+      pinnedCompleted:
+        dateISO === currentDateISO
+          ? lessonsCompletedOn(args.subjects, args.completed, dateISO)
+          : undefined,
+    });
+
+    for (const lesson of queue.unplacedFixedLessons) {
+      if (schedulableIds.has(lesson.id)) unplacedFixed.add(lesson.id);
+    }
+    for (const lesson of queue.newLessons) {
+      if (!schedulableIds.has(lesson.id) || consumed.has(lesson.id)) continue;
+      consumed.add(lesson.id);
+      datesByLesson[lesson.id] = dateISO;
+    }
+
+    projectionDays = dayOffset + 1;
+    if (consumed.size + unplacedFixed.size >= schedulable.length) break;
+  }
+
+  const unplacedFixedLessonIds = [...unplacedFixed].sort();
+  const unprojectedLessonIds = schedulable
+    .filter((lesson) => !consumed.has(lesson.id) && !unplacedFixed.has(lesson.id))
+    .map((lesson) => lesson.id)
+    .sort();
+  const placedLessonIds = Object.keys(datesByLesson);
+  const projectionComplete =
+    unscheduledLessonIds.length === 0 &&
+    unplacedFixedLessonIds.length === 0 &&
+    unprojectedLessonIds.length === 0;
+  const lastScheduledLessonDate =
+    projectionComplete && placedLessonIds.length > 0
+      ? Object.values(datesByLesson).reduce((latest, dateISO) =>
+          dateISO > latest ? dateISO : latest,
+        )
+      : undefined;
+
+  return {
+    datesByLesson,
+    lastScheduledLessonDate,
+    placedLessonIds,
+    unplacedFixedLessonIds,
+    unscheduledLessonIds,
+    unprojectedLessonIds,
+    projectionDays,
+    projectionComplete,
+    positiveCapacityDays,
+  };
+}
+
+// For "Lịch gốc": compatibility view over the canonical full projection.
 export function buildShiftedSchedule(args: {
   subjects: Subject[];
   completed: Record<string, string>;
@@ -589,49 +717,11 @@ export function buildShiftedSchedule(args: {
   settings: PlannerSettings;
   fromISO?: string;
 }): Record<string, string> {
-  const from = args.fromISO ?? todayISO();
-  const out: Record<string, string> = {};
-
-  const uncompletedIds = allRemainingLessonIds(args.subjects, args.completed);
-  if (uncompletedIds.length === 0) return out;
-
-  const totalUncompleted = uncompletedIds.length;
-  const consumed = new Set<string>();
-  let dayOffset = 0;
-
-  while (consumed.size < totalUncompleted && dayOffset < 365) {
-    const dateISO = addDaysISO(from, dayOffset);
-
-    let hours: number;
-    if (dayOffset === 0) {
-      hours = args.settings.todayHours;
-    } else if (args.settings.dailyHours[dateISO] !== undefined) {
-      hours = args.settings.dailyHours[dateISO];
-    } else {
-      hours = args.settings.defaultDailyHours;
-    }
-
-    const queue = pickDayQueue({
-      subjects: args.subjects,
-      completed: args.completed,
-      consumed,
-      meta: args.meta,
-      settings: args.settings,
-      dateISO,
-      hoursOverride: hours,
-      pinnedCompleted:
-        dayOffset === 0 ? lessonsCompletedOn(args.subjects, args.completed, dateISO) : undefined,
-    });
-
-    for (const l of queue.newLessons) {
-      if (!consumed.has(l.id)) {
-        consumed.add(l.id);
-        out[l.id] = dateISO;
-      }
-    }
-
-    dayOffset++;
-  }
-
-  return out;
+  return buildScheduleProjection({
+    subjects: args.subjects,
+    completed: args.completed,
+    meta: args.meta,
+    settings: args.settings,
+    fromISO: args.fromISO,
+  }).datesByLesson;
 }
