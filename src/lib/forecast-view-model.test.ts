@@ -24,7 +24,7 @@ type Completion =
 type ViewModel = {
   defaultDailyHours: number;
   explicitCapacityOverrideCount: number;
-  sundayRestByDefault: true;
+  sundayRestByDefault: false;
   horizonWeeks: HorizonWeeks;
   horizonDays: 14 | 28 | 56 | 84;
   horizonEndISO: string;
@@ -481,7 +481,7 @@ describe("Forecast view model", () => {
     });
 
     expect(result.defaultDailyHours).toBe(2);
-    expect(result.sundayRestByDefault).toBe(true);
+    expect(result.sundayRestByDefault).toBe(false);
     expect(result.explicitCapacityOverrideCount).toBeGreaterThanOrEqual(1);
   });
 

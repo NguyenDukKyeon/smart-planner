@@ -54,7 +54,7 @@ describe("canonical daily capacity", () => {
     ).toBe(4);
   });
 
-  it("rests on Sunday when there is no explicit override", async () => {
+  it("uses default hours on Sunday when there is no explicit override", async () => {
     const resolveDailyCapacityHours = await loadResolver();
     expect(resolveDailyCapacityHours).toBeTypeOf("function");
     if (!resolveDailyCapacityHours) return;
@@ -65,7 +65,44 @@ describe("canonical daily capacity", () => {
         currentDateISO: "2026-08-08",
         settings: { ...DEFAULT_PLANNER_SETTINGS, defaultDailyHours: 6, dailyHours: {} },
       }),
+    ).toBe(6);
+  });
+
+  it("preserves an explicit zero-hour Sunday override", async () => {
+    const resolveDailyCapacityHours = await loadResolver();
+    expect(resolveDailyCapacityHours).toBeTypeOf("function");
+    if (!resolveDailyCapacityHours) return;
+
+    expect(
+      resolveDailyCapacityHours({
+        dateISO: "2026-08-09",
+        currentDateISO: "2026-08-08",
+        settings: {
+          ...DEFAULT_PLANNER_SETTINGS,
+          defaultDailyHours: 6,
+          dailyHours: { "2026-08-09": 0 },
+        },
+      }),
     ).toBe(0);
+  });
+
+  it("uses todayHours when the current day is Sunday", async () => {
+    const resolveDailyCapacityHours = await loadResolver();
+    expect(resolveDailyCapacityHours).toBeTypeOf("function");
+    if (!resolveDailyCapacityHours) return;
+
+    expect(
+      resolveDailyCapacityHours({
+        dateISO: "2026-08-09",
+        currentDateISO: "2026-08-09",
+        settings: {
+          ...DEFAULT_PLANNER_SETTINGS,
+          todayHours: 3,
+          defaultDailyHours: 6,
+          dailyHours: { "2026-08-09": 9 },
+        },
+      }),
+    ).toBe(3);
   });
 
   it("uses default hours on an ordinary weekday", async () => {

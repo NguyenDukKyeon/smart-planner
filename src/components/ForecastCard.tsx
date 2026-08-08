@@ -76,7 +76,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
       ? `Có ${vm.outsideHorizonLessons} bài chưa hoàn thành nằm ngoài phạm vi ${vm.horizonWeeks} tuần đang xem.`
       : `Tất cả bài chưa hoàn thành đều nằm trong phạm vi ${vm.horizonWeeks} tuần đang xem.`;
 
-  const capacityText = `Theo lịch công suất hiện tại · mặc định ${formatHours(vm.defaultDailyHours)} giờ/ngày · Chủ nhật nghỉ nếu không đặt riêng.`;
+  const capacityText = `Theo lịch công suất hiện tại · mặc định ${formatHours(vm.defaultDailyHours)} giờ/ngày cho cả 7 ngày.`;
   const capacityOverrideText =
     vm.explicitCapacityOverrideCount > 0
       ? ` Có ${vm.explicitCapacityOverrideCount} ngày đặt công suất riêng được tính vào dự báo.`

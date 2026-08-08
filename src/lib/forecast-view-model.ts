@@ -28,7 +28,7 @@ export type ForecastViewModel = {
   defaultDailyHours: number;
   hoursPerDay: number;
   explicitCapacityOverrideCount: number;
-  sundayRestByDefault: true;
+  sundayRestByDefault: false;
   horizonWeeks: ForecastHorizonWeeks;
   horizonDays: 14 | 28 | 56 | 84;
   horizonEndISO: string;
@@ -149,7 +149,7 @@ export function selectForecastCompletion(params: {
     defaultDailyHours,
     hoursPerDay: defaultDailyHours,
     explicitCapacityOverrideCount,
-    sundayRestByDefault: true as const,
+    sundayRestByDefault: false as const,
     totalNewHours,
     totalReviewHours,
     totalWorkloadHours: Math.round((totalNewHours + totalReviewHours) * 10) / 10,

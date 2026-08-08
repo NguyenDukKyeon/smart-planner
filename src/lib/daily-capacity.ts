@@ -1,4 +1,3 @@
-import { isSundayISO } from "./date-utils";
 import type { PlannerSettings } from "./planner";
 
 export function resolveDailyCapacityHours(params: {
@@ -10,6 +9,5 @@ export function resolveDailyCapacityHours(params: {
   if (Object.prototype.hasOwnProperty.call(params.settings.dailyHours, params.dateISO)) {
     return params.settings.dailyHours[params.dateISO];
   }
-  if (isSundayISO(params.dateISO)) return 0;
   return params.settings.defaultDailyHours;
 }
