@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the Forecast 2/4/8/12-week selector scope the displayed scheduled lesson count and workload to the selected window while keeping the canonical whole-roadmap completion milestone invariant.
+**Goal:** Make the Forecast 2/4/8/12-week selector scope displayed lesson/workload metrics to the selected window while keeping the canonical whole-roadmap completion milestone invariant.
 
-**Architecture:** Keep `buildFlexiblePlan()` as the sole selected-window scheduler and keep `selectForecastCompletion()` as the whole-roadmap completion/workload compatibility boundary. Extend `selectForecastViewModel()` with explicit horizon-scoped metrics derived from the already-built visible plan, then migrate `ForecastCard` to those scoped fields. Do not change scheduler placement, persistence, Roadmap, or Flexible Schedule behavior.
+**Architecture:** `buildFlexiblePlan()` remains the sole selected-window scheduler. `selectForecastCompletion()` remains the whole-roadmap compatibility/completion boundary. `selectForecastViewModel()` will summarize the already-built `visiblePlan` into explicit horizon fields; `ForecastCard` will render those fields.
 
 **Tech Stack:** TypeScript, React, Vitest, ReactDOM server rendering, GitHub Actions.
 
@@ -12,25 +12,24 @@
 
 - Exact predecessor: `main@3444c5d54207ec16de90988958755da62507af11`.
 - Branch: `fix/forecast-horizon-window`.
-- Horizon options remain exactly `2 | 4 | 8 | 12` weeks => `14 | 28 | 56 | 84` calendar days.
-- `completion` remains a whole-roadmap canonical projection fact and must be invariant across horizon changes for identical scheduling state.
-- Existing global compatibility fields (`remainingLessons`, `totalNewHours`, `totalReviewHours`, `totalWorkloadHours`) retain their current whole-roadmap semantics.
-- Add explicit horizon fields; `ForecastCard` must use those fields for lesson/workload tiles.
-- `horizonScheduledLessons` counts unique unfinished lessons actually placed in `visiblePlan[*].queue.newLessons`.
-- Completed pinned lessons do not count toward horizon scheduled lessons or horizon new workload.
-- `horizonUnplacedFixedLessons` counts unique unfinished lessons in `visiblePlan[*].queue.unplacedFixedLessons` and is not scheduled workload.
-- `horizonNewHours` sums canonical `plannedDurationMinutes` for unique unfinished scheduled lessons only.
-- `horizonReviewHours` sums scheduler-provided `minutes` for unique uncompleted review tasks actually present in the selected visible plan; do not use the global `35%` estimate.
-- `horizonWorkloadHours = horizonNewHours + horizonReviewHours` under the existing one-decimal display rounding policy.
-- Horizon selection remains transient UI state and does not mutate planner settings or persistence.
-- Sunday remains a normal default-capacity day under the already-merged seven-day capacity policy.
-- No scheduler placement algorithm change, Roadmap change, Flexible Schedule change, persistence/schema change, dependency change, CI/deployment change, Weekly Summary change, or P2 work.
-- Use natural GitHub Actions as executable RED/GREEN evidence.
-- Do not amend, rebase, squash, force-push, or rewrite history.
+- Horizon mapping remains `2|4|8|12` weeks => `14|28|56|84` calendar days.
+- Existing global fields (`remainingLessons`, `totalNewHours`, `totalReviewHours`, `totalWorkloadHours`) keep their whole-roadmap semantics.
+- Add explicit scoped fields: `totalRemainingLessons`, `horizonScheduledLessons`, `horizonNewHours`, `horizonReviewHours`, `horizonWorkloadHours`, `horizonUnplacedFixedLessons`.
+- Completion is whole-roadmap and invariant across horizon changes for identical state.
+- Scoped new work comes only from unique unfinished `visiblePlan[*].queue.newLessons`, using `plannedDurationMinutes`.
+- Completed pinned lessons do not count as scoped new work.
+- Scoped review work comes only from unique uncompleted `visiblePlan[*].queue.reviewLessons`, using scheduler-provided `minutes`; do not use global 35% review estimate.
+- Unplaced fixed lessons are counted separately and never as scheduled workload.
+- `horizonWorkloadHours = horizonNewHours + horizonReviewHours` under existing one-decimal rounding.
+- Horizon state remains transient; no planner-setting mutation or persistence change.
+- Sunday remains a normal default-capacity day.
+- No scheduler placement, Roadmap, Flexible Schedule, persistence/schema, dependency, CI/deployment, Weekly Summary, or P2 changes.
+- Natural GitHub Actions are RED/GREEN evidence.
+- No amend/rebase/squash/force-push/history rewrite.
 
 ---
 
-### Task 1: Add horizon-scoped Forecast read-model metrics
+### Task 1: Horizon-scoped read model
 
 **Files:**
 - Create: `src/lib/forecast-horizon-window-regression.test.ts`
@@ -38,67 +37,71 @@
 - Modify: `src/lib/forecast-view-model.ts`
 
 **Interfaces:**
-- Consumes: existing `buildFlexiblePlan(): PlanDay[]`, `summarizeUnscheduledWork()`, `selectForecastCompletion()`.
-- Produces these new `ForecastViewModel` fields:
 
 ```ts
-totalRemainingLessons: number;
-horizonScheduledLessons: number;
-horizonNewHours: number;
-horizonReviewHours: number;
-horizonWorkloadHours: number;
-horizonUnplacedFixedLessons: number;
+type HorizonFields = {
+  totalRemainingLessons: number;
+  horizonScheduledLessons: number;
+  horizonNewHours: number;
+  horizonReviewHours: number;
+  horizonWorkloadHours: number;
+  horizonUnplacedFixedLessons: number;
+};
 ```
 
-- Keeps existing `remainingLessons`, `totalNewHours`, `totalReviewHours`, `totalWorkloadHours`, `completion`, confidence and evidence fields unchanged in meaning.
+- [ ] **Step 1: Write a behavioral RED contract that still typechecks before production fields exist**
 
-- [ ] **Step 1: Add RED type/behavior coverage to the focused horizon regression file**
-
-Create `src/lib/forecast-horizon-window-regression.test.ts` with deterministic fixtures that call `selectForecastViewModel()` at a fixed `fromISO`.
-
-Required first RED cases:
+In `src/lib/forecast-horizon-window-regression.test.ts`, import the module namespace and cast the selector through `unknown`, following the repo's current Forecast test pattern:
 
 ```ts
-it("scopes lesson count and new workload to the selected horizon while preserving global completion", () => {
-  const subjects = makeSubjects({ count: 40, minutes: 120, scheduledDate: "2026-08-08" });
-  const state = makeState({ hours: 4 });
+import * as forecastModule from "./forecast-view-model";
 
-  const twoWeeks = selectForecastViewModel({
-    subjects,
-    state,
-    horizonWeeks: 2,
-    fromISO: "2026-08-08",
-  });
-  const twelveWeeks = selectForecastViewModel({
-    subjects,
-    state,
-    horizonWeeks: 12,
-    fromISO: "2026-08-08",
-  });
+type HorizonViewModel = {
+  remainingLessons: number;
+  totalNewHours: number;
+  outsideHorizonLessons: number;
+  completion: unknown;
+  totalRemainingLessons: number;
+  horizonScheduledLessons: number;
+  horizonNewHours: number;
+  horizonReviewHours: number;
+  horizonWorkloadHours: number;
+  horizonUnplacedFixedLessons: number;
+};
 
-  expect(twoWeeks.totalRemainingLessons).toBe(40);
-  expect(twoWeeks.horizonScheduledLessons).toBeLessThan(40);
-  expect(twelveWeeks.horizonScheduledLessons).toBeGreaterThanOrEqual(
-    twoWeeks.horizonScheduledLessons,
-  );
-  expect(twelveWeeks.horizonNewHours).toBeGreaterThanOrEqual(twoWeeks.horizonNewHours);
-  expect(twelveWeeks.outsideHorizonLessons).toBeLessThanOrEqual(twoWeeks.outsideHorizonLessons);
-  expect(twelveWeeks.completion).toEqual(twoWeeks.completion);
-});
+type Selector = (params: {
+  subjects: Subject[];
+  state: ProgressState;
+  horizonWeeks: 2 | 4 | 8 | 12;
+  fromISO?: string;
+}) => HorizonViewModel;
+
+const selectForecastViewModel = (
+  forecastModule as unknown as { selectForecastViewModel: Selector }
+).selectForecastViewModel;
 ```
 
-Add a planned-duration assertion that computes the expected two-week scheduled IDs from `buildFlexiblePlan()` and verifies the selector uses those exact unique unfinished lessons rather than global totals:
+This is required so RED is runtime behavior, not a TypeScript compile failure.
+
+- [ ] **Step 2: Add core window RED cases**
+
+Use deterministic helpers `makeSubjects()`, `makeState()` and fixed `fromISO = "2026-08-08"`.
 
 ```ts
-const visiblePlan = buildFlexiblePlan({
-  subjects,
-  completed: state.completedLessons,
-  reviewCompletions: state.reviewCompletions,
-  meta: state.studyMeta,
-  settings: state.plannerSettings,
-  fromISO: "2026-08-08",
-  horizonDays: 14,
-});
+const twoWeeks = selectForecastViewModel({ subjects, state, horizonWeeks: 2, fromISO });
+const twelveWeeks = selectForecastViewModel({ subjects, state, horizonWeeks: 12, fromISO });
+
+expect(twoWeeks.totalRemainingLessons).toBe(40);
+expect(twoWeeks.horizonScheduledLessons).toBeLessThan(40);
+expect(twelveWeeks.horizonScheduledLessons).toBeGreaterThanOrEqual(twoWeeks.horizonScheduledLessons);
+expect(twelveWeeks.horizonNewHours).toBeGreaterThanOrEqual(twoWeeks.horizonNewHours);
+expect(twelveWeeks.outsideHorizonLessons).toBeLessThanOrEqual(twoWeeks.outsideHorizonLessons);
+expect(twelveWeeks.completion).toEqual(twoWeeks.completion);
+```
+
+Build the same 14-day `visiblePlan` in the test and compute exact unique unfinished scheduled IDs:
+
+```ts
 const scheduled = new Map<string, number>();
 for (const day of visiblePlan) {
   for (const lesson of day.queue.newLessons) {
@@ -107,13 +110,14 @@ for (const day of visiblePlan) {
     }
   }
 }
-const expectedMinutes = [...scheduled.values()].reduce((sum, minutes) => sum + minutes, 0);
+const expectedMinutes = [...scheduled.values()].reduce((sum, value) => sum + value, 0);
 expect(twoWeeks.horizonScheduledLessons).toBe(scheduled.size);
 expect(twoWeeks.horizonNewHours).toBe(Math.round((expectedMinutes / 60) * 10) / 10);
-expect(twoWeeks.totalNewHours).toBeGreaterThanOrEqual(twoWeeks.horizonNewHours);
 ```
 
-Add a whole-roadmap real-data-style regression using the existing 352-lesson distribution (`345×120`, `6×90`, `1×30`) with 11 completed lessons. It must prove the 2-week scoped values are not the whole-roadmap values:
+- [ ] **Step 3: Add real-roadmap RED**
+
+Reproduce the existing 352-lesson distribution (`345×120`, `6×90`, `1×30`) and complete the first 11 120-minute lessons. Assert:
 
 ```ts
 expect(twoWeeks.totalRemainingLessons).toBe(341);
@@ -123,142 +127,87 @@ expect(twoWeeks.horizonScheduledLessons).toBeLessThan(341);
 expect(twoWeeks.horizonNewHours).toBeLessThan(677.5);
 ```
 
-- [ ] **Step 2: Add RED edge coverage for reviews, pinned completions, and unplaced fixed work**
+Also compare 2 weeks with 12 weeks and assert completion equality.
 
-In the same focused test file add three deterministic tests:
+- [ ] **Step 4: Add edge RED cases**
 
-1. Completed pinned lesson exclusion:
+Pinned completion: complete one lesson exactly on `fromISO`; verify it may appear in the scheduler plan but does not inflate scoped count/workload.
 
-```ts
-expect(result.horizonScheduledLessons).toBe(result.totalRemainingLessons);
-expect(result.horizonNewHours).toBe(/* planned minutes of unfinished scheduled lessons only */);
-```
-
-The fixture must include a lesson completed exactly on `fromISO` so `buildFlexiblePlan()` can pin it for visibility; the selector must still exclude it from horizon scheduled count/workload.
-
-2. Review task scope:
-
-Use a lesson completed one day before `fromISO`, so the scheduler produces the age-1 review task (`15` minutes) on `fromISO`. Assert:
+Review scope: complete one lesson on `2026-08-07`; with `fromISO = 2026-08-08`, the age-1 review is 15 minutes:
 
 ```ts
 expect(result.horizonReviewHours).toBe(0.3);
 ```
 
-Then mark `review:<lessonId>:<fromISO>` completed in `state.reviewCompletions` and assert the same view model reports:
+Then set:
 
 ```ts
-expect(result.horizonReviewHours).toBe(0);
+state.reviewCompletions[`review:${lessonId}:2026-08-08`] = "2026-08-08";
 ```
 
-3. Unplaced fixed lesson:
+and expect `horizonReviewHours === 0`.
 
-Create one unfinished `fixed` lesson of `180` planned minutes on a date with only `1` hour capacity. Assert:
+Unplaced fixed: one `fixed` 180-minute lesson with 1-hour capacity:
 
 ```ts
 expect(result.horizonUnplacedFixedLessons).toBe(1);
 expect(result.horizonScheduledLessons).toBe(0);
 expect(result.horizonNewHours).toBe(0);
-```
-
-Also assert:
-
-```ts
 expect(result.horizonWorkloadHours).toBe(
   Math.round((result.horizonNewHours + result.horizonReviewHours) * 10) / 10,
 );
 ```
 
-- [ ] **Step 3: Update the existing ForecastViewModel test-local type contract**
+- [ ] **Step 5: Extend the existing test-local Forecast ViewModel contract**
 
-In `src/lib/forecast-view-model.test.ts`, extend the test-local `ViewModel` type with exactly:
+Add the six horizon fields to the local `ViewModel` type in `forecast-view-model.test.ts`. Because that file already casts the module through a local selector contract, this remains behavioral RED. Extend its current horizon monotonicity test with horizon count/new-hours monotonicity and `completion` equality.
 
-```ts
-totalRemainingLessons: number;
-horizonScheduledLessons: number;
-horizonNewHours: number;
-horizonReviewHours: number;
-horizonWorkloadHours: number;
-horizonUnplacedFixedLessons: number;
-```
+Do not alter existing whole-roadmap assertions (`341`, `677.5h`).
 
-Keep the existing global fields in that type. Extend the current horizon monotonicity test so it also checks:
+- [ ] **Step 6: Commit test-only RED and obtain natural CI**
 
-```ts
-expect(longView.horizonScheduledLessons).toBeGreaterThanOrEqual(
-  shortView.horizonScheduledLessons,
-);
-expect(longView.horizonNewHours).toBeGreaterThanOrEqual(shortView.horizonNewHours);
-expect(longView.completion).toEqual(shortView.completion);
-```
+No production file changes. Valid RED requires typecheck/lint PASS and test failures caused by missing/undefined horizon behavior. Formatting/type-only failures do not count.
 
-Do not change the existing real-roadmap assertions that prove global workload is `341 / 677.5h`; those remain compatibility facts.
+- [ ] **Step 7: Implement the minimal pure horizon summarizer**
 
-- [ ] **Step 4: Commit the test-only RED**
-
-Commit only the test changes. Do not modify `src/lib/forecast-view-model.ts` yet.
-
-Expected natural GitHub Actions result:
-
-```text
-typecheck PASS or test-local dynamic contract compilation PASS
-lint PASS
-tests FAIL only because the new horizon fields/behavior do not exist yet
-```
-
-If formatting/type errors prevent tests from running, fix only those errors and obtain a behavioral RED before production changes.
-
-- [ ] **Step 5: Implement the minimal horizon summarizer in `forecast-view-model.ts`**
-
-Extend `ForecastViewModel` with the six new fields.
-
-Add one internal pure helper with this responsibility:
+In `forecast-view-model.ts`, extend `ForecastViewModel` with the six fields and add:
 
 ```ts
 function summarizeForecastHorizon(params: {
   visiblePlan: ReturnType<typeof buildFlexiblePlan>;
   completedLessons: Record<string, string>;
-}): {
-  scheduledLessons: number;
-  newMinutes: number;
-  reviewMinutes: number;
-  unplacedFixedLessons: number;
-}
-```
+}) {
+  const scheduled = new Map<string, number>();
+  const unplacedFixed = new Set<string>();
+  const reviews = new Map<string, number>();
 
-Implementation rules:
-
-```ts
-const scheduledLessons = new Map<string, number>();
-const unplacedFixedLessonIds = new Set<string>();
-const reviewTasks = new Map<string, number>();
-
-for (const day of params.visiblePlan) {
-  for (const lesson of day.queue.newLessons) {
-    if (params.completedLessons[lesson.id]) continue;
-    if (!scheduledLessons.has(lesson.id)) {
-      scheduledLessons.set(lesson.id, lesson.plannedDurationMinutes);
+  for (const day of params.visiblePlan) {
+    for (const lesson of day.queue.newLessons) {
+      if (params.completedLessons[lesson.id]) continue;
+      if (!scheduled.has(lesson.id)) scheduled.set(lesson.id, lesson.plannedDurationMinutes);
+    }
+    for (const lesson of day.queue.unplacedFixedLessons) {
+      if (!params.completedLessons[lesson.id]) unplacedFixed.add(lesson.id);
+    }
+    for (const review of day.queue.reviewLessons) {
+      if (!review.completed && !reviews.has(review.taskId)) {
+        reviews.set(review.taskId, review.minutes);
+      }
     }
   }
 
-  for (const lesson of day.queue.unplacedFixedLessons) {
-    if (params.completedLessons[lesson.id]) continue;
-    unplacedFixedLessonIds.add(lesson.id);
-  }
-
-  for (const review of day.queue.reviewLessons) {
-    if (review.completed) continue;
-    if (!reviewTasks.has(review.taskId)) {
-      reviewTasks.set(review.taskId, review.minutes);
-    }
-  }
+  return {
+    scheduledLessons: scheduled.size,
+    newMinutes: [...scheduled.values()].reduce((sum, value) => sum + value, 0),
+    reviewMinutes: [...reviews.values()].reduce((sum, value) => sum + value, 0),
+    unplacedFixedLessons: unplacedFixed.size,
+  };
 }
 ```
 
-Return sums from those maps/sets. Do not derive horizon work from `base.totalNewHours` or the global 35% review estimate.
+- [ ] **Step 8: Assemble scoped fields from the already-built visible plan**
 
-- [ ] **Step 6: Assemble new horizon fields from the already-built `visiblePlan`**
-
-Inside `selectForecastViewModel()` after `visiblePlan` and `visibility` are available:
+After `visiblePlan` and `visibility`:
 
 ```ts
 const horizon = summarizeForecastHorizon({
@@ -276,49 +225,32 @@ totalRemainingLessons: base.remainingLessons,
 horizonScheduledLessons: horizon.scheduledLessons,
 horizonNewHours,
 horizonReviewHours,
-horizonWorkloadHours:
-  Math.round((horizonNewHours + horizonReviewHours) * 10) / 10,
+horizonWorkloadHours: Math.round((horizonNewHours + horizonReviewHours) * 10) / 10,
 horizonUnplacedFixedLessons: horizon.unplacedFixedLessons,
 ```
 
-Keep all spread `...base` global fields unchanged. Keep `completion` from `selectForecastCompletion()`; do not recompute it from the horizon plan.
+Keep `...base` unchanged; completion is not recomputed from horizon.
 
-- [ ] **Step 7: Obtain full Task 1 GREEN**
+- [ ] **Step 9: Obtain full Task 1 GREEN**
 
-Natural GitHub Actions must pass the full repository gate on the exact Task 1 source/test head:
-
-```text
-typecheck
-lint
-tests
-build
-clean-tree
-```
-
-Record exact head SHA, workflow run ID, job ID, test file count, test count, and PR merge ref for evidence.
+Natural exact-head CI must PASS typecheck/lint/tests/build/clean-tree. Record exact head/run/job/test counts/merge ref.
 
 ---
 
-### Task 2: Make ForecastCard visibly use the selected window
+### Task 2: Horizon-aware ForecastCard
 
 **Files:**
 - Modify: `src/lib/forecast-card-runtime.test.ts`
 - Modify: `src/components/ForecastCard.tsx`
 
-**Interfaces:**
-- Consumes Task 1 fields: `totalRemainingLessons`, `horizonScheduledLessons`, `horizonNewHours`, `horizonReviewHours`, `horizonWorkloadHours`, `horizonUnplacedFixedLessons`.
-- Keeps `completion`, confidence, subject completion progress, capacity controls, and horizon-local state ownership unchanged.
+- [ ] **Step 1: Write runtime RED before JSX changes**
 
-- [ ] **Step 1: Write runtime RED assertions before changing JSX**
-
-Update the first runtime test to require the new copy and exact scoped values from the selector:
+Require:
 
 ```ts
 expect(html).toContain("Mốc học hết toàn bộ bài mới");
 expect(html).toContain("Bài trong phạm vi");
-expect(html).toContain(
-  `${expected.horizonScheduledLessons} / ${expected.totalRemainingLessons} bài`,
-);
+expect(html).toContain(`${expected.horizonScheduledLessons} / ${expected.totalRemainingLessons} bài`);
 expect(html).toContain("Bài mới trong phạm vi");
 expect(html).toContain("Ôn tập trong phạm vi");
 expect(html).toContain("Khối lượng trong phạm vi");
@@ -327,80 +259,37 @@ expect(html).toContain(
 );
 ```
 
-Remove assertions that require the old unscoped tile labels:
+Keep capacity/confidence/Sunday assertions. Update the all-fit test to require:
 
 ```text
-Bài còn lại
-Bài mới
-Ôn tập
-Tổng khối lượng
-Mốc học hết bài mới theo lịch hiện tại
-```
-
-Do not remove the capacity, confidence, selected-horizon, or Sunday-seven-day assertions.
-
-Extend the planned-workload runtime test so it compares rendered scoped values with `selectForecastViewModel({ horizonWeeks: 2 })` instead of assuming the global workload tile is the user-facing value.
-
-Add/adjust the all-fit test to require neutral contextual copy:
-
-```text
-Trong 2 tuần: X/Y bài được xếp.
 Toàn bộ bài còn lại đã được biểu diễn trong phạm vi đang xem.
 ```
 
-Add one runtime test for a fixed lesson that cannot fit capacity and require distinct copy containing:
+Add a fixed-over-capacity fixture requiring copy containing:
 
 ```text
 bài cố định nằm trong phạm vi nhưng chưa xếp được
 ```
 
-- [ ] **Step 2: Commit the Task 2 test-only RED**
+- [ ] **Step 2: Commit runtime test-only RED**
 
-Commit only `src/lib/forecast-card-runtime.test.ts` changes. Expected behavioral RED: selector fields exist from Task 1, but rendered HTML still contains the old labels/global workload fields.
+Selector is already GREEN from Task 1; expected failures are old ForecastCard copy/global metric rendering only.
 
-- [ ] **Step 3: Change ForecastCard metrics to the horizon fields**
+- [ ] **Step 3: Migrate the five summary tiles**
 
-In `ForecastCard.tsx` change only the Forecast summary semantics/copy.
-
-Completion tile:
+Use exactly:
 
 ```tsx
-<div> Mốc học hết toàn bộ bài mới </div>
+Mốc học hết toàn bộ bài mới
+Bài trong phạm vi -> {vm.horizonScheduledLessons} / {vm.totalRemainingLessons} bài
+Bài mới trong phạm vi -> formatHours(vm.horizonNewHours)
+Ôn tập trong phạm vi -> formatHours(vm.horizonReviewHours)
+Khối lượng trong phạm vi -> formatHours(vm.horizonWorkloadHours)
 ```
 
-Lesson tile:
+Keep capacity, horizon, confidence, subject progress, and `shiftedDates` compatibility behavior unchanged.
 
-```tsx
-<div>Bài trong phạm vi</div>
-<div>{vm.horizonScheduledLessons} / {vm.totalRemainingLessons} bài</div>
-```
-
-New workload tile:
-
-```tsx
-<div>Bài mới trong phạm vi</div>
-<div>{formatHours(vm.horizonNewHours)} giờ</div>
-```
-
-Review tile:
-
-```tsx
-<div>Ôn tập trong phạm vi</div>
-<div>{formatHours(vm.horizonReviewHours)} giờ</div>
-```
-
-Total tile:
-
-```tsx
-<div>Khối lượng trong phạm vi</div>
-<div>{formatHours(vm.horizonWorkloadHours)} giờ</div>
-```
-
-Do not change the capacity, horizon, confidence, or per-subject progress tiles.
-
-- [ ] **Step 4: Make outside-horizon feedback explain what the selector changed**
-
-Replace the current `outsideHorizonText` with deterministic scoped/total context:
+- [ ] **Step 4: Replace feedback copy with scoped/total context**
 
 ```ts
 const horizonPlacementText = `Trong ${vm.horizonWeeks} tuần: ${vm.horizonScheduledLessons}/${vm.totalRemainingLessons} bài được xếp.`;
@@ -414,36 +303,24 @@ const unplacedFixedText =
     : "";
 ```
 
-Render `outsideHorizonText` followed by `unplacedFixedText` in the existing feedback card. Keep the visual treatment neutral/amber according to existing `outsideHorizonLessons` behavior; do not redesign the component.
+Render both messages in the existing feedback card. No visual redesign.
 
-- [ ] **Step 5: Obtain full Task 2 GREEN**
+- [ ] **Step 5: Obtain full Task 2 GREEN and freeze source/test head**
 
-Natural GitHub Actions must pass the full repository gate on the exact Task 2 source/test head. Record exact head, run/job IDs, test counts, and merge ref. Freeze production/test code after this GREEN.
+Natural CI must PASS the full gate. Record exact evidence values. No production/test changes after this head unless Independent Review rejects it.
 
 ---
 
-### Task 3: Evidence and independent acceptance
+### Task 3: Evidence and Independent Review
 
 **Files:**
 - Create: `docs/superpowers/evidence/2026-08-08-smart-planner-forecast-horizon-window-completion.md`
 
-**Interfaces:**
-- Consumes the final source/test head and natural GitHub Actions evidence from Tasks 1–2.
-- Produces a docs-only audit capsule; no production/test edits are allowed after the source/test head is frozen unless Independent Review rejects it and a new RED→GREEN correction cycle is opened.
+- [ ] **Step 1: Scope audit**
 
-- [ ] **Step 1: Audit predecessor-to-source/test scope**
-
-Compare exact predecessor:
+Predecessor-to-source/test diff may contain only the approved spec/plan and these implementation paths:
 
 ```text
-3444c5d54207ec16de90988958755da62507af11
-```
-
-to the final source/test head. Expected package paths only:
-
-```text
-docs/superpowers/specs/2026-08-08-smart-planner-forecast-horizon-window-design.md
-docs/superpowers/plans/2026-08-08-smart-planner-forecast-horizon-window.md
 src/lib/forecast-view-model.ts
 src/lib/forecast-view-model.test.ts
 src/lib/forecast-horizon-window-regression.test.ts
@@ -451,53 +328,26 @@ src/components/ForecastCard.tsx
 src/lib/forecast-card-runtime.test.ts
 ```
 
-No scheduler placement production file should change.
+No scheduler placement production file may change.
 
-- [ ] **Step 2: Create the evidence capsule as exactly one docs-only commit after frozen source/test head**
+- [ ] **Step 2: Create one docs-only evidence commit after frozen source/test head**
 
-Evidence must record:
+Record exact predecessor, PR, valid RED/GREEN heads/runs/jobs/merge refs/test counts, real-roadmap scoped-vs-global proof, horizon-invariant completion proof, review/pinned/unplaced proof, and source/test-vs-evidence head distinction.
 
-- exact predecessor;
-- branch and PR number;
-- approved spec and plan paths;
-- each valid behavioral RED and GREEN with exact head/run/job/merge-ref;
-- discarded formatting/type-only runs separately if any;
-- final test counts;
-- proof that 2-week scoped metrics are smaller than whole-roadmap metrics on the 352/341 real-data-style fixture;
-- proof that completion is invariant across 2/4/8/12 weeks;
-- proof that review workload uses scheduled uncompleted review tasks;
-- proof that completed pinned lessons and unplaced fixed lessons are excluded from scheduled horizon workload;
-- predecessor-to-final source/test diff scope;
-- final source/test head and evidence head distinction.
+- [ ] **Step 3: Obtain natural exact evidence-head CI GREEN**
 
-- [ ] **Step 3: Obtain exact evidence-head natural CI GREEN**
-
-The evidence commit must be followed by natural PR CI on the exact evidence head. Full gate must pass.
+Full gate: typecheck/lint/tests/build/clean-tree.
 
 - [ ] **Step 4: Fresh Independent Review**
 
-Fresh-read the exact evidence head and verify at minimum:
+Verify `main` still equals predecessor, PR Draft/open/unmerged, no unresolved threads, scoped metrics derive from `visiblePlan`, completion is horizon-invariant, review completion filtering works, pinned completed lessons are excluded, unplaced fixed lessons are separate, ForecastCard no longer presents global workload as selected-window workload, and exact evidence-head CI is GREEN.
 
-```text
-main still equals the exact predecessor
-PR remains Draft/open/unmerged
-no unresolved review threads
-completion invariant across horizon choices
-horizon lesson/workload values derive from visiblePlan
-review scope excludes completed tasks
-pinned completed lessons are excluded
-unplaced fixed lessons are separate
-ForecastCard uses horizon fields, not global workload fields
-outside-horizon copy contains scoped/total context
-CI is GREEN on exact evidence head
-```
+If any Important/Critical finding exists: reject and open a new test-only RED correction cycle.
 
-If any Important/Critical finding exists, post rejection and return to a new test-only RED cycle. Do not patch without RED.
-
-If clean, post acceptance:
+If clean, post:
 
 ```text
 FORECAST HORIZON WINDOW IMPLEMENTED / ACCEPTED / NOT_MERGED
 ```
 
-Keep the PR Draft and unmerged until separate merge authorization.
+Keep PR Draft/unmerged until separate merge authorization.
