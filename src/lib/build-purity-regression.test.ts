@@ -31,13 +31,16 @@ describe("build purity", () => {
     expect(packageJson.scripts.lint).toBe("eslint .");
   });
 
-  test("removes obsolete source-patching files", async () => {
+  test("removes obsolete source-patching and intermediate implementation files", async () => {
     for (const fileName of legacyPatchFiles) {
       await expect(access(new URL(`../../scripts/${fileName}`, import.meta.url))).rejects.toThrow();
     }
 
     await expect(
       access(new URL("../../scripts/templates/FlexiblePlanner.tsx", import.meta.url)),
+    ).rejects.toThrow();
+    await expect(
+      access(new URL("../components/CourseManagerModalContent.tsx", import.meta.url)),
     ).rejects.toThrow();
   });
 
@@ -50,16 +53,40 @@ describe("build purity", () => {
       new URL("../components/CourseManagerModal.tsx", import.meta.url),
       "utf8",
     );
+    const lessonRowSource = await readFile(
+      new URL("../components/course-manager/LessonRow.tsx", import.meta.url),
+      "utf8",
+    );
+    const topicSectionSource = await readFile(
+      new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
+      "utf8",
+    );
+    const reorderSource = await readFile(
+      new URL("../components/course-manager/useLessonReorder.ts", import.meta.url),
+      "utf8",
+    );
     const routeSource = await readFile(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
-    expect(plannerSource).toContain("useScheduleTransactions");
+    expect(plannerSource).toContain("scheduleTransactions: ScheduleTransactionController");
     expect(plannerSource).toContain("buildMoveLessonDateCandidate");
     expect(plannerSource).toContain("unplacedFixedLessons");
     expect(plannerSource).toContain("application/x-smart-lesson-id");
     expect(plannerSource).not.toContain("type UndoEntry =");
     expect(plannerSource).not.toContain("setUndoStack");
-    expect(courseManagerSource).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
-    expect(courseManagerSource).toContain("draggable={false}");
-    expect(routeSource).toContain("transactionAdapters={scheduleTransactionAdapters}");
+
+    expect(courseManagerSource).toContain("scheduleTransactions.executeMutation");
+    expect(courseManagerSource).toContain("<LessonRow");
+    expect(courseManagerSource).toContain("<TopicSection");
+    expect(lessonRowSource).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
+    expect(lessonRowSource).toContain("application/x-smart-lesson-id");
+    expect(lessonRowSource).toContain("draggable={false}");
+    expect(topicSectionSource).toContain("Chèn phía trên");
+    expect(topicSectionSource).toContain("Chèn phía dưới");
+    expect(topicSectionSource).toContain("data-course-scroll-container");
+    expect(reorderSource).toContain("export function autoScrollDuringLessonDrag");
+
+    expect(routeSource.match(/useScheduleTransactions\(/g)).toHaveLength(1);
+    expect(routeSource.match(/scheduleTransactions=\{scheduleTransactions\}/g)).toHaveLength(2);
+    expect(routeSource).not.toContain("transactionAdapters={scheduleTransactionAdapters}");
   });
 });

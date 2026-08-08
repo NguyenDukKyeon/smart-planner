@@ -8,7 +8,7 @@ describe("Flexible schedule UX", () => {
       "utf8",
     );
     const hookSource = await fs.readFile(
-      new URL("../components/flexible-planner/useScheduleTransactions.ts", import.meta.url),
+      new URL("../components/schedule/useScheduleTransactions.ts", import.meta.url),
       "utf8",
     );
     const moveDialogSource = await fs.readFile(
@@ -27,7 +27,7 @@ describe("Flexible schedule UX", () => {
     expect(plannerSource).toContain("unplacedFixedLessons");
     expect(plannerSource).toContain("lùi một ngày");
     expect(plannerSource).toContain("tiến một ngày");
-    expect(plannerSource).toContain("useScheduleTransactions");
+    expect(plannerSource).toContain("scheduleTransactions: ScheduleTransactionController");
     expect(plannerSource).toContain("undoLastMutation");
     expect(plannerSource).toContain('aria-label="Hoàn tác lần chuyển lịch gần nhất"');
     expect(plannerSource).toContain("Nhấn Ctrl+Z để hoàn tác");
@@ -36,7 +36,9 @@ describe("Flexible schedule UX", () => {
     expect(hookSource).toContain('event.key.toLowerCase() !== "z"');
     expect(hookSource).toContain("isEditableUndoTarget");
     expect(routeSource).toContain("Lịch linh hoạt");
-    expect(routeSource).toContain("transactionAdapters={scheduleTransactionAdapters}");
+    expect(routeSource.match(/useScheduleTransactions\(/g)).toHaveLength(1);
+    expect(routeSource.match(/scheduleTransactions=\{scheduleTransactions\}/g)).toHaveLength(2);
+    expect(routeSource).not.toContain("transactionAdapters={scheduleTransactionAdapters}");
 
     expect(moveDialogSource).toContain("DialogTrigger");
     expect(moveDialogSource).toContain("Chọn ngày");

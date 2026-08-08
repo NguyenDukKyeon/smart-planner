@@ -169,19 +169,26 @@ describe("fixed and flexible lesson scheduling", () => {
 });
 
 describe("Course Manager drag interaction", () => {
-  test("uses a dedicated one-step handle, exact drop boundaries and edge auto-scroll", async () => {
-    const source = await fs.readFile(
-      new URL("../components/CourseManagerModal.tsx", import.meta.url),
-      "utf8",
-    );
+  test("uses authoritative extracted drag units for handle, boundaries and auto-scroll", async () => {
+    const [rowSource, topicSource, reorderSource] = await Promise.all([
+      fs.readFile(new URL("../components/course-manager/LessonRow.tsx", import.meta.url), "utf8"),
+      fs.readFile(
+        new URL("../components/course-manager/TopicSection.tsx", import.meta.url),
+        "utf8",
+      ),
+      fs.readFile(
+        new URL("../components/course-manager/useLessonReorder.ts", import.meta.url),
+        "utf8",
+      ),
+    ]);
 
-    expect(source).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
-    expect(source).toContain("application/x-smart-lesson-id");
-    expect(source).toContain("draggable={false}");
-    expect(source).toContain("Chèn phía trên");
-    expect(source).toContain("Chèn phía dưới");
-    expect(source).toContain("function autoScrollDuringLessonDrag");
-    expect(source).toContain("data-course-scroll-container");
-    expect(source).not.toContain("Lần 2: giữ và kéo");
+    expect(rowSource).toContain("Kéo một lần bằng tay cầm để đổi vị trí");
+    expect(rowSource).toContain("application/x-smart-lesson-id");
+    expect(rowSource).toContain("draggable={false}");
+    expect(topicSource).toContain("Chèn phía trên");
+    expect(topicSource).toContain("Chèn phía dưới");
+    expect(topicSource).toContain("data-course-scroll-container");
+    expect(reorderSource).toContain("export function autoScrollDuringLessonDrag");
+    expect(rowSource).not.toContain("Lần 2: giữ và kéo");
   });
 });

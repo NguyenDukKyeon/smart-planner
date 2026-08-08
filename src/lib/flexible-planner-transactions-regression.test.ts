@@ -6,7 +6,7 @@ const plannerSource = readFileSync(
   "utf8",
 );
 const hookSource = readFileSync(
-  new URL("../components/flexible-planner/useScheduleTransactions.ts", import.meta.url),
+  new URL("../components/schedule/useScheduleTransactions.ts", import.meta.url),
   "utf8",
 );
 const moveDialogSource = readFileSync(
@@ -17,23 +17,25 @@ const inputSource = readFileSync(new URL("../components/ui/input.tsx", import.me
 const dashboardSource = readFileSync(new URL("../routes/index.tsx", import.meta.url), "utf8");
 
 describe("Flexible Planner shared schedule transactions", () => {
-  test("the hook owns capped history and keyboard undo", () => {
+  test("the shared hook owns capped history and keyboard undo", () => {
     expect(hookSource).toContain("commitScheduleMutation");
     expect(hookSource).toContain("undoLastScheduleMutation");
     expect(hookSource).toContain("isEditableUndoTarget");
     expect(hookSource).toContain('event.key.toLowerCase() !== "z"');
     expect(hookSource).toContain("historyRef.current");
+    expect(hookSource).toContain("lastUndoneEntry");
   });
 
-  test("the hook discards stale history after an unrelated external schedule change", () => {
+  test("the shared hook discards stale history after an unrelated external schedule change", () => {
     expect(hookSource).toContain("shouldInvalidateScheduleHistory");
     expect(hookSource).toContain("observedSnapshotRef");
     expect(hookSource).toContain("expectedPublishedSnapshotRef");
     expect(hookSource).toContain("replaceHistory([])");
   });
 
-  test("lesson moves and day capacity use shared candidate builders", () => {
-    expect(plannerSource).toContain("useScheduleTransactions");
+  test("lesson moves and day capacity consume the route-owned controller", () => {
+    expect(plannerSource).toContain("scheduleTransactions: ScheduleTransactionController");
+    expect(plannerSource).not.toContain("useScheduleTransactions({");
     expect(plannerSource).toContain("buildMoveLessonDateCandidate");
     expect(plannerSource).toContain("buildChangeDayCapacityCandidate");
     expect(plannerSource).not.toContain("type UndoEntry =");
@@ -75,13 +77,15 @@ describe("Flexible Planner shared schedule transactions", () => {
     expect(inputSource).not.toContain("cancelNextBlurCommitRef");
   });
 
-  test("Dashboard separates persistence from publishing for both stores", () => {
+  test("Dashboard owns one controller and passes it to both Plan surfaces", () => {
     expect(dashboardSource).toContain("persistPlannerSettings,");
     expect(dashboardSource).toContain("applyPersistedPlannerSettings,");
     expect(dashboardSource).toContain("const persistScheduleSubjects = useCallback(");
     expect(dashboardSource).toContain("const backupScheduleSubjects = useCallback(");
     expect(dashboardSource).toContain("const applyPersistedScheduleSubjects = useCallback(");
     expect(dashboardSource).toContain("const scheduleTransactionAdapters = useMemo(");
-    expect(dashboardSource).toContain("transactionAdapters={scheduleTransactionAdapters}");
+    expect(dashboardSource.match(/useScheduleTransactions\(/g)).toHaveLength(1);
+    expect(dashboardSource.match(/scheduleTransactions=\{scheduleTransactions\}/g)).toHaveLength(2);
+    expect(dashboardSource).not.toContain("transactionAdapters={scheduleTransactionAdapters}");
   });
 });

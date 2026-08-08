@@ -57,6 +57,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { getPushPreferences } from "@/lib/push-notification-store";
 import { getWebPushCapability, syncScheduledWebPush } from "@/lib/web-push-client";
 import { buildScheduledWebPushJobs } from "@/lib/web-push-schedule";
+import { useScheduleTransactions } from "@/components/schedule/useScheduleTransactions";
 import {
   RESET_ROLLBACK_KEY,
   getBrowserStorage,
@@ -529,6 +530,18 @@ function Dashboard() {
     ],
   );
 
+  const scheduleTransactions = useScheduleTransactions({
+    subjects,
+    plannerSettings: state.plannerSettings,
+    adapters: scheduleTransactionAdapters,
+    onUndoSuccess: (entry) => {
+      toast.success("Đã hoàn tác thay đổi lịch.", { description: entry.description });
+    },
+    onUndoError: (error, rollbackError) => {
+      toast.error(rollbackError ? `${error} ${rollbackError}` : error);
+    },
+  });
+
   const handleStartFocus = useCallback(
     (request: TimerLessonRequest) => {
       if (storageBlocked) {
@@ -882,7 +895,7 @@ function Dashboard() {
               }
             : undefined
         }
-        canRestoreFactoryReset={hasFactoryResetRollback}
+        canRestoreFactoryResetRollback={hasFactoryResetRollback}
         onRestoreFactoryReset={restoreFactoryResetRollback}
         affectedCounts={workspaceChooserOpen ? affectedCounts : undefined}
       />
@@ -943,6 +956,8 @@ function Dashboard() {
               <CourseManagerModal
                 currentSubjects={subjects}
                 onSubjectsUpdated={updateSubjectsSafely}
+                plannerSettings={state.plannerSettings}
+                scheduleTransactions={scheduleTransactions}
                 progress={state}
                 activeTimerLessonId={activeTimerLesson?.id ?? null}
                 trigger={
@@ -980,7 +995,7 @@ function Dashboard() {
                 <FlexiblePlanner
                   state={state}
                   subjects={subjects}
-                  transactionAdapters={scheduleTransactionAdapters}
+                  scheduleTransactions={scheduleTransactions}
                 />
               </TabsContent>
               <TabsContent value="original" className="mt-4 space-y-4">

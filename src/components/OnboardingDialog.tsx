@@ -14,6 +14,7 @@ type Props = {
   onUseDemo: () => void;
   onCancel?: () => void;
   canRestoreFactoryReset?: boolean;
+  canRestoreFactoryResetRollback?: boolean;
   onRestoreFactoryReset?: () => void;
   affectedCounts?: { lessons: number; sessions: number; habits: number; completions: number };
 };
@@ -23,10 +24,13 @@ export function OnboardingDialog({
   onStartEmpty,
   onUseDemo,
   onCancel,
-  canRestoreFactoryReset = false,
+  canRestoreFactoryReset,
+  canRestoreFactoryResetRollback,
   onRestoreFactoryReset,
   affectedCounts,
 }: Props) {
+  const canRestore = canRestoreFactoryReset ?? canRestoreFactoryResetRollback ?? false;
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel?.()}>
       <DialogContent
@@ -79,7 +83,7 @@ export function OnboardingDialog({
             Hủy, không thay đổi dữ liệu
           </Button>
         )}
-        {canRestoreFactoryReset && onRestoreFactoryReset && (
+        {canRestore && onRestoreFactoryReset && (
           <Button onClick={onRestoreFactoryReset} variant="outline" className="rounded-xl text-xs">
             Khôi phục lần xóa gần nhất
           </Button>

@@ -34,10 +34,18 @@ type UseScheduleTransactionsParams = {
   onUndoError?: (error: string, rollbackError?: string) => void;
 };
 
-type ExecuteScheduleMutationParams = {
+export type ExecuteScheduleMutationParams = {
   candidate: ScheduleCandidate;
   kind: ScheduleMutationKind;
   description: string;
+};
+
+export type ScheduleTransactionController = {
+  history: ScheduleMutationEntry[];
+  canUndo: boolean;
+  lastUndoneEntry: ScheduleMutationEntry | null;
+  executeMutation: (params: ExecuteScheduleMutationParams) => CommitScheduleMutationResult;
+  undoLastMutation: () => UndoScheduleMutationResult;
 };
 
 export function useScheduleTransactions({
@@ -46,8 +54,9 @@ export function useScheduleTransactions({
   adapters,
   onUndoSuccess,
   onUndoError,
-}: UseScheduleTransactionsParams) {
+}: UseScheduleTransactionsParams): ScheduleTransactionController {
   const [history, setHistoryState] = useState<ScheduleMutationEntry[]>([]);
+  const [lastUndoneEntry, setLastUndoneEntry] = useState<ScheduleMutationEntry | null>(null);
   const historyRef = useRef<ScheduleMutationEntry[]>([]);
   const observedSnapshotRef = useRef<ScheduleSnapshot>(
     createScheduleSnapshot(subjects, plannerSettings),
@@ -118,7 +127,10 @@ export function useScheduleTransactions({
 
     if (result.ok) {
       replaceHistory(result.history);
-      if (result.status === "undone") onUndoSuccess?.(result.entry);
+      if (result.status === "undone") {
+        setLastUndoneEntry(result.entry);
+        onUndoSuccess?.(result.entry);
+      }
     } else {
       onUndoError?.(result.error, result.rollbackError);
     }
@@ -157,6 +169,7 @@ export function useScheduleTransactions({
   return {
     history,
     canUndo: history.length > 0,
+    lastUndoneEntry,
     executeMutation,
     undoLastMutation,
   };
