@@ -134,7 +134,9 @@ describe("Forecast view model", () => {
     });
 
     expect(longView.outsideHorizonLessons).toBeLessThanOrEqual(shortView.outsideHorizonLessons);
-    expect(longView.visibleScheduledLessons).toBeGreaterThanOrEqual(shortView.visibleScheduledLessons);
+    expect(longView.visibleScheduledLessons).toBeGreaterThanOrEqual(
+      shortView.visibleScheduledLessons,
+    );
   });
 
   it("keeps new-learning, review, and total workload internally consistent", () => {
