@@ -2,6 +2,7 @@
 import { SUBJECTS, type Lesson, type Subject } from "./mock-data";
 import { addDaysISO, dayIndex, daysBetweenISO, isSundayISO, todayISO } from "./date-utils";
 import { sortSubjects, sortLessonsBySubjectPriority } from "./subject-order";
+import { resolveDailyCapacityHours } from "./daily-capacity";
 
 export type PlannerSettings = {
   todayHours: number;
@@ -227,7 +228,7 @@ export function pickDayQueue(params: {
   for (const l of pinned) {
     if (consumed.has(l.id)) continue;
     newLessons.push(l);
-    newMinutes += estimateLessonMinutes(l.id, meta, subjects);
+    newMinutes += l.plannedDurationMinutes;
     consumed.add(l.id);
   }
 
@@ -241,7 +242,7 @@ export function pickDayQueue(params: {
     // ngân sách được đưa vào khu vực "Chưa xếp được", không dời sang ngày sau.
     const fixedCandidates = fixedLessonsScheduledOn(subjects, completed, consumed, dateISO, meta);
     for (const lesson of fixedCandidates) {
-      const estimatedMinutes = estimateLessonMinutes(lesson.id, meta, subjects);
+      const estimatedMinutes = lesson.plannedDurationMinutes;
       if (newMinutes + estimatedMinutes <= newBudget) {
         newLessons.push(lesson);
         newMinutes += estimatedMinutes;
@@ -269,7 +270,7 @@ export function pickDayQueue(params: {
         const pool = pools[subjectId] || [];
         const lesson = pool[cursors[subjectId]];
         if (!lesson) return [];
-        const estimatedMinutes = estimateLessonMinutes(lesson.id, meta, subjects);
+        const estimatedMinutes = lesson.plannedDurationMinutes;
         if (estimatedMinutes > remainingBudget) return [];
         return [{ subjectId, subjectOrder, lesson, estimatedMinutes }];
       });
@@ -297,7 +298,7 @@ export function pickDayQueue(params: {
     const fixedCandidates = fixedLessonsScheduledOn(subjects, completed, consumed, dateISO, meta);
     unplacedFixedLessons.push(...fixedCandidates);
     unplacedFixedMinutes = fixedCandidates.reduce(
-      (sum, lesson) => sum + estimateLessonMinutes(lesson.id, meta, subjects),
+      (sum, lesson) => sum + lesson.plannedDurationMinutes,
       0,
     );
   }
@@ -381,15 +382,11 @@ export function buildFlexiblePlan(args: {
   const days: PlanDay[] = [];
   for (let i = 0; i < horizon; i++) {
     const dateISO = addDaysISO(from, i);
-    const isToday = dateISO === todayISO();
-    let hours: number;
-    if (isToday) {
-      hours = args.settings.todayHours;
-    } else if (args.settings.dailyHours[dateISO] !== undefined) {
-      hours = args.settings.dailyHours[dateISO];
-    } else {
-      hours = args.settings.defaultDailyHours;
-    }
+    const hours = resolveDailyCapacityHours({
+      dateISO,
+      currentDateISO: todayISO(),
+      settings: args.settings,
+    });
     const pinned = lessonsCompletedOn(args.subjects, args.completed, dateISO);
     const queue = pickDayQueue({
       subjects: args.subjects,
