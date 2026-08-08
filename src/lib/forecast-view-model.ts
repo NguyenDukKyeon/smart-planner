@@ -131,8 +131,9 @@ export function selectForecastCompletion(params: {
   const explicitCapacityOverrideCount = Object.keys(params.state.plannerSettings.dailyHours).filter(
     (dateISO) => dateISO > startISO && dateISO <= projectionEndISO,
   ).length;
-  const schedulableRemainingLessons = lessons.filter((lesson) =>
-    Boolean(lesson.scheduledDate),
+  const unplacedFixedLessonIds = new Set(projection.unplacedFixedLessonIds);
+  const schedulableRemainingLessons = lessons.filter(
+    (lesson) => Boolean(lesson.scheduledDate) && !unplacedFixedLessonIds.has(lesson.id),
   ).length;
   const completion = resolveCompletion({
     remainingLessons: lessons.length,
