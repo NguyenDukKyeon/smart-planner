@@ -1,6 +1,6 @@
 // Pure scheduler + forecast helpers. No React, no localStorage.
 import { SUBJECTS, type Lesson, type Subject } from "./mock-data";
-import { addDaysISO, dayIndex, daysBetweenISO, isSundayISO, todayISO } from "./date-utils";
+import { addDaysISO, dayIndex, daysBetweenISO, todayISO } from "./date-utils";
 import { sortSubjects, sortLessonsBySubjectPriority } from "./subject-order";
 import { resolveDailyCapacityHours } from "./daily-capacity";
 
@@ -514,13 +514,7 @@ export function forecast(args: {
 }
 
 function advanceStudyDays(fromISO: string, studyDays: number): string {
-  let iso = fromISO;
-  let count = 0;
-  while (count < studyDays) {
-    iso = addDaysISO(iso, 1);
-    if (!isSundayISO(iso)) count++;
-  }
-  return iso;
+  return addDaysISO(fromISO, studyDays);
 }
 
 export function allRemainingLessonIds(
