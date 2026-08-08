@@ -116,6 +116,20 @@ describe("Forecast view model", () => {
     );
   });
 
+  it("reports zero outside-horizon work when all unfinished lessons fit", () => {
+    if (!selectForecastViewModel) return;
+    const result = selectForecastViewModel({
+      subjects: makeSubjects(1),
+      state: makeState(2),
+      horizonWeeks: 2,
+      fromISO: "2026-08-08",
+    });
+
+    expect(result.remainingLessons).toBe(1);
+    expect(result.visibleScheduledLessons).toBe(1);
+    expect(result.outsideHorizonLessons).toBe(0);
+  });
+
   it("a longer horizon never hides more unfinished work", () => {
     if (!selectForecastViewModel) return;
     const subjects = makeSubjects(20);
