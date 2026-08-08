@@ -99,8 +99,8 @@ describe("canonical full schedule projection", () => {
     expect(result.projectionComplete).toBe(true);
     expect(result.placedLessonIds).toHaveLength(2);
     expect(result.datesByLesson["lesson-1"]).toBe("2026-08-08");
-    expect(result.datesByLesson["lesson-2"]).toBe("2026-08-10");
-    expect(result.lastScheduledLessonDate).toBe("2026-08-10");
+    expect(result.datesByLesson["lesson-2"]).toBe("2026-08-09");
+    expect(result.lastScheduledLessonDate).toBe("2026-08-09");
     expect(result.positiveCapacityDays).toBe(2);
   });
 
@@ -190,13 +190,13 @@ describe("canonical full schedule projection", () => {
     expect(result.positiveCapacityDays).toBe(0);
   });
 
-  it("uses Sunday rest by default but honors an explicit Sunday capacity", async () => {
+  it("uses default Sunday capacity and honors an explicit Sunday capacity", async () => {
     const buildScheduleProjection = await loadProjectionBuilder();
     expect(buildScheduleProjection).toBeTypeOf("function");
     if (!buildScheduleProjection) return;
 
     const catalog = subjectWith([{ id: "sunday-lesson", scheduledDate: "2026-08-09" }]);
-    const rested = buildScheduleProjection({
+    const defaulted = buildScheduleProjection({
       subjects: catalog,
       completed: {},
       meta: DEFAULT_STUDY_META,
@@ -219,8 +219,9 @@ describe("canonical full schedule projection", () => {
       maxDays: 1,
     });
 
-    expect(rested.positiveCapacityDays).toBe(0);
-    expect(rested.unprojectedLessonIds).toEqual(["sunday-lesson"]);
+    expect(defaulted.positiveCapacityDays).toBe(1);
+    expect(defaulted.projectionComplete).toBe(true);
+    expect(defaulted.datesByLesson["sunday-lesson"]).toBe("2026-08-09");
     expect(overridden.positiveCapacityDays).toBe(1);
     expect(overridden.projectionComplete).toBe(true);
     expect(overridden.datesByLesson["sunday-lesson"]).toBe("2026-08-09");
