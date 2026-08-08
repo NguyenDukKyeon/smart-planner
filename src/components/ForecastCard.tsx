@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { SUBJECTS, type Subject } from "@/lib/mock-data";
-import { allRemainingLessonIds, forecast } from "@/lib/planner";
 import type { ProgressState } from "@/lib/progress-store";
 import { displayDate } from "@/lib/date-utils";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ import {
   normalizeDailyStudyHours,
 } from "@/lib/study-hours";
 import { HighStudyHoursNote } from "@/components/HighStudyHoursNote";
+import { selectForecastCompletion } from "@/lib/forecast-view-model";
 
 type Props = {
   state: ProgressState;
@@ -35,41 +35,15 @@ export function ForecastCard({
   state,
   subjects = SUBJECTS,
   onSetDefaultDailyHours,
-  shiftedDates,
 }: Props) {
-  const hours = Number.isFinite(state.plannerSettings.defaultDailyHours)
-    ? normalizeDailyStudyHours(state.plannerSettings.defaultDailyHours)
-    : 2;
+  const fc = useMemo(() => selectForecastCompletion({ subjects, state }), [subjects, state]);
+  const hours = fc.hoursPerDay;
 
   const handleHoursChange = (h: number) => {
     if (onSetDefaultDailyHours) {
       onSetDefaultDailyHours(normalizeDailyStudyHours(h));
     }
   };
-
-  const remainingIds = useMemo(
-    () => allRemainingLessonIds(subjects, state.completedLessons),
-    [subjects, state.completedLessons],
-  );
-
-  const latestShiftedDate = useMemo(() => {
-    if (!shiftedDates) return null;
-    const dates = Object.values(shiftedDates);
-    if (dates.length === 0) return null;
-    dates.sort();
-    return dates[dates.length - 1];
-  }, [shiftedDates]);
-
-  const fc = useMemo(
-    () =>
-      forecast({
-        remainingLessonIds: remainingIds,
-        meta: state.studyMeta,
-        subjects,
-        hoursPerDay: hours,
-      }),
-    [remainingIds, state.studyMeta, subjects, hours],
-  );
 
   const remainingBySubject = useMemo(() => {
     const sorted = sortSubjects(subjects);
@@ -96,17 +70,13 @@ export function ForecastCard({
   }[fc.basis];
 
   const planCompletionText =
-    fc.remaining === 0
+    fc.completion.kind === "complete"
       ? "Đã hoàn thành tất cả! 🎉"
-      : hours <= 0
+      : fc.completion.kind === "no-capacity"
         ? "Chưa có quỹ giờ để dự báo"
-        : latestShiftedDate
-          ? displayDate(latestShiftedDate)
-          : fc.earliestEndDateISO === fc.latestEndDateISO
-            ? displayDate(fc.endDateISO)
-            : `${displayDate(fc.earliestEndDateISO)} – ${displayDate(fc.latestEndDateISO)}`;
-
-  const totalWorkloadHours = Math.round((fc.totalNewHours + fc.totalReviewHours) * 10) / 10;
+        : fc.completion.kind === "date"
+          ? displayDate(fc.completion.startISO)
+          : `${displayDate(fc.completion.startISO)} – ${displayDate(fc.completion.endISO)}`;
 
   return (
     <section className="min-w-0 space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs sm:p-4.5">
@@ -168,7 +138,7 @@ export function ForecastCard({
           <div className="min-w-0">
             <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Bài còn lại</div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
-              {fc.remaining} bài
+              {fc.remainingLessons} bài
             </div>
           </div>
         </div>
@@ -180,11 +150,10 @@ export function ForecastCard({
               Tổng khối lượng dự kiến
             </div>
             <div className="text-xs font-bold text-slate-800 sm:text-sm">
-              {formatHours(totalWorkloadHours)} giờ
+              {formatHours(fc.totalWorkloadHours)} giờ
             </div>
             <div className="mt-0.5 text-[10px] leading-tight text-slate-500">
-              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ
-              ôn
+              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ ôn
             </div>
           </div>
         </div>
