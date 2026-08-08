@@ -33,11 +33,17 @@ export type ForecastViewModel = {
   horizonDays: 14 | 28 | 56 | 84;
   horizonEndISO: string;
   remainingLessons: number;
+  totalRemainingLessons: number;
   visibleScheduledLessons: number;
+  horizonScheduledLessons: number;
   outsideHorizonLessons: number;
+  horizonUnplacedFixedLessons: number;
   totalNewHours: number;
   totalReviewHours: number;
   totalWorkloadHours: number;
+  horizonNewHours: number;
+  horizonReviewHours: number;
+  horizonWorkloadHours: number;
   meanMinutes: number;
   evidenceLessonCount: number;
   evidenceSessionCount: number;
@@ -63,6 +69,42 @@ function unfinishedLessons(subjects: Subject[], completedLessons: Record<string,
       milestone.lessons.filter((lesson) => !completedLessons[lesson.id]),
     ),
   );
+}
+
+function summarizeForecastHorizon(params: {
+  visiblePlan: ReturnType<typeof buildFlexiblePlan>;
+  completedLessons: Record<string, string>;
+}) {
+  const scheduled = new Map<string, number>();
+  const unplacedFixed = new Set<string>();
+  const reviews = new Map<string, number>();
+
+  for (const day of params.visiblePlan) {
+    for (const lesson of day.queue.newLessons) {
+      if (params.completedLessons[lesson.id]) continue;
+      if (!scheduled.has(lesson.id)) {
+        scheduled.set(lesson.id, lesson.plannedDurationMinutes);
+      }
+    }
+
+    for (const lesson of day.queue.unplacedFixedLessons) {
+      if (!params.completedLessons[lesson.id]) {
+        unplacedFixed.add(lesson.id);
+      }
+    }
+
+    for (const review of day.queue.reviewLessons) {
+      if (review.completed || reviews.has(review.taskId)) continue;
+      reviews.set(review.taskId, review.minutes);
+    }
+  }
+
+  return {
+    scheduledLessons: scheduled.size,
+    newMinutes: [...scheduled.values()].reduce((sum, value) => sum + value, 0),
+    reviewMinutes: [...reviews.values()].reduce((sum, value) => sum + value, 0),
+    unplacedFixedLessons: unplacedFixed.size,
+  };
 }
 
 function resolveCompletion(params: {
@@ -187,13 +229,25 @@ export function selectForecastViewModel(params: {
     completed: params.state.completedLessons,
     visiblePlan,
   });
+  const horizon = summarizeForecastHorizon({
+    visiblePlan,
+    completedLessons: params.state.completedLessons,
+  });
+  const horizonNewHours = roundHours(horizon.newMinutes);
+  const horizonReviewHours = roundHours(horizon.reviewMinutes);
 
   return {
     ...base,
     horizonWeeks: params.horizonWeeks,
     horizonDays,
     horizonEndISO: addDaysISO(startISO, horizonDays - 1),
+    totalRemainingLessons: base.remainingLessons,
     visibleScheduledLessons: visibility.visibleScheduledCount,
+    horizonScheduledLessons: horizon.scheduledLessons,
     outsideHorizonLessons: visibility.outsideHorizonCount,
+    horizonUnplacedFixedLessons: horizon.unplacedFixedLessons,
+    horizonNewHours,
+    horizonReviewHours,
+    horizonWorkloadHours: Math.round((horizonNewHours + horizonReviewHours) * 10) / 10,
   };
 }
