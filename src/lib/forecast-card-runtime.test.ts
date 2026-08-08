@@ -75,7 +75,8 @@ describe("ForecastCard runtime clarity", () => {
     expect(html).toContain(`${expected.outsideHorizonLessons} bài chưa hoàn thành`);
     expect(html).toContain("Mức tin cậy");
     expect(html).toContain("Theo lịch công suất hiện tại");
-    expect(html).toContain("Chủ nhật nghỉ nếu không đặt riêng");
+    expect(html).toContain("mặc định 1 giờ/ngày cho cả 7 ngày");
+    expect(html).not.toContain("Chủ nhật nghỉ nếu không đặt riêng");
     expect(html).not.toContain("Tính toán theo vận tốc học đều");
   });
 
