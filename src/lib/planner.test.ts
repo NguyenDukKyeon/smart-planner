@@ -39,6 +39,37 @@ const subjects: Subject[] = [
   },
 ];
 
+function longLessonSubjects(): Subject[] {
+  return [
+    {
+      id: "math",
+      name: "Toán",
+      emoji: "📐",
+      milestones: [
+        {
+          id: "math-topic",
+          title: "Chủ đề",
+          subtitle: "",
+          lessons: [
+            {
+              id: "math-120",
+              title: "Bài 120 phút",
+              xp: 20,
+              plannedDurationMinutes: 120,
+              scheduledDate: "2026-08-08",
+              scheduleMode: "flexible",
+              weekday: "Thứ 7",
+              sourceSubject: "Toán",
+              week: 1,
+              initialDone: false,
+            },
+          ],
+        },
+      ],
+    },
+  ];
+}
+
 describe("flexible planning capacity", () => {
   test("uses each lesson planned duration", () => {
     expect(estimateLessonMinutes("english-1", DEFAULT_STUDY_META, subjects)).toBe(45);
@@ -52,6 +83,32 @@ describe("flexible planning capacity", () => {
         subjects,
       ),
     ).toBe(35);
+  });
+
+  test("ordinary placement keeps planned duration despite short historical sessions", () => {
+    const catalog = longLessonSubjects();
+    const meta = { ...DEFAULT_STUDY_META, actualMinutes: { "math-120": [20, 20, 20] } };
+    const oneHour = pickDayQueue({
+      subjects: catalog,
+      completed: {},
+      meta,
+      settings: DEFAULT_PLANNER_SETTINGS,
+      dateISO: "2026-08-08",
+      hoursOverride: 1,
+    });
+    const twoHours = pickDayQueue({
+      subjects: catalog,
+      completed: {},
+      meta,
+      settings: DEFAULT_PLANNER_SETTINGS,
+      dateISO: "2026-08-08",
+      hoursOverride: 2,
+    });
+
+    expect(oneHour.newLessons).toEqual([]);
+    expect(oneHour.newMinutes).toBe(0);
+    expect(twoHours.newLessons.map((lesson) => lesson.id)).toEqual(["math-120"]);
+    expect(twoHours.newMinutes).toBe(120);
   });
 
   test("shows unallocated capacity instead of hiding it", () => {
