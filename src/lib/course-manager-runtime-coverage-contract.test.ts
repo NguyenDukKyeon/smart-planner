@@ -24,8 +24,8 @@ describe("P1D Course Manager behavior-preservation coverage", () => {
     expect(interactionSuite).toContain("renderToStaticMarkup");
     expect(interactionSuite).toContain("TopicSection");
     expect(interactionSuite).toContain("runtimeTriggerToggle");
-    expect(interactionSuite).toContain('aria-expanded=\\"false\\"');
-    expect(interactionSuite).toContain('aria-expanded=\\"true\\"');
+    expect(interactionSuite).toContain('aria-expanded="false"');
+    expect(interactionSuite).toContain('aria-expanded="true"');
     expect(interactionSuite).not.toContain('readFile(new URL("../components/course-manager');
   });
 });
