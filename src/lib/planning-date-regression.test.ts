@@ -113,6 +113,7 @@ describe("scheduled lesson dates", () => {
         ...DEFAULT_PLANNER_SETTINGS,
         todayHours: 6,
         defaultDailyHours: 6,
+        dailyHours: { "2026-08-02": 6 },
       },
       fromISO: date,
       horizonDays: 2,
