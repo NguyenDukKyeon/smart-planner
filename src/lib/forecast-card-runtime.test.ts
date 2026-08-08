@@ -7,7 +7,7 @@ import { selectForecastViewModel } from "./forecast-view-model";
 import type { Subject } from "./mock-data";
 import { createInitialProgressState, todayISO } from "./progress-store";
 
-function makeSubjects(count: number, scheduledDate = ""): Subject[] {
+function makeSubjects(count: number, scheduledDate = todayISO()): Subject[] {
   return [
     {
       id: "math",
@@ -49,11 +49,8 @@ describe("ForecastCard runtime clarity", () => {
     const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
 
     expect(html).toContain("Dự kiến hoàn thành");
-    if (expected.completion.kind === "date" || expected.completion.kind === "range") {
-      expect(html).toContain(displayDate(expected.completion.startISO));
-      if (expected.completion.kind === "range") {
-        expect(html).toContain(displayDate(expected.completion.endISO));
-      }
+    if (expected.completion.kind === "date") {
+      expect(html).toContain(displayDate(expected.completion.dateISO));
     } else {
       throw new Error(`Expected a dated Forecast completion, got ${expected.completion.kind}`);
     }
