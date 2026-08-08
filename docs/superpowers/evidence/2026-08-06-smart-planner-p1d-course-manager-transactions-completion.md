@@ -15,27 +15,30 @@ This record is implementation evidence only. It does not grant package acceptanc
 - Approved design commit: `448c9ff69944a95229afc9da0fa400539f9185c3`
 - Approved implementation plan commit: `522e7a0cc3027b0f7c86d1bf20cebc5c6ab48450`
 - Last production-behavior source commit: `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`
-- Literal final reviewed source/test HEAD covered by this evidence: `0967d6b6c5cced4634914ea68405e8b0daf9822c`
-- Source topology at final reviewed source/test HEAD: 66 commits ahead of predecessor, 0 behind.
+- Literal final reviewed source/test HEAD covered by this evidence: `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3`
+- Source topology at final reviewed source/test HEAD: 72 commits ahead of predecessor, 0 behind.
 - Pull request: draft PR #8, open and unmerged.
 
-No production source changed after `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`. The two commits after the previous evidence handoff `57b8346fe967080dee52134296113a1ae6c6a6ab` are test-only and close the later independent review finding that predecessor presentation behavior had only source-string regression coverage.
+No production source changed after `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`. The latest recovery after prior evidence head `4511609f1afca87eb2975665e4161924f9914d7d` is test-only and closes the later independent review finding that the existing runtime presentation suite rendered only the initial open TopicSection state rather than proving the collapse interaction path.
 
-This evidence commit is intentionally after the literal final reviewed source/test HEAD above. Independent review must bind runtime behavior and verification to `0967d6b6c5cced4634914ea68405e8b0daf9822c`, verify that production source remained frozen at `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`, and verify that the evidence-head delta is docs-only.
+This evidence commit is intentionally after the literal final reviewed source/test HEAD above. Independent review must bind runtime behavior and verification to `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3`, verify that production source remained frozen at `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`, and verify that source/test-head → evidence-head is exactly one docs-only commit modifying only this record.
 
 ## Final exact-head GREEN gate
 
-GitHub Actions `Build diagnostics` run #299:
+GitHub Actions `Build diagnostics` run #305:
 
-- run id: `31159303627`
-- job id: `92805769615`
-- literal reviewed source/test head: `0967d6b6c5cced4634914ea68405e8b0daf9822c`
-- checked PR merge ref: `13a9647939eded751abd7a15b616d82cd9c1cc4e` — merge of reviewed head into predecessor `ceeee84682c55c663d09a6b171227a1d92171046`
+- run id: `31235022388`
+- job id: `93045807390`
+- literal reviewed source/test head: `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3`
+- checked PR merge ref: `05164e7aca1455ed61b7ecd990c31129e61aac8e` — merge of reviewed head into predecessor `ceeee84682c55c663d09a6b171227a1d92171046`
 - `npm install`: PASS
 - `npm run typecheck`: PASS
-- `npm run lint`: PASS — 0 errors, 7 pre-existing/nonblocking warnings
-- `npm test`: PASS — 53/53 test files, 347/347 tests
-- `npm run build`: PASS — test suite reran 53/53 and 347/347, followed by client, SSR and Nitro/Vercel production builds
+- `npm run lint`: PASS — 0 errors, 7 known nonblocking warnings
+- `npm test`: PASS — 54/54 test files, 349/349 tests
+- `course-manager-presentation-runtime.test.ts`: PASS — 3/3 tests
+- `course-manager-topic-collapse-interaction.test.ts`: PASS — 1/1 test
+- `course-manager-runtime-coverage-contract.test.ts`: PASS — 2/2 tests
+- `npm run build`: PASS — test suite reran 54/54 files and 349/349 tests, followed by client, SSR and Nitro/Vercel production builds
 - `git diff --exit-code`: PASS
 - job conclusion: SUCCESS
 
@@ -111,38 +114,66 @@ The first Task 9 scope audit found a dead intermediate `src/components/CourseMan
 - GREEN cleanup: `977841037bba79a53d090e2120b2498986b4a58a`, deleting only the dead intermediate source artifact.
 - GREEN run #289 `31137356888`, job `92739603534`: full gate PASS at 51/51 files and 342/342 tests.
 
-A subsequent independent review then found a separate Important Task 6.4 behavior-preservation regression. The approved plan required `LessonRow` and `TopicSection` to be extracted verbatim, but the extracted runtime had lost topic collapse/completed-and-remaining summary, lesson status/progress/details/full management menu including quick move-to-subject, and visible insertion-line feedback.
+A subsequent independent review found a separate Important Task 6.4 behavior-preservation regression. The approved plan required `LessonRow` and `TopicSection` to preserve predecessor behavior, but the extracted runtime had lost topic collapse/completed-and-remaining summary, lesson status/progress/details/full management menu including quick move-to-subject, and visible insertion-line feedback.
 
 - Independent rejection comment: PR #8 issue comment `5211344413`.
-- A later acceptance comment `5211359682` was corrected in place after the rejection was fresh-read and independently verified; it now records `P1D IMPLEMENTED / REJECTED / NOT_MERGED`. No package acceptance is claimed by that comment.
+- Corrected historical comment `5211359682` records `P1D IMPLEMENTED / REJECTED / NOT_MERGED` after the preceding finding was fresh-read.
 - Recovery RED test commit: `50cbc176da983e66b4407b3728fe72b1ff71f918`.
-- Valid RED run #291 `31141111294`, job `92751024900`: typecheck PASS, lint PASS, 50/51 files and 342/343 tests PASS; the only failing test was the new Course Manager presentation regression, first failing because authoritative `TopicSection.tsx` lacked `Collapsible`.
+- Valid RED run #291 `31141111294`, job `92751024900`: typecheck PASS, lint PASS, 50/51 files and 342/343 tests PASS; only the new authoritative presentation regression failed.
 - Production recovery commits:
   - `5eeff3e8bf2f4f8436959283614ecdba7018f4ba` — restore lesson status/progress/details/full dropdown and quick-move callback surface.
   - `5e843a4672db70bb6e5dffe4b08011a583347c5b` — restore collapsible topic summary and visible insertion line/label.
   - `39c1238b0db506ca78ff13c4dcd064b3f41faa62` — reconnect completion/remaining data and route single-lesson quick move through `buildMoveLessonsCandidate` plus the shared `move-lessons` transaction boundary.
-- Run #294 `31141660682`, job `92752657254` proved the wiring typechecked but failed lint only on three Prettier formatting errors in the two recovered presentation files; tests/build were correctly not treated as GREEN from that run.
+- Run #294 `31141660682`, job `92752657254` typechecked but failed lint only on three Prettier errors; it was not treated as GREEN.
 - Formatting-only forward commits: `71e522b3f460db04a1d0091d39c7b11d885f3528` and `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`.
 - Production-recovery GREEN run #296 `31141823263`, job `92753150350`: typecheck PASS, lint PASS with 0 errors/7 known warnings, 51/51 files and 343/343 tests PASS, production build PASS, clean-tree PASS.
 
-A fresh independent re-review then found one remaining Important verification gap: the restored production behavior was still protected only by source-string inspection in `catalog-order-drag-regression.test.ts`. The prior rejection had explicitly required behavior to be proven against authoritative runtime rather than merely checking source-string presence.
+A fresh independent re-review then found one remaining Important verification gap: the restored production behavior was still protected only by source-string inspection in `catalog-order-drag-regression.test.ts`.
 
 - Independent verification-gap rejection comment: PR #8 issue comment `5212784605`.
 - RED coverage-contract commit: `cf25889b205050f74b213df6bddb9f87f99ecfeb`.
-- Valid RED run #298 `31159077248`, job `92805053031`: typecheck PASS, lint PASS; 51 existing test files / 343 existing tests remained green, while the new coverage-contract test failed exactly because `course-manager-presentation-runtime.test.ts` did not yet exist. Aggregate result: 51/52 test files and 343/344 tests PASS; build and clean-tree were correctly skipped after the failing test gate.
+- Valid RED run #298 `31159077248`, job `92805053031`: typecheck PASS, lint PASS; 51/52 test files and 343/344 tests PASS; only the new runtime coverage contract failed because `course-manager-presentation-runtime.test.ts` did not yet exist.
 - GREEN runtime-regression commit: `0967d6b6c5cced4634914ea68405e8b0daf9822c`.
-- The runtime suite uses existing React/ReactDOM only and adds no dependency. It renders authoritative production `TopicSection` and `LessonRow` via `renderToStaticMarkup`; a minimal Radix dropdown mock exposes the menu children/callbacks in the Node test environment without replacing either production Course Manager component.
-- Runtime assertions prove:
-  - open collapsible topic semantics and completed/remaining summary from runtime props;
-  - active insertion edge renders a visible indigo line and explicit `Chèn phía trên ...` label, while the inactive render does not contain the active line;
-  - lesson `Đang học` status, studied/target minutes and percentage, scheduling detail, drag/up/down affordances, full management actions and quick `Chuyển sang Vật lý` action render from the production component;
-  - invoking the captured quick-move menu callback calls the production `onMoveToSubject` contract with exact lesson and target-subject IDs;
-  - `Hoàn thành`, `Đang học` and `Chưa bắt đầu` all render from actual runtime props.
-- Final GREEN run #299 `31159303627`, job `92805769615`: typecheck PASS, lint PASS with 0 errors/7 known warnings, 53/53 files and 347/347 tests PASS, production build PASS, clean-tree PASS.
+- The runtime suite uses existing React/ReactDOM only and adds no dependency. It renders authoritative production `TopicSection` and `LessonRow` via `renderToStaticMarkup`; a minimal Radix dropdown mock exposes menu children/callbacks in Node without replacing either production Course Manager component.
+- Runtime assertions prove open-state topic semantics and completed/remaining summary, visible active insertion feedback, lesson status/progress/details/full management actions, exact quick-move callback IDs, and all predecessor progress-state labels.
+- GREEN run #299 `31159303627`, job `92805769615`: typecheck PASS, lint PASS with 0 errors/7 known warnings, 53/53 files and 347/347 tests PASS, production build PASS, clean-tree PASS.
+
+### Task 9.7 — close the remaining TopicSection interaction-proof gap
+
+A later fresh Independent Reviewer accepted the production restoration but rejected acceptance because the runtime presentation suite still rendered only the initial open TopicSection state. It did not exercise the required `open → collapsed → reopened` interaction path.
+
+- Independent rejection comment: PR #8 issue comment `5221237680`.
+- Initial RED contract commit: `e7b0a2d8fbe02ab01cc1497dfbe9ebee1ba513f9`.
+- Run #301 `31234513608`, job `93044488142` failed at lint on one Prettier error before tests executed. It is explicitly **not** counted as valid RED.
+- Formatter-only RED correction: `836a645d03ee663066b3bd22dea48d5dfdebe765`.
+- Valid RED run #302 `31234598868`, job `93044702586`, checked merge ref `084f6c0a91dfbc3eaa4f73bb3448908946ea52e5`:
+  - typecheck PASS;
+  - lint PASS — 0 errors / 7 known warnings;
+  - tests: 52/53 files and 347/348 tests PASS;
+  - sole failure: `course-manager-runtime-coverage-contract.test.ts` → `requires a runtime TopicSection collapse interaction regression`, because `course-manager-topic-collapse-interaction.test.ts` did not yet exist;
+  - build/clean-tree skipped after the failing test gate.
+- Contract marker correction: `0ddf42c7f7eb21ed1f8f5789273b527802429889`; this preserved RED semantics and corrected only the expected literal `aria-expanded` markers.
+- Interaction suite commit: `eadaf1fb0166ed920d02a0b1d293205924b370ec`.
+- Run #304 `31234886032`, job `93045449341` passed typecheck but failed lint on two Prettier errors in the new test before tests ran. It is explicitly **not** counted as GREEN.
+- Formatter-only interaction correction / literal final source-test head: `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3`.
+- Valid GREEN run #305 `31235022388`, job `93045807390`, checked merge ref `05164e7aca1455ed61b7ecd990c31129e61aac8e`: typecheck PASS; lint PASS with 0 errors/7 known warnings; 54/54 test files and 349/349 tests PASS; full production build PASS; clean-tree PASS.
+
+The interaction suite:
+
+- imports and renders the actual production `TopicSection` component;
+- does not read production component source with `fs.readFile`;
+- uses only existing React/ReactDOM/Vitest dependencies and adds no package or lockfile change;
+- uses a minimal test-only state harness plus Collapsible adapter because this repository does not include a DOM interaction testing dependency;
+- captures the `onOpenChange` supplied by production `TopicSection` and exposes a test trigger that invokes that exact callback path;
+- proves initial open state (`aria-expanded="true"`) with lesson content visible;
+- invokes the runtime trigger, proves state becomes closed, rerenders, then proves `aria-expanded="false"` and lesson content is absent;
+- invokes the trigger again, rerenders, and proves `aria-expanded="true"` and lesson content returns.
+
+This is a component-runtime interaction harness, not a browser pointer/click DOM simulation. Its purpose is specifically to prove the production `TopicSection` state/onOpenChange collapse contract that the preceding review identified as untested.
 
 ## Exact changed-file list at literal final reviewed source/test HEAD
 
-Compared with `ceeee84682c55c663d09a6b171227a1d92171046`, reviewed head `0967d6b6c5cced4634914ea68405e8b0daf9822c` changes exactly these 33 paths. The evidence document is already present in reviewed-head ancestry because recovery commits followed earlier evidence handoffs; this commit refreshes that same path after the final reviewed head.
+Compared with `ceeee84682c55c663d09a6b171227a1d92171046`, reviewed head `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3` changes exactly these 34 paths:
 
 1. `docs/superpowers/evidence/2026-08-06-smart-planner-p1d-course-manager-transactions-completion.md`
 2. `docs/superpowers/plans/2026-08-06-smart-planner-p1d-course-manager-transactions.md`
@@ -168,15 +199,16 @@ Compared with `ceeee84682c55c663d09a6b171227a1d92171046`, reviewed head `0967d6b
 22. `src/lib/course-manager-presentation-runtime.test.ts`
 23. `src/lib/course-manager-reorder-bulk-candidates.test.ts`
 24. `src/lib/course-manager-runtime-coverage-contract.test.ts`
-25. `src/lib/course-manager-transaction-owner-regression.test.ts`
-26. `src/lib/course-manager-ui-regression.test.ts`
-27. `src/lib/flexible-planner-transactions-regression.test.ts`
-28. `src/lib/flexible-planner-ux-regression.test.ts`
-29. `src/lib/schedule-candidates.ts`
-30. `src/lib/schedule-mode-regression.test.ts`
-31. `src/lib/schedule-operations-integration.test.ts`
-32. `src/lib/schedule-transactions.ts`
-33. `src/routes/index.tsx`
+25. `src/lib/course-manager-topic-collapse-interaction.test.ts`
+26. `src/lib/course-manager-transaction-owner-regression.test.ts`
+27. `src/lib/course-manager-ui-regression.test.ts`
+28. `src/lib/flexible-planner-transactions-regression.test.ts`
+29. `src/lib/flexible-planner-ux-regression.test.ts`
+30. `src/lib/schedule-candidates.ts`
+31. `src/lib/schedule-mode-regression.test.ts`
+32. `src/lib/schedule-operations-integration.test.ts`
+33. `src/lib/schedule-transactions.ts`
+34. `src/routes/index.tsx`
 
 No dependency manifest, lockfile, scheduler algorithm, review algorithm, catalog/progress persistence schema, Forecast component, Roadmap implementation, CI workflow, deployment configuration or production dependency is changed.
 
@@ -192,7 +224,7 @@ The Course Manager orchestration, extracted `course-manager/*` units, shared sch
 
 `flexible-planner-ux-regression.test.ts`, `build-purity-regression.test.ts` and `schedule-mode-regression.test.ts` received narrow source-path updates because ownership and drag implementation moved to authoritative shared/extracted files. Task 9 also corrected source regressions so they cannot pass by reading a dead implementation copy.
 
-`course-manager-runtime-coverage-contract.test.ts` and `course-manager-presentation-runtime.test.ts` are the narrowly scoped closure for independent review comment `5212784605`. The first produces a valid RED when runtime coverage is absent; the second renders authoritative production components and proves the previously disputed presentation behaviors at runtime without adding a DOM test dependency.
+`course-manager-runtime-coverage-contract.test.ts` and `course-manager-presentation-runtime.test.ts` close independent review comment `5212784605`. `course-manager-topic-collapse-interaction.test.ts` is the narrower follow-up closure for comment `5221237680` and proves the open/closed/reopen runtime state path without adding a DOM-test dependency.
 
 ### `src/components/OnboardingDialog.tsx`
 
@@ -202,12 +234,14 @@ This path is outside the locked P1D production map. It contains a narrow compati
 
 The production recovery from the first behavior-preservation rejection changed only four logical paths relative to previous evidence head `2aa145dd5247362779662308adbfc6f19f074846`: `CourseManagerModal.tsx`, `LessonRow.tsx`, `TopicSection.tsx`, and `catalog-order-drag-regression.test.ts`. The modal recovery commit itself added exactly 43 lines and deleted 0 lines, avoiding full-file transcription drift. The two final production commits were formatting-only corrections demanded by the repository lint gate.
 
-The later verification-gap recovery from evidence head `57b8346fe967080dee52134296113a1ae6c6a6ab` to reviewed head `0967d6b6c5cced4634914ea68405e8b0daf9822c` is exactly two commits and exactly two test-only files:
+The verification-gap recovery from evidence head `57b8346fe967080dee52134296113a1ae6c6a6ab` to reviewed head `0967d6b6c5cced4634914ea68405e8b0daf9822c` changed exactly two test-only files: `course-manager-runtime-coverage-contract.test.ts` and `course-manager-presentation-runtime.test.ts`.
 
-- `src/lib/course-manager-runtime-coverage-contract.test.ts`
-- `src/lib/course-manager-presentation-runtime.test.ts`
+The final interaction-proof recovery from evidence head `4511609f1afca87eb2975665e4161924f9914d7d` to reviewed head `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3` is exactly five commits, 0 behind, and exactly two test-only paths:
 
-No production file changed in this second recovery.
+- `src/lib/course-manager-runtime-coverage-contract.test.ts` — +16 / -0 relative to the prior evidence head;
+- `src/lib/course-manager-topic-collapse-interaction.test.ts` — new, +189 / -0.
+
+No production file changed in this final recovery.
 
 ## Acceptance criteria 1–25
 
@@ -231,11 +265,11 @@ No production file changed in this second recovery.
 18. **PASS — global undo guard retained.** The shared hook retains editable-control protection for Ctrl/Cmd+Z rather than attaching listeners per child surface.
 19. **PASS — external catalog publication invalidates stale history.** Shared-hook stale-history invalidation remains active and catalog publication is observed above both surfaces.
 20. **PASS — catalog backup is distinct from schedule undo.** UI labels are explicitly `Hoàn tác thay đổi danh mục gần nhất` versus `Hoàn tác thay đổi lịch`.
-21. **PASS FOR IMPLEMENTER RECOVERY AUDIT — drag mechanics and predecessor feedback retained.** Dedicated handle, MIME, custom preview, top/bottom targets, edge auto-scroll, modal scroll container and up/down fallback remain under authoritative architecture regressions; the disputed predecessor insertion-edge presentation is now additionally rendered from production `TopicSection` in `course-manager-presentation-runtime.test.ts`, including active visible indigo line and explicit insertion label.
-22. **PASS FOR IMPLEMENTER RECOVERY AUDIT — Course Manager UX retained.** Search/filter/sort, bulk selection, archive/restore and mobile navigation remain under existing regressions; the disputed topic collapse/completed-and-remaining summary and lesson status/progress/details/full menu are now rendered from authoritative production components at runtime, and quick move-to-subject callback wiring is executed by the runtime regression.
+21. **PASS FOR IMPLEMENTER RECOVERY AUDIT — drag mechanics and predecessor feedback retained.** Dedicated handle, MIME, custom preview, top/bottom targets, edge auto-scroll, modal scroll container and up/down fallback remain under authoritative architecture regressions; active visible insertion feedback is rendered from production `TopicSection` in the runtime presentation suite.
+22. **PASS FOR IMPLEMENTER RECOVERY AUDIT — Course Manager UX retained and TopicSection collapse path now exercised.** Search/filter/sort, bulk selection, archive/restore and mobile navigation remain under existing regressions; topic completed/remaining summary and lesson status/progress/details/full menu are rendered from authoritative production components; quick move callback wiring is executed; the focused interaction suite additionally proves production `TopicSection` open → closed → reopened state/content behavior through its supplied `onOpenChange` path.
 23. **PASS WITH EXPLICIT INCIDENTAL-DIFF JUSTIFICATION.** No scheduler/review/schema/Forecast/Roadmap/dependency/lockfile/workflow/deployment changes exist. `OnboardingDialog.tsx` is the sole non-P1D production-path exception and is documented above as a behavior-equivalent compatibility shim from connector reconstruction.
-24. **PASS — exact final reviewed source/test head quality gates.** GitHub Actions run #299 on the PR merge ref for `0967d6b6c5cced4634914ea68405e8b0daf9822c` passed typecheck, lint, 347 tests, production build and clean-tree.
-25. **PASS FOR IMPLEMENTER RECOVERY AUDIT / FRESH INDEPENDENT REVIEW PENDING.** Both prior Important findings were reproduced with valid RED evidence and have GREEN recovery evidence. The later verification-gap finding is closed by runtime-rendered production-component coverage and exact-head run #299. No known unresolved Critical or Important finding remains in implementer evidence. Task 9.6 still requires a fresh independent reviewer conclusion and may overturn this assessment.
+24. **PASS — exact final reviewed source/test head quality gates.** GitHub Actions run #305 on the PR merge ref for `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3` passed typecheck, lint, 349 tests, production build and clean-tree.
+25. **IMPLEMENTER RECOVERY AUDIT HAS NO KNOWN CRITICAL/IMPORTANT GAP / FRESH INDEPENDENT REVIEW REQUIRED.** Prior Important findings, including comment `5221237680`, have valid RED evidence and focused GREEN recovery evidence. This is not self-acceptance. Task 9 still requires a fresh Independent Reviewer disposition and that reviewer may reject this assessment.
 
 ## Nonblocking observations
 
@@ -253,7 +287,9 @@ No production file changed in this second recovery.
 - The accidental empty `NOPE` commit from the earlier Task 9 audit remains preserved in history and neutralized by a forward cleanup commit.
 - The dead `CourseManagerModalContent.tsx` artifact was removed only after a valid RED regression demonstrated the defect.
 - The first independent behavior-preservation rejection was not dismissed: it was reproduced with a new authoritative RED regression before production recovery.
-- The later independent verification-gap rejection was also not dismissed: it was reproduced by run #298 before the runtime-regression suite was added.
+- The source-string verification-gap rejection was not dismissed: it was reproduced by run #298 before the runtime presentation suite was added.
+- The subsequent interaction-proof rejection `5221237680` was not dismissed: run #302 reproduced the absence of the required interaction suite before the focused GREEN test was added.
+- Runs #301 and #304 are recorded as lint-only intermediate failures and are not used as RED/GREEN behavioral evidence.
 - This evidence does not self-accept P1D.
 
 ## Review handoff
@@ -262,10 +298,10 @@ Independent review must fresh-read GitHub and bind the review to:
 
 - predecessor `ceeee84682c55c663d09a6b171227a1d92171046`;
 - last production-behavior source commit `ec220ab2752e023f0dbd9e71ff3a3587f1ea64e3`;
-- literal final reviewed source/test head `0967d6b6c5cced4634914ea68405e8b0daf9822c`;
-- this evidence head, verifying source/test-head → evidence-head is one docs-only commit;
-- production-recovery GREEN run #296 and final runtime-regression GREEN run #299;
-- independent rejection comments `5211344413` and `5212784605`, plus corrected historical comment `5211359682`;
+- literal final reviewed source/test head `863bac4ddf9f4c546f09d17f4562a11c8ba3b0b3`;
+- this evidence head, verifying source/test-head → evidence-head is one docs-only commit modifying only this completion record;
+- production-recovery GREEN #296, runtime-presentation GREEN #299, valid interaction RED #302 and final interaction GREEN #305;
+- independent rejection comments `5211344413`, `5212784605` and `5221237680`, plus corrected historical comment `5211359682`;
 - predecessor-to-head scope, including the disclosed `OnboardingDialog.tsx` compatibility shim;
 - all 25 acceptance criteria without relying on implementer self-audit.
 
