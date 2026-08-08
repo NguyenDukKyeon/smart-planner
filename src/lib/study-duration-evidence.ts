@@ -78,8 +78,7 @@ export function selectStudyDurationEvidence(params: {
   if (ratios.length >= 2) {
     const mean = ratios.reduce((sum, value) => sum + value, 0) / ratios.length;
     if (mean > 0) {
-      const variance =
-        ratios.reduce((sum, value) => sum + (value - mean) ** 2, 0) / ratios.length;
+      const variance = ratios.reduce((sum, value) => sum + (value - mean) ** 2, 0) / ratios.length;
       coefficientOfVariation = Math.sqrt(variance) / mean;
     }
   }
