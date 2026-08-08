@@ -1,7 +1,8 @@
 import { addDaysISO, todayISO } from "./date-utils";
 import type { Subject } from "./mock-data";
-import { buildFlexiblePlan, buildScheduleProjection } from "./planner";
+import { buildFlexiblePlan } from "./planner";
 import type { ProgressState } from "./progress-store";
+import { buildScheduleProjection } from "./schedule-projection";
 import { summarizeUnscheduledWork } from "./schedule-visibility";
 import {
   selectStudyDurationEvidence,
