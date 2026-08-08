@@ -31,11 +31,7 @@ function formatHours(value: number): string {
   return HOUR_FORMATTER.format(Math.round(Math.max(0, value) * 10) / 10);
 }
 
-export function ForecastCard({
-  state,
-  subjects = SUBJECTS,
-  onSetDefaultDailyHours,
-}: Props) {
+export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHours }: Props) {
   const fc = useMemo(() => selectForecastCompletion({ subjects, state }), [subjects, state]);
   const hours = fc.hoursPerDay;
 
@@ -153,7 +149,8 @@ export function ForecastCard({
               {formatHours(fc.totalWorkloadHours)} giờ
             </div>
             <div className="mt-0.5 text-[10px] leading-tight text-slate-500">
-              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ ôn
+              {formatHours(fc.totalNewHours)} giờ bài mới + {formatHours(fc.totalReviewHours)} giờ
+              ôn
             </div>
           </div>
         </div>
