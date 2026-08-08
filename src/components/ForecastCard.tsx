@@ -71,10 +71,15 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
         ? displayDate(vm.completion.dateISO)
         : "Chưa thể xác định ngày hoàn thành";
 
+  const horizonPlacementText = `Trong ${vm.horizonWeeks} tuần: ${vm.horizonScheduledLessons}/${vm.totalRemainingLessons} bài được xếp.`;
   const outsideHorizonText =
     vm.outsideHorizonLessons > 0
-      ? `Có ${vm.outsideHorizonLessons} bài chưa hoàn thành nằm ngoài phạm vi ${vm.horizonWeeks} tuần đang xem.`
-      : `Tất cả bài chưa hoàn thành đều nằm trong phạm vi ${vm.horizonWeeks} tuần đang xem.`;
+      ? `${horizonPlacementText} Có ${vm.outsideHorizonLessons} bài chưa hoàn thành nằm ngoài phạm vi đang xem.`
+      : `${horizonPlacementText} Toàn bộ bài còn lại đã được biểu diễn trong phạm vi đang xem.`;
+  const unplacedFixedText =
+    vm.horizonUnplacedFixedLessons > 0
+      ? ` Có ${vm.horizonUnplacedFixedLessons} bài cố định nằm trong phạm vi nhưng chưa xếp được theo công suất hiện tại.`
+      : "";
 
   const capacityText = `Theo lịch công suất hiện tại · mặc định ${formatHours(vm.defaultDailyHours)} giờ/ngày cho cả 7 ngày.`;
   const capacityOverrideText =
@@ -153,7 +158,7 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
           <span className="shrink-0 text-base">🎯</span>
           <div className="min-w-0">
             <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Mốc học hết bài mới theo lịch hiện tại
+              Mốc học hết toàn bộ bài mới
             </div>
             <div className="truncate text-xs font-bold text-emerald-700 sm:text-sm">
               {planCompletionText}
@@ -164,9 +169,11 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">📚</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Bài còn lại</div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Bài trong phạm vi
+            </div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
-              {vm.remainingLessons} bài
+              {vm.horizonScheduledLessons} / {vm.totalRemainingLessons} bài
             </div>
           </div>
         </div>
@@ -174,9 +181,11 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">📖</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Bài mới</div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Bài mới trong phạm vi
+            </div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
-              {formatHours(vm.totalNewHours)} giờ
+              {formatHours(vm.horizonNewHours)} giờ
             </div>
           </div>
         </div>
@@ -184,9 +193,11 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-base">🔁</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">Ôn tập</div>
+            <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+              Ôn tập trong phạm vi
+            </div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
-              {formatHours(vm.totalReviewHours)} giờ
+              {formatHours(vm.horizonReviewHours)} giờ
             </div>
           </div>
         </div>
@@ -195,10 +206,10 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
           <span className="shrink-0 text-base">⏱️</span>
           <div className="min-w-0">
             <div className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
-              Tổng khối lượng
+              Khối lượng trong phạm vi
             </div>
             <div className="truncate text-xs font-bold text-slate-800 sm:text-sm">
-              {formatHours(vm.totalWorkloadHours)} giờ
+              {formatHours(vm.horizonWorkloadHours)} giờ
             </div>
           </div>
         </div>
@@ -248,7 +259,10 @@ export function ForecastCard({ state, subjects = SUBJECTS, onSetDefaultDailyHour
         <div className="font-semibold">
           {vm.outsideHorizonLessons > 0 ? "Ngoài phạm vi" : "Trong phạm vi"}
         </div>
-        <div className="mt-0.5 leading-relaxed">{outsideHorizonText}</div>
+        <div className="mt-0.5 leading-relaxed">
+          {outsideHorizonText}
+          {unplacedFixedText}
+        </div>
       </div>
 
       <div className="space-y-2 pt-1">
