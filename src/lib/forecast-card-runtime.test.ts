@@ -49,7 +49,7 @@ function session(id: string, lessonId: string, minutes: number) {
 }
 
 describe("ForecastCard runtime clarity", () => {
-  it("renders the canonical projected completion and truthful schedule-capacity labels", () => {
+  it("renders the canonical global completion and selected-window workload labels", () => {
     const subjects = makeSubjects(20);
     const state = createInitialProgressState(false);
     state.plannerSettings.defaultDailyHours = 1;
@@ -58,29 +58,38 @@ describe("ForecastCard runtime clarity", () => {
 
     expect(expected.outsideHorizonLessons).toBeGreaterThan(0);
     expect(expected.completion.kind).toBe("date");
+    expect(expected.horizonScheduledLessons).toBeLessThan(expected.totalRemainingLessons);
 
     const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
 
-    expect(html).toContain("Mốc học hết bài mới theo lịch hiện tại");
+    expect(html).toContain("Mốc học hết toàn bộ bài mới");
     if (expected.completion.kind === "date") {
       expect(html).toContain(displayDate(expected.completion.dateISO));
     }
-    expect(html).toContain("Bài mới");
-    expect(html).toContain("Ôn tập");
-    expect(html).toContain("Tổng khối lượng");
+    expect(html).toContain("Bài trong phạm vi");
+    expect(html).toContain(
+      `${expected.horizonScheduledLessons} / ${expected.totalRemainingLessons} bài`,
+    );
+    expect(html).toContain("Bài mới trong phạm vi");
+    expect(html).toContain("Ôn tập trong phạm vi");
+    expect(html).toContain("Khối lượng trong phạm vi");
     expect(html).toContain("Công suất mặc định");
     expect(html).toContain("Phạm vi đang xem");
     expect(html).toContain("2 tuần");
     expect(html).toContain("Ngoài phạm vi");
+    expect(html).toContain(
+      `Trong 2 tuần: ${expected.horizonScheduledLessons}/${expected.totalRemainingLessons} bài được xếp.`,
+    );
     expect(html).toContain(`${expected.outsideHorizonLessons} bài chưa hoàn thành`);
     expect(html).toContain("Mức tin cậy");
     expect(html).toContain("Theo lịch công suất hiện tại");
     expect(html).toContain("mặc định 1 giờ/ngày cho cả 7 ngày");
     expect(html).not.toContain("Chủ nhật nghỉ nếu không đặt riêng");
     expect(html).not.toContain("Tính toán theo vận tốc học đều");
+    expect(html).not.toContain("Mốc học hết bài mới theo lịch hiện tại");
   });
 
-  it("renders planned new-learning workload instead of short historical-session averages", () => {
+  it("renders scoped planned new-learning workload instead of short historical-session averages", () => {
     const subjects = makeSubjects(3, todayISO(), 120);
     const state = createInitialProgressState(false);
     state.plannerSettings.defaultDailyHours = 4;
@@ -92,11 +101,14 @@ describe("ForecastCard runtime clarity", () => {
       session("short-3", "runtime-lesson-3", 20),
     ];
     state.studyMeta.actualMinutes = { "runtime-lesson-3": [20, 20, 20] };
+    const expected = selectForecastViewModel({ subjects, state, horizonWeeks: 2 });
 
     const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
 
-    expect(html).toContain("Bài mới");
-    expect(html).toContain("4 giờ");
+    expect(expected.horizonNewHours).toBe(4);
+    expect(html).toContain("Bài mới trong phạm vi");
+    expect(html).toContain(`${expected.horizonNewHours} giờ`);
+    expect(html).toContain(`${expected.horizonScheduledLessons} / 2 bài`);
   });
 
   it("renders a truthful no-date state when ordinary work has no schedule date", () => {
@@ -147,7 +159,7 @@ describe("ForecastCard runtime clarity", () => {
     expect(html).not.toContain("Tính toán theo vận tốc học đều 2 giờ/ngày");
   });
 
-  it("renders truthful non-warning copy when all unfinished work fits the horizon", () => {
+  it("renders truthful scoped context when all unfinished work fits the horizon", () => {
     const subjects = makeSubjects(1, todayISO());
     const state = createInitialProgressState(false);
     state.plannerSettings.defaultDailyHours = 2;
@@ -159,7 +171,27 @@ describe("ForecastCard runtime clarity", () => {
     const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
 
     expect(html).toContain("Trong phạm vi");
-    expect(html).toContain("Tất cả bài chưa hoàn thành đều nằm trong phạm vi 2 tuần đang xem.");
+    expect(html).toContain(
+      `Trong 2 tuần: ${expected.horizonScheduledLessons}/${expected.totalRemainingLessons} bài được xếp.`,
+    );
+    expect(html).toContain("Toàn bộ bài còn lại đã được biểu diễn trong phạm vi đang xem.");
+  });
+
+  it("renders fixed work inside the window that cannot fit capacity as a separate condition", () => {
+    const subjects = makeSubjects(1, todayISO(), 180);
+    subjects[0].milestones[0].lessons[0].scheduleMode = "fixed";
+    const state = createInitialProgressState(false);
+    state.plannerSettings.defaultDailyHours = 1;
+    state.plannerSettings.todayHours = 1;
+    const expected = selectForecastViewModel({ subjects, state, horizonWeeks: 2 });
+
+    expect(expected.horizonUnplacedFixedLessons).toBe(1);
+    expect(expected.horizonScheduledLessons).toBe(0);
+
+    const html = renderToStaticMarkup(createElement(ForecastCard, { state, subjects }));
+
+    expect(html).toContain("0 / 1 bài");
+    expect(html).toContain("1 bài cố định nằm trong phạm vi nhưng chưa xếp được");
   });
 
   it("keeps shifted dates as a compatibility-only Forecast prop while Roadmap remains their owner", async () => {
