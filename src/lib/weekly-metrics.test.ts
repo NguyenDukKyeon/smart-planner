@@ -278,12 +278,8 @@ describe("selectWeeklyMetrics", () => {
     const byId = new Map(metrics.archivedActivity.map((activity) => [activity.lessonId, activity]));
     expect(lessonTitleOf(byId.get("archived-standalone"))).toBe("Từ vựng Unit 3");
     expect(lessonTitleOf(byId.get("archived-subject-only"))).toBe("Dao động cũ");
-    expect(lessonTitleOf(byId.get("blank-first-source"))).toBe(
-      "Tên hợp lệ từ subject archive",
-    );
-    expect(lessonTitleOf(byId.get("missing-everywhere"))).toBe(
-      "Bài học không còn trong lộ trình",
-    );
+    expect(lessonTitleOf(byId.get("blank-first-source"))).toBe("Tên hợp lệ từ subject archive");
+    expect(lessonTitleOf(byId.get("missing-everywhere"))).toBe("Bài học không còn trong lộ trình");
     expect(byId.get("archived-standalone")?.focusMinutes).toBe(30);
   });
 
