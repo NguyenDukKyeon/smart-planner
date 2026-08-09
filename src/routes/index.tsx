@@ -39,9 +39,11 @@ import {
   CUSTOM_SUBJECTS_BACKUP_KEY,
   CUSTOM_SUBJECTS_KEY,
   getStoredCustomSubjects,
+  loadArchivedCatalog,
   normalizeSubjects,
   saveCatalogBackup,
   saveStoredCustomSubjects,
+  type ArchivedCatalog,
   type CatalogUpdateOptions,
   type CatalogUpdateResult,
 } from "@/lib/custom-subjects";
@@ -123,6 +125,8 @@ const LazyPushNotificationCenterModal = lazy(async () => {
   if (loaded.status === "error") throw new Error(loaded.error);
   return { default: loaded.value.PushNotificationCenterModal };
 });
+
+const EMPTY_ARCHIVED_CATALOG: ArchivedCatalog = { subjects: [], lessons: [] };
 
 function isDashboardView(value: string): value is DashboardView {
   return DASHBOARD_VIEWS.includes(value as DashboardView);
@@ -399,15 +403,20 @@ function Dashboard() {
   }, [todayStudyDayComplete, todayStudyDayRecorded, updateHabit]);
 
   const realStudyStreak = useMemo(() => computeStudyStreak(state), [state]);
+  const archivedCatalog = useMemo(() => {
+    const loaded = loadArchivedCatalog();
+    return loaded.status === "ok" ? loaded.value : EMPTY_ARCHIVED_CATALOG;
+  }, [subjects]);
   const weeklyMetrics = useMemo(
     () =>
       selectWeeklyMetrics({
         state,
         subjects,
+        archivedCatalog,
         shiftedDates,
         referenceDateISO: todayISO(),
       }),
-    [state, subjects, shiftedDates],
+    [archivedCatalog, state, subjects, shiftedDates],
   );
 
   useEffect(() => {
