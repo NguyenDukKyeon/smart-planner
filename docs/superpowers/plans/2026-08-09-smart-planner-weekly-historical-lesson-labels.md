@@ -46,12 +46,10 @@
 
 - [ ] **Step 1: Extend selector tests first with title-precedence and fallback cases**
 
-Add `ArchivedCatalog` test fixtures and assertions to `src/lib/weekly-metrics.test.ts` before production code changes. Use concrete cases that prove all precedence levels and arithmetic stability:
+Add `ArchivedCatalog` test fixtures and assertions to `src/lib/weekly-metrics.test.ts` before production code changes:
 
 ```ts
 import type { ArchivedCatalog } from "./custom-subjects";
-
-const emptyArchive: ArchivedCatalog = { subjects: [], lessons: [] };
 ```
 
 For the existing `outside-plan` live lesson, change the expected object to require the live title:
@@ -67,7 +65,7 @@ expect(metrics.lessons.outOfPlanCompletions).toEqual([
 ]);
 ```
 
-Add a table-driven test with these historical IDs:
+Add historical archive fixtures that prove all precedence levels:
 
 ```ts
 const archivedCatalog: ArchivedCatalog = {
@@ -146,14 +144,14 @@ const archivedCatalog: ArchivedCatalog = {
 };
 ```
 
-Create completed historical entries and one focus session in the selected week, then assert:
+Create completed historical entries for all four IDs during the selected week. Add one 30-minute `createStudySession()` for `archived-standalone`, then assert:
 
 ```ts
 expect(byId.get("archived-standalone")?.lessonTitle).toBe("Từ vựng Unit 3");
 expect(byId.get("archived-subject-only")?.lessonTitle).toBe("Dao động cũ");
 expect(byId.get("blank-first-source")?.lessonTitle).toBe("Tên hợp lệ từ subject archive");
 expect(byId.get("missing-everywhere")?.lessonTitle).toBe("Bài học không còn trong lộ trình");
-expect(byId.get("archived-standalone")?.focusMinutes).toBe(/* unchanged expected minutes */);
+expect(byId.get("archived-standalone")?.focusMinutes).toBe(30);
 ```
 
 Also assert at least one live weekly target exposes its existing title:
@@ -233,7 +231,7 @@ Populate `lessonTitle(lesson.id)` for targets, `lessonTitle(lessonId)` for out-o
 
 Natural GitHub Actions must show typecheck/lint/tests/build/clean-tree all PASS. Confirm the full existing weekly metrics suite remains green and the new precedence/fallback cases pass.
 
-- [ ] **Step 5: Commit/freeze Task 1 source behavior**
+- [ ] **Step 5: Freeze Task 1 source behavior**
 
 Record exact RED run/job/head and exact GREEN run/job/head for the completion evidence. Do not start Task 2 before Task 1 full GREEN.
 
@@ -320,7 +318,7 @@ Create a stable empty enrichment value outside the component:
 const EMPTY_ARCHIVED_CATALOG: ArchivedCatalog = { subjects: [], lessons: [] };
 ```
 
-At the dashboard route boundary, load archive metadata as enrichment only. A suitable bounded pattern is:
+At the dashboard route boundary, load archive metadata as enrichment only:
 
 ```ts
 const archivedCatalog = useMemo(() => {
