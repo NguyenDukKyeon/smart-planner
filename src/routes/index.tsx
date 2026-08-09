@@ -405,7 +405,8 @@ function Dashboard() {
   const realStudyStreak = useMemo(() => computeStudyStreak(state), [state]);
   const weeklyMetrics = useMemo(() => {
     const loadedArchive = loadArchivedCatalog();
-    const archivedCatalog = loadedArchive.status === "ok" ? loadedArchive.value : EMPTY_ARCHIVED_CATALOG;
+    const archivedCatalog =
+      loadedArchive.status === "ok" ? loadedArchive.value : EMPTY_ARCHIVED_CATALOG;
     return selectWeeklyMetrics({
       state,
       subjects,
