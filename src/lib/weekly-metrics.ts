@@ -1,3 +1,4 @@
+import type { ArchivedCatalog } from "./custom-subjects";
 import type { HabitDef, Subject } from "./mock-data";
 import { addDaysISO, dayIndex, getMondayISO, isDateISO, todayISO } from "./date-utils";
 import { UNDATED_COMPLETION, type ProgressState } from "./progress-store";
@@ -17,6 +18,7 @@ export type WeeklyMetrics = {
     rate: number;
     targets: Array<{
       lessonId: string;
+      lessonTitle: string;
       subjectId: string;
       scheduledDate: string;
       effectiveDate: string;
@@ -24,7 +26,12 @@ export type WeeklyMetrics = {
       completionStatus: WeeklyLessonCompletionStatus;
       met: boolean;
     }>;
-    outOfPlanCompletions: Array<{ lessonId: string; subjectId: string; completedOn: string }>;
+    outOfPlanCompletions: Array<{
+      lessonId: string;
+      lessonTitle: string;
+      subjectId: string;
+      completedOn: string;
+    }>;
   };
   habits: {
     targetTotal: number;
@@ -63,6 +70,7 @@ export type WeeklyMetrics = {
   }>;
   archivedActivity: Array<{
     lessonId: string;
+    lessonTitle: string;
     completedOn?: string;
     focusMinutes: number;
   }>;
@@ -71,9 +79,12 @@ export type WeeklyMetrics = {
 export type WeeklyMetricsArgs = {
   state: ProgressState;
   subjects: Subject[];
+  archivedCatalog?: ArchivedCatalog;
   shiftedDates?: Record<string, string>;
   referenceDateISO?: string;
 };
+
+const FALLBACK_LESSON_TITLE = "Bài học không còn trong lộ trình";
 
 function percent(numerator: number, denominator: number): number {
   if (denominator <= 0) return 0;
@@ -100,6 +111,7 @@ function habitOccurrenceOnDate(habit: HabitDef, state: ProgressState, dateISO: s
 export function selectWeeklyMetrics({
   state,
   subjects,
+  archivedCatalog,
   shiftedDates = {},
   referenceDateISO = todayISO(),
 }: WeeklyMetricsArgs): WeeklyMetrics {
@@ -112,14 +124,32 @@ export function selectWeeklyMetrics({
     string,
     { subjectId: string; lesson: Subject["milestones"][number]["lessons"][number] }
   >();
+  const lessonTitles = new Map<string, string>();
+  const rememberTitle = (lessonId: string, title: unknown) => {
+    if (lessonTitles.has(lessonId) || typeof title !== "string") return;
+    const normalized = title.trim();
+    if (normalized) lessonTitles.set(lessonId, normalized);
+  };
 
   for (const subject of sortedSubjects) {
     for (const milestone of subject.milestones) {
       for (const lesson of milestone.lessons) {
         lessonSubject.set(lesson.id, { subjectId: subject.id, lesson });
+        rememberTitle(lesson.id, lesson.title);
       }
     }
   }
+  for (const item of archivedCatalog?.lessons ?? []) {
+    rememberTitle(item.lesson.id, item.lesson.title);
+  }
+  for (const subject of archivedCatalog?.subjects ?? []) {
+    for (const milestone of subject.milestones) {
+      for (const lesson of milestone.lessons) {
+        rememberTitle(lesson.id, lesson.title);
+      }
+    }
+  }
+  const lessonTitle = (lessonId: string) => lessonTitles.get(lessonId) ?? FALLBACK_LESSON_TITLE;
 
   const subjectMetrics = new Map(
     sortedSubjects.map((subject) => [
@@ -163,6 +193,7 @@ export function selectWeeklyMetrics({
 
     targets.push({
       lessonId: lesson.id,
+      lessonTitle: lessonTitle(lesson.id),
       subjectId,
       scheduledDate: lesson.scheduledDate,
       effectiveDate,
@@ -190,6 +221,7 @@ export function selectWeeklyMetrics({
     if (!weekDates.has(effectiveDate)) {
       outOfPlanCompletions.push({
         lessonId,
+        lessonTitle: lessonTitle(lessonId),
         subjectId: liveLesson.subjectId,
         completedOn,
       });
@@ -291,9 +323,9 @@ export function selectWeeklyMetrics({
       dailyTargetMinutes,
     },
     subjects: subjectList,
-    archivedActivity: [...archivedByLesson.values()].sort((a, b) =>
-      a.lessonId.localeCompare(b.lessonId),
-    ),
+    archivedActivity: [...archivedByLesson.values()]
+      .map((activity) => ({ ...activity, lessonTitle: lessonTitle(activity.lessonId) }))
+      .sort((a, b) => a.lessonId.localeCompare(b.lessonId)),
   };
 }
 

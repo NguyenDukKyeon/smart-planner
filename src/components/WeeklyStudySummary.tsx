@@ -93,7 +93,7 @@ export function WeeklyStudySummary({ metrics, todayTargetMinutes }: Props) {
               <ul className="mt-1 space-y-1">
                 {nonStandardTargets.map((target) => (
                   <li key={target.lessonId} className="text-slate-600">
-                    <strong className="text-slate-800">{target.lessonId}:</strong>{" "}
+                    <strong className="text-slate-800">{target.lessonTitle}:</strong>{" "}
                     {weeklyLessonCompletionLabel(target.completionStatus)}
                   </li>
                 ))}
@@ -105,7 +105,7 @@ export function WeeklyStudySummary({ metrics, todayTargetMinutes }: Props) {
             <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-950 shadow-xs">
               <p className="font-semibold">Bài hoàn thành trong tuần nhưng ngoài kế hoạch tuần</p>
               <p className="mt-1">
-                {metrics.lessons.outOfPlanCompletions.map((item) => item.lessonId).join(", ")}
+                {metrics.lessons.outOfPlanCompletions.map((item) => item.lessonTitle).join(", ")}
               </p>
             </div>
           )}
@@ -116,7 +116,7 @@ export function WeeklyStudySummary({ metrics, todayTargetMinutes }: Props) {
               <ul className="mt-1 space-y-1">
                 {metrics.archivedActivity.map((activity) => (
                   <li key={activity.lessonId}>
-                    {activity.lessonId}
+                    {activity.lessonTitle}
                     {activity.completedOn ? ` · hoàn thành ${activity.completedOn}` : ""}
                     {activity.focusMinutes > 0
                       ? ` · ${minutesLabel(activity.focusMinutes)} tập trung`
