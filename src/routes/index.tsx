@@ -403,21 +403,17 @@ function Dashboard() {
   }, [todayStudyDayComplete, todayStudyDayRecorded, updateHabit]);
 
   const realStudyStreak = useMemo(() => computeStudyStreak(state), [state]);
-  const archivedCatalog = useMemo(() => {
-    const loaded = loadArchivedCatalog();
-    return loaded.status === "ok" ? loaded.value : EMPTY_ARCHIVED_CATALOG;
-  }, [subjects]);
-  const weeklyMetrics = useMemo(
-    () =>
-      selectWeeklyMetrics({
-        state,
-        subjects,
-        archivedCatalog,
-        shiftedDates,
-        referenceDateISO: todayISO(),
-      }),
-    [archivedCatalog, state, subjects, shiftedDates],
-  );
+  const weeklyMetrics = useMemo(() => {
+    const loadedArchive = loadArchivedCatalog();
+    const archivedCatalog = loadedArchive.status === "ok" ? loadedArchive.value : EMPTY_ARCHIVED_CATALOG;
+    return selectWeeklyMetrics({
+      state,
+      subjects,
+      archivedCatalog,
+      shiftedDates,
+      referenceDateISO: todayISO(),
+    });
+  }, [state, subjects, shiftedDates]);
 
   useEffect(() => {
     if (storageError) toast.error(storageError, { duration: 12000 });
